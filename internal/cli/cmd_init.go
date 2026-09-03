@@ -47,10 +47,10 @@ func runInit(ctx context.Context, env Env, args []string) int {
 		projectName = filepath.Base(ws.Root())
 	}
 	project := canonical.NewProject(compiler.DeriveProjectID(projectName), projectName)
-	if err := store.SaveProject(ws, project); err != nil {
+	if _, err := store.SaveProject(ctx, ws, project, false); err != nil {
 		return fail(env, "init", *jsonOut, ExitWriteFailed, err, nil)
 	}
-	created := []string{store.ProjectFile}
+	created := []string{store.ProjectFile, store.ProvenanceFile}
 
 	if *withProfiles {
 		for _, t := range capabilities.AvailableTargets() {
@@ -74,6 +74,5 @@ func runInit(ctx context.Context, env Env, args []string) int {
 	}
 	fmt.Fprintf(env.Stdout, "\nNext: run `stemma scan` to see what agent configuration this repository has,\n")
 	fmt.Fprintf(env.Stdout, "then `stemma import --from <format>` to populate the canonical project.\n")
-	_ = ctx
 	return ExitOK
 }

@@ -9,6 +9,11 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 )
 
+// Ordered is a nested mapping whose keys keep a deliberate order rather than
+// being sorted. Use it where the order carries meaning for a reader, such as
+// putting an activation's "type" before its patterns.
+type Ordered []KV
+
 // KV is an ordered front matter entry.
 type KV struct {
 	Key   string
@@ -34,6 +39,15 @@ func RenderFrontMatter(entries []KV) string {
 func writeYAMLEntry(b *strings.Builder, key string, value any, indent int) {
 	pad := strings.Repeat("  ", indent)
 	switch v := value.(type) {
+	case Ordered:
+		if len(v) == 0 {
+			fmt.Fprintf(b, "%s%s: {}\n", pad, key)
+			return
+		}
+		fmt.Fprintf(b, "%s%s:\n", pad, key)
+		for _, entry := range v {
+			writeYAMLEntry(b, entry.Key, entry.Value, indent+1)
+		}
 	case []string:
 		if len(v) == 0 {
 			fmt.Fprintf(b, "%s%s: []\n", pad, key)
@@ -112,6 +126,12 @@ func yamlValue(v any) string {
 			items = append(items, yamlValue(s))
 		}
 		return "[" + strings.Join(items, ", ") + "]"
+	case Ordered:
+		parts := make([]string, 0, len(t))
+		for _, e := range t {
+			parts = append(parts, e.Key+": "+yamlValue(e.Value))
+		}
+		return "{" + strings.Join(parts, ", ") + "}"
 	case map[string]any:
 		parts := make([]string, 0, len(t))
 		for _, k := range sortedKeys(t) {

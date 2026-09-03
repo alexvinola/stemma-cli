@@ -179,6 +179,25 @@ func (w *Workspace) Exists(rel string) (bool, error) {
 	return info.Mode().IsRegular(), nil
 }
 
+// DirExists reports whether a directory exists at rel.
+func (w *Workspace) DirExists(rel string) (bool, error) {
+	native, err := w.Native(rel)
+	if err != nil {
+		return false, err
+	}
+	info, err := os.Lstat(native)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	if info.Mode()&fs.ModeSymlink != 0 {
+		return false, fmt.Errorf("%w: %q", ErrSymlink, rel)
+	}
+	return info.IsDir(), nil
+}
+
 // File is a configuration file read from the workspace.
 type File struct {
 	// Path is the repository-relative slash path.

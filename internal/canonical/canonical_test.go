@@ -182,7 +182,7 @@ func TestMarshalIsDeterministicAndSorted(t *testing.T) {
 	if string(first) != string(second) {
 		t.Fatal("marshalling depends on input order")
 	}
-	if !strings.Contains(string(first), `"schemaVersion": 1`) {
+	if !strings.Contains(string(first), `"schemaVersion": 2`) {
 		t.Error("schema version missing from output")
 	}
 }
@@ -207,13 +207,13 @@ func TestRoundTripJSON(t *testing.T) {
 }
 
 func TestUnmarshalRejectsUnknownFieldsAndVersions(t *testing.T) {
-	if _, err := UnmarshalProject([]byte(`{"schemaVersion":1,"nope":true}`)); err == nil {
+	if _, err := UnmarshalProject([]byte(`{"schemaVersion":2,"nope":true}`)); err == nil {
 		t.Error("unknown fields must be rejected")
 	}
 	if _, err := UnmarshalProject([]byte(`{"schemaVersion":99}`)); err == nil {
 		t.Error("unsupported schema versions must be rejected")
 	}
-	if _, err := UnmarshalProject([]byte(`{"schemaVersion":1} {"schemaVersion":1}`)); err == nil {
+	if _, err := UnmarshalProject([]byte(`{"schemaVersion":2} {"schemaVersion":2}`)); err == nil {
 		t.Error("trailing content must be rejected")
 	}
 }
@@ -237,7 +237,7 @@ func FuzzUnmarshalProject(f *testing.F) {
 	p := sampleProject()
 	data, _ := MarshalProject(p)
 	f.Add(string(data))
-	f.Add(`{"schemaVersion":1}`)
+	f.Add(`{"schemaVersion":2}`)
 	f.Add(`{`)
 	f.Fuzz(func(t *testing.T, s string) {
 		project, err := UnmarshalProject([]byte(s))

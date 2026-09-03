@@ -26,7 +26,7 @@ func TestProjectRoundTrip(t *testing.T) {
 		t.Fatal("loading a missing project must fail")
 	}
 	p := canonical.NewProject("prj_1", "Test")
-	if err := SaveProject(ws, p); err != nil {
+	if _, err := SaveProject(ctx, ws, p, false); err != nil {
 		t.Fatal(err)
 	}
 	back, err := LoadProject(ctx, ws)

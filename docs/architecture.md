@@ -15,7 +15,7 @@ exporters), plus a transactional writer.
       │  importer: normalize into canonical entities,
       │            preserve unknown content
       ▼
- canonical project  (.stemma/project.json)
+ canonical project  (.stemma/: Markdown entities + project.json)
       │  validation, deterministic optimization passes
       ▼
  canonical project + target profile (.stemma/profiles/<target>.json)
@@ -52,7 +52,7 @@ exporters), plus a transactional writer.
 | `internal/adapters/<provider>` | One importer and one exporter per provider |
 | `internal/adapters/registry` | Explicit target → adapter mapping |
 | `internal/compiler` | Import driver, pure `Compile`, `BuildPlan`, `Apply` |
-| `internal/store` | Reading and writing `.stemma/` |
+| `internal/store` | The on-disk layout of `.stemma/`: entity Markdown files, metadata, provenance |
 | `internal/cli` | Flags, human and JSON output, exit codes |
 
 The dependency graph is acyclic and flows downwards through that table.

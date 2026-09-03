@@ -1,9 +1,47 @@
 # The canonical model
 
-The canonical project at `.stemma/project.json` is the source of truth once a
-repository has been imported. Provider files are projections of it.
+The canonical project under `.stemma/` is the source of truth once a repository
+has been imported. Provider files are projections of it.
 
-Schema: `schema/canonical-v1.schema.json`. Go types: `internal/canonical`.
+Schema: `schema/canonical-v2.schema.json`. Go types: `internal/canonical`;
+on-disk layout: `internal/store`.
+
+## Layout
+
+```
+.stemma/
+├── project.json      # metadata: id, name, targets, token budgets
+├── context/<slug>.md # one file per entity, named after the entity id
+├── rules/<slug>.md
+├── procedures/<slug>.md
+├── skills/<slug>.md
+├── agents/<slug>.md
+├── decisions/<slug>.md
+├── provenance.json   # machine bookkeeping (see below)
+├── profiles/<target>.json
+└── manifest.json
+```
+
+Entities are Markdown because almost everything in them *is* Markdown. Holding
+multi-line prose inside JSON strings made the file people are supposed to edit
+the least pleasant one in the repository, and produced diffs where changing one
+word rewrote a whole line. The file name is the entity's slug, so the
+filesystem mirrors the entity ids: `rule.api-validation` is
+`.stemma/rules/api-validation.md`.
+
+Structured metadata goes in YAML front matter, in the same restricted subset
+Stemma parses everywhere else — no tags, anchors or aliases. Prose fields that
+are not the main body become recognised `## Heading` sections. Anything under an
+unrecognised heading stays part of the body, so nothing a person writes is lost.
+
+There are two serializations of a project, and they have different jobs:
+
+| Form | Where | Job |
+| --- | --- | --- |
+| Markdown + `project.json` | `.stemma/` | what people read and edit |
+| One canonical JSON document | in memory only | giving a project exactly one byte form to hash, which is what manifests and plans compare |
+
+The second never touches disk except in compact test fixtures.
 
 ## Entity identifiers
 
@@ -68,9 +106,11 @@ A single actionable instruction: `id`, `title`, `instruction`, `priority`
 (`must` / `should` / `may`), `enabled`, `activation`, plus optional
 `rationale`, `goodExamples` and `badExamples`.
 
-Only `instruction` is necessarily agent-facing. Rationale and examples stay
-available to people and are not exported into permanent agent context; a test
-enforces that they never leak into generated files.
+Only `instruction` is necessarily agent-facing. On disk the instruction is the
+body of the rule file, and rationale and examples are `## Rationale`,
+`## Good examples` and `## Bad examples` sections after it — so the split
+between "what the agent is told" and "why we decided this" is visible while you
+edit. A test enforces that the human-only parts never leak into generated files.
 
 ### Procedure
 
@@ -104,9 +144,14 @@ Every imported entity records where it came from: source format, source path,
 source hash, byte and line span where known, importer version, and a
 disposition (`parsed`, `adapted`, `preserved-opaque`).
 
+This lives in `.stemma/provenance.json`, not in the entity files, deliberately:
+it is bookkeeping the machine maintains, and it would be noise in a file a
+person is editing. Deleting it degrades gracefully — Stemma regenerates files
+instead of re-emitting original bytes — rather than losing information.
+
 Provenance also records a `contentHash`: the digest of the entity exactly as the
 importer produced it. Re-emitting a source file verbatim requires that hash to
-still match, so editing `.stemma/project.json` always regenerates rather than
+still match, so editing an entity's Markdown file always regenerates rather than
 silently keeping the old bytes.
 
 Provenance is what makes `stemma explain` able to trace a generated line back to

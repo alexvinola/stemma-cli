@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/alexvinola/stemma-cli/master/schema/canonical-v1.schema.json",
-  "title": "Stemma canonical project (v1)",
-  "description": "The provider-neutral source of truth stored at .stemma/project.json. This schema documents the format; Stemma itself validates with internal/canonical, which additionally checks entity id shapes, glob syntax, activation union invariants and opaque block hashes.",
+  "$id": "https://raw.githubusercontent.com/alexvinola/stemma-cli/master/schema/canonical-v2.schema.json",
+  "title": "Stemma canonical project metadata (v2)",
+  "description": "The root of this schema describes .stemma/project.json, which holds project-level metadata only. From version 2 the entities themselves live in Markdown files under .stemma/ (context/, rules/, procedures/, skills/, agents/, decisions/), one file per entity, named after the entity id's slug. Their YAML front matter shapes are documented in $defs so editors can validate them and so the enums stay in one place. Machine bookkeeping — provenance and preserved opaque content — lives in .stemma/provenance.json, described by $defs/provenanceFile. Stemma validates with internal/canonical and internal/store, which additionally check id shapes, glob syntax, activation union invariants and opaque block hashes.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "name", "targets", "contextDocuments", "rules", "procedures", "skills", "agents", "decisions", "opaqueBlocks"],
+  "required": ["schemaVersion", "id", "name", "targets"],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "id": { "type": "string", "minLength": 1, "description": "Stable project identifier." },
     "name": { "type": "string", "minLength": 1 },
     "description": { "type": "string" },
@@ -16,21 +16,14 @@
     "architectureStyle": { "type": "string" },
     "targets": { "type": "array", "items": { "$ref": "#/$defs/targetFormat" } },
     "tokenBudgets": { "$ref": "#/$defs/tokenBudgets" },
-    "contextDocuments": { "type": "array", "items": { "$ref": "#/$defs/contextDocument" } },
-    "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
-    "procedures": { "type": "array", "items": { "$ref": "#/$defs/procedure" } },
-    "skills": { "type": "array", "items": { "$ref": "#/$defs/skill" } },
-    "agents": { "type": "array", "items": { "$ref": "#/$defs/agent" } },
-    "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision" } },
-    "extensions": { "$ref": "#/$defs/extensions" },
-    "opaqueBlocks": { "type": "array", "items": { "$ref": "#/$defs/opaqueBlock" } }
+    "extensions": { "$ref": "#/$defs/extensions" }
   },
   "$defs": {
     "targetFormat": { "enum": ["github-copilot", "claude", "codex", "kiro", "cursor"] },
     "entityId": {
       "type": "string",
       "pattern": "^(context|rule|procedure|skill|agent|decision|opaque)\\.[a-z0-9]+(-[a-z0-9]+)*$",
-      "description": "\"<entityType>.<slug>\". Profile overrides are keyed by this id."
+      "description": "\"<entityType>.<slug>\". The slug is also the file name: rule.api-validation lives in .stemma/rules/api-validation.md. Profile overrides are keyed by this id."
     },
     "tokenBudgets": {
       "type": "object",
@@ -43,7 +36,7 @@
     },
     "activation": {
       "type": "object",
-      "description": "Exhaustive tagged union. Fields that do not belong to the tag must be absent.",
+      "description": "Front matter key present on context and rule files. Exhaustive tagged union; fields that do not belong to the tag must be absent.",
       "additionalProperties": false,
       "required": ["type"],
       "properties": {
@@ -69,6 +62,100 @@
       "description": "Provider-specific data Stemma preserves but does not interpret, keyed by provider identifier. Keys beginning with \"stemma.\" are reserved round-trip hints and are never written into generated provider files.",
       "additionalProperties": { "type": "object" }
     },
+    "contextFile": {
+      "type": "object",
+      "description": "Front matter of .stemma/context/<slug>.md. The Markdown body is the document's content.",
+      "additionalProperties": false,
+      "required": ["title", "activation"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["product", "technology", "architecture", "structure", "domain", "conventions", "security", "testing", "operations", "other"] },
+        "audience": { "enum": ["agent", "human", "both"], "description": "A document whose audience is \"human\" is never projected into agent-facing output." },
+        "activation": { "$ref": "#/$defs/activation" },
+        "enabled": { "type": "boolean" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "ruleFile": {
+      "type": "object",
+      "description": "Front matter of .stemma/rules/<slug>.md. The Markdown body before any recognised heading is the instruction — the only part an agent sees. Optional \"## Rationale\", \"## Good examples\" and \"## Bad examples\" sections hold human documentation.",
+      "additionalProperties": false,
+      "required": ["title", "activation"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "priority": { "enum": ["must", "should", "may"] },
+        "enabled": { "type": "boolean" },
+        "activation": { "$ref": "#/$defs/activation" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "procedureFile": {
+      "type": "object",
+      "description": "Front matter of .stemma/procedures/<slug>.md. The body is the ordered content.",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "trigger": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "skillFile": {
+      "type": "object",
+      "description": "Front matter of .stemma/skills/<slug>.md. The body is the skill content.",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "allowedTools": { "type": "array", "items": { "type": "string" } },
+        "invocationPolicy": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "agentFile": {
+      "type": "object",
+      "description": "Front matter of .stemma/agents/<slug>.md. The body is the agent's instructions.",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "modelPreference": { "type": "string", "description": "Opaque provider metadata. Stemma never translates model names between providers." },
+        "enabled": { "type": "boolean" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "decisionFile": {
+      "type": "object",
+      "description": "Front matter of .stemma/decisions/<slug>.md. The body carries \"## Context\", \"## Decision\", \"## Consequences\" and \"## Agent constraints\" sections; only the constraints are projected into agent-facing context.",
+      "additionalProperties": false,
+      "required": ["title", "status"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["proposed", "accepted", "deprecated", "superseded"] },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "provenanceFile": {
+      "type": "object",
+      "description": "The shape of .stemma/provenance.json: machine bookkeeping, never edited by hand. Losing it costs byte-identical round trips, not correctness.",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "entities", "opaqueBlocks"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "entities": {
+          "type": "object",
+          "description": "Keyed by entity id.",
+          "additionalProperties": { "$ref": "#/$defs/provenance" }
+        },
+        "opaqueBlocks": { "type": "array", "items": { "$ref": "#/$defs/opaqueBlock" } }
+      }
+    },
     "provenance": {
       "type": "object",
       "additionalProperties": false,
@@ -80,7 +167,7 @@
         "span": { "$ref": "#/$defs/span" },
         "importerVersion": { "type": "string" },
         "disposition": { "enum": ["parsed", "adapted", "preserved-opaque"] },
-        "contentHash": { "type": "string", "description": "Digest of the entity as the importer produced it, ignoring provenance. Re-emitting a source file verbatim requires this to still match, so a hand edit to the canonical project is never discarded." },
+        "contentHash": { "type": "string", "description": "Digest of the entity as the importer produced it, ignoring provenance. Re-emitting a source file verbatim requires this to still match, so a hand edit is never discarded." },
         "mappings": { "type": "array", "items": { "type": "string" } }
       }
     },
@@ -92,103 +179,6 @@
         "byteEnd": { "type": "integer", "minimum": 0 },
         "lineStart": { "type": "integer", "minimum": 0 },
         "lineEnd": { "type": "integer", "minimum": 0 }
-      }
-    },
-    "contextDocument": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "title", "kind", "content", "audience", "activation", "provenance"],
-      "properties": {
-        "id": { "$ref": "#/$defs/entityId" },
-        "title": { "type": "string", "minLength": 1 },
-        "kind": { "enum": ["product", "technology", "architecture", "structure", "domain", "conventions", "security", "testing", "operations", "other"] },
-        "content": { "type": "string", "minLength": 1 },
-        "audience": { "enum": ["agent", "human", "both"] },
-        "activation": { "$ref": "#/$defs/activation" },
-        "enabled": { "type": "boolean" },
-        "provenance": { "$ref": "#/$defs/provenance" },
-        "extensions": { "$ref": "#/$defs/extensions" }
-      }
-    },
-    "rule": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "title", "instruction", "priority", "enabled", "activation", "provenance"],
-      "properties": {
-        "id": { "$ref": "#/$defs/entityId" },
-        "title": { "type": "string", "minLength": 1 },
-        "instruction": { "type": "string", "minLength": 1, "description": "The only necessarily agent-facing field." },
-        "priority": { "enum": ["must", "should", "may"] },
-        "enabled": { "type": "boolean" },
-        "activation": { "$ref": "#/$defs/activation" },
-        "rationale": { "type": "string", "description": "Human documentation; not exported to agent context by default." },
-        "goodExamples": { "type": "array", "items": { "type": "string" } },
-        "badExamples": { "type": "array", "items": { "type": "string" } },
-        "provenance": { "$ref": "#/$defs/provenance" },
-        "extensions": { "$ref": "#/$defs/extensions" }
-      }
-    },
-    "procedure": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "name", "description", "content", "provenance"],
-      "properties": {
-        "id": { "$ref": "#/$defs/entityId" },
-        "name": { "type": "string", "minLength": 1 },
-        "description": { "type": "string" },
-        "trigger": { "type": "string" },
-        "content": { "type": "string", "minLength": 1 },
-        "enabled": { "type": "boolean" },
-        "provenance": { "$ref": "#/$defs/provenance" },
-        "extensions": { "$ref": "#/$defs/extensions" }
-      }
-    },
-    "skill": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "name", "description", "content", "provenance"],
-      "properties": {
-        "id": { "$ref": "#/$defs/entityId" },
-        "name": { "type": "string", "minLength": 1 },
-        "description": { "type": "string" },
-        "content": { "type": "string", "minLength": 1 },
-        "allowedTools": { "type": "array", "items": { "type": "string" } },
-        "invocationPolicy": { "type": "string" },
-        "enabled": { "type": "boolean" },
-        "provenance": { "$ref": "#/$defs/provenance" },
-        "extensions": { "$ref": "#/$defs/extensions" }
-      }
-    },
-    "agent": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "name", "description", "instructions", "provenance"],
-      "properties": {
-        "id": { "$ref": "#/$defs/entityId" },
-        "name": { "type": "string", "minLength": 1 },
-        "description": { "type": "string" },
-        "instructions": { "type": "string", "minLength": 1 },
-        "tools": { "type": "array", "items": { "type": "string" } },
-        "modelPreference": { "type": "string", "description": "Opaque provider metadata. Stemma never translates model names between providers." },
-        "enabled": { "type": "boolean" },
-        "provenance": { "$ref": "#/$defs/provenance" },
-        "extensions": { "$ref": "#/$defs/extensions" }
-      }
-    },
-    "decision": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "title", "status", "provenance"],
-      "properties": {
-        "id": { "$ref": "#/$defs/entityId" },
-        "title": { "type": "string", "minLength": 1 },
-        "status": { "enum": ["proposed", "accepted", "deprecated", "superseded"] },
-        "context": { "type": "string" },
-        "decision": { "type": "string" },
-        "consequences": { "type": "string" },
-        "agentConstraints": { "type": "array", "items": { "type": "string" }, "description": "The only part normally projected into agent-facing context." },
-        "provenance": { "$ref": "#/$defs/provenance" },
-        "extensions": { "$ref": "#/$defs/extensions" }
       }
     },
     "opaqueBlock": {

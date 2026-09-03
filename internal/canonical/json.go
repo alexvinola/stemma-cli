@@ -67,9 +67,12 @@ func (p *Project) normalizeSlices() {
 	}
 }
 
-// MarshalProject renders a project as canonical, deterministic JSON with a
-// trailing newline. Map keys are sorted by encoding/json; slices are sorted by
-// Sort before encoding.
+// MarshalProject renders a project as canonical, deterministic JSON.
+//
+// This is the *hashing* form of a project, not its on-disk form: it gives every
+// project exactly one byte representation, which is what manifests and plans
+// compare. What a person edits is the Markdown layout written by internal/store.
+// Compact single-document fixtures also use this form.
 func MarshalProject(p Project) ([]byte, error) {
 	p.SchemaVersion = schemaVersion
 	p.normalizeSlices()

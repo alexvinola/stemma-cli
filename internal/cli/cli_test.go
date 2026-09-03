@@ -345,27 +345,10 @@ func TestDeleteProposalsAreNeverExecuted(t *testing.T) {
 	h.run("import", "--from", "github-copilot")
 	h.run("apply", "--target", "claude", "--yes")
 
-	// Remove a rule from the canonical project so its file is no longer produced.
-	project := h.read(".stemma/project.json")
-	var doc map[string]any
-	if err := json.Unmarshal([]byte(project), &doc); err != nil {
-		t.Fatal(err)
+	// Remove an entity from the canonical project so its file is no longer produced.
+	if err := os.Remove(filepath.Join(h.root, ".stemma", "context", "api-layer-conventions.md")); err != nil {
+		h.t.Fatal(err)
 	}
-	docs, _ := doc["contextDocuments"].([]any)
-	var kept []any
-	for _, d := range docs {
-		m := d.(map[string]any)
-		if m["id"] == "context.api-layer-conventions" {
-			continue
-		}
-		kept = append(kept, d)
-	}
-	doc["contextDocuments"] = kept
-	updated, err := json.MarshalIndent(doc, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	h.write(".stemma/project.json", string(updated)+"\n")
 
 	res := h.run("plan", "--target", "claude")
 	if !strings.Contains(res.stdout, "delete proposed") {
@@ -713,33 +696,18 @@ func TestNoOpApplyClaimsOwnership(t *testing.T) {
 	if h.read(".github/copilot-instructions.md") != original {
 		t.Fatal("a no-op apply rewrote a file it should have left alone")
 	}
-	var m map[string]any
-	if err := json.Unmarshal([]byte(h.read(".stemma/manifest.json")), &m); err != nil {
+	var manifestDoc map[string]any
+	if err := json.Unmarshal([]byte(h.read(".stemma/manifest.json")), &manifestDoc); err != nil {
 		t.Fatal(err)
 	}
-	targets, _ := m["targets"].(map[string]any)
+	targets, _ := manifestDoc["targets"].(map[string]any)
 	if _, ok := targets["github-copilot"]; !ok {
 		t.Fatalf("the manifest does not record ownership: %v", targets)
 	}
 
 	// A later real change must apply cleanly, with no conflict.
-	project := h.read(".stemma/project.json")
-	var doc map[string]any
-	if err := json.Unmarshal([]byte(project), &doc); err != nil {
-		t.Fatal(err)
-	}
-	docs, _ := doc["contextDocuments"].([]any)
-	for _, d := range docs {
-		m := d.(map[string]any)
-		if m["id"] == "context.testing" {
-			m["content"] = m["content"].(string) + "\n\nAlso run the linter."
-		}
-	}
-	updated, err := json.MarshalIndent(doc, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	h.write(".stemma/project.json", string(updated)+"\n")
+	entity := ".stemma/context/testing.md"
+	h.write(entity, h.read(entity)+"\nAlso run the linter.\n")
 
 	res := h.run("apply", "--target", "github-copilot", "--yes")
 	if res.code != cli.ExitOK {

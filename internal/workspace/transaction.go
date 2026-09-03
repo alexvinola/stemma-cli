@@ -54,6 +54,8 @@ type Transaction struct {
 	existed  map[string]bool
 	modes    map[string]fs.FileMode
 	written  []string
+	removed  []string
+	removals []string
 	tempPath map[string]string
 }
 
@@ -86,6 +88,20 @@ func (t *Transaction) Add(op WriteOp) error {
 	return nil
 }
 
+// Remove queues a deletion. Deleting is only ever used for files Stemma wrote
+// itself inside .stemma; provider files are never deleted.
+func (t *Transaction) Remove(rel string) error {
+	clean, err := NormalizeRel(rel)
+	if err != nil {
+		return err
+	}
+	if err := t.ws.CheckNoSymlink(clean); err != nil {
+		return err
+	}
+	t.removals = append(t.removals, clean)
+	return nil
+}
+
 // Commit performs every queued write, rolling back on the first failure.
 //
 // The commit order is sorted by path so that behaviour is deterministic and
@@ -103,7 +119,34 @@ func (t *Transaction) Commit() error {
 		}
 		t.written = append(t.written, op.Path)
 	}
+
+	removals := append([]string{}, t.removals...)
+	sort.Strings(removals)
+	for _, rel := range removals {
+		if err := t.snapshot(rel); err != nil {
+			return t.rollback(err)
+		}
+		if !t.existed[rel] {
+			continue
+		}
+		native, err := t.ws.Native(rel)
+		if err != nil {
+			return t.rollback(err)
+		}
+		if err := os.Remove(native); err != nil {
+			return t.rollback(fmt.Errorf("remove %q: %w", rel, err))
+		}
+		t.written = append(t.written, rel)
+		t.removed = append(t.removed, rel)
+	}
 	return nil
+}
+
+// RemovedPaths returns the files deleted by this transaction, sorted.
+func (t *Transaction) RemovedPaths() []string {
+	out := append([]string{}, t.removed...)
+	sort.Strings(out)
+	return out
 }
 
 // snapshot records the previous state of a destination file.

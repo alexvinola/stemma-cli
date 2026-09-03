@@ -48,6 +48,9 @@ adapters/registry  →  compiler  →  store  →  cli  →  cmd/stemma
 
 - `internal/workspace` owns **every** filesystem effect. Nothing else opens,
   reads, writes, stats or walks files.
+- `internal/store` owns the on-disk layout of `.stemma/`. It is the only place
+  that knows entities are Markdown files, and the only code allowed to remove a
+  file Stemma wrote (entity files, on an import that replaces the project).
 - `internal/compiler` `Compile` is pure: no filesystem, no stdout, no `os.Exit`.
   `BuildPlan` may read; only `Apply` writes.
 - `internal/cli` owns presentation. Commands take an `Env` with explicit

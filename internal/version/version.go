@@ -8,9 +8,12 @@ package version
 // Version is the Stemma CLI version.
 const Version = "0.1.0"
 
-// CanonicalSchemaVersion is the version of the canonical project schema
-// written to .stemma/project.json.
-const CanonicalSchemaVersion = 1
+// CanonicalSchemaVersion is the version of the canonical project layout.
+//
+// Version 2 stores entities as Markdown files under .stemma/, with project
+// metadata in .stemma/project.json and machine bookkeeping in
+// .stemma/provenance.json. Version 1 held everything in one JSON document.
+const CanonicalSchemaVersion = 2
 
 // ProfileSchemaVersion is the version of target projection profiles.
 const ProfileSchemaVersion = 1

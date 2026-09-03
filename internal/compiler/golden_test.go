@@ -16,6 +16,7 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/compiler"
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/profiles"
+	"github.com/alexvinola/stemma-cli/internal/store"
 	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
@@ -132,6 +133,57 @@ func mappingsJSON(t *testing.T, mappings []adapters.ProjectionMapping) []byte {
 	return buf.Bytes()
 }
 
+// compareProjectTree compares the on-disk layout of an imported project with
+// the golden tree under "expected-project/".
+func compareProjectTree(t *testing.T, caseDir string, project canonical.Project) {
+	t.Helper()
+	encoded, err := store.EncodeProject(project)
+	if err != nil {
+		t.Fatalf("encode project: %v", err)
+	}
+	root := filepath.Join(caseDir, "expected-project")
+	if *updateGolden {
+		if err := os.RemoveAll(root); err != nil {
+			t.Fatal(err)
+		}
+	}
+	paths := make([]string, 0, len(encoded.Files))
+	for rel := range encoded.Files {
+		paths = append(paths, rel)
+	}
+	sort.Strings(paths)
+	for _, rel := range paths {
+		// ".stemma/" is stripped: the golden tree mirrors the project, not the
+		// directory it happens to live in.
+		golden := filepath.Join(root, filepath.FromSlash(strings.TrimPrefix(rel, ".stemma/")))
+		compareOrUpdate(t, golden, encoded.Files[rel])
+	}
+	if *updateGolden {
+		return
+	}
+	var extra []string
+	err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		rel, rerr := filepath.Rel(root, path)
+		if rerr != nil {
+			return rerr
+		}
+		key := ".stemma/" + filepath.ToSlash(rel)
+		if _, ok := encoded.Files[key]; !ok {
+			extra = append(extra, key)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range extra {
+		t.Errorf("fixture contains %s but the importer did not produce it", e)
+	}
+}
+
 // fixtureCases lists the case directories of a provider fixture directory.
 func fixtureCases(t *testing.T, provider string) []string {
 	t.Helper()
@@ -182,11 +234,9 @@ func TestGoldenImportAndExport(t *testing.T) {
 				if err != nil {
 					t.Fatalf("import: %v", err)
 				}
-				data, err := canonical.MarshalProject(res.Project)
-				if err != nil {
-					t.Fatal(err)
-				}
-				compareOrUpdate(t, filepath.Join(caseDir, "expected-project.json"), data)
+				// The golden form of an imported project is the layout a person
+				// actually edits, so a change to that format shows up here.
+				compareProjectTree(t, caseDir, res.Project)
 				compareOrUpdate(t, filepath.Join(caseDir, "expected-diagnostics.json"),
 					diagnosticsJSON(t, res.Diagnostics))
 
@@ -202,7 +252,7 @@ func TestGoldenCanonical(t *testing.T) {
 	for _, caseName := range fixtureCases(t, "canonical") {
 		t.Run(caseName, func(t *testing.T) {
 			caseDir := filepath.Join(testdataDir, "canonical", caseName)
-			data, err := os.ReadFile(filepath.Join(caseDir, "project.json"))
+			data, err := os.ReadFile(filepath.Join(caseDir, "canonical.json"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -233,7 +283,7 @@ func compileTargets(
 	}
 	var targets []string
 	for _, e := range entries {
-		if e.IsDir() && strings.HasPrefix(e.Name(), "expected-") {
+		if e.IsDir() && strings.HasPrefix(e.Name(), "expected-") && e.Name() != "expected-project" {
 			targets = append(targets, strings.TrimPrefix(e.Name(), "expected-"))
 		}
 	}

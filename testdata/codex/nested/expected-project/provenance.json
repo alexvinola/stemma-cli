@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "entities": {
+    "context.architecture": {
+      "sourceFormat": "codex",
+      "sourcePath": "AGENTS.md",
+      "sourceHash": "sha256:ed98612feea7e9e31513836424202ba1abec7eb22cffdc39783bd97ad9526b5d",
+      "span": {
+        "byteStart": 15,
+        "byteEnd": 85,
+        "lineStart": 3,
+        "lineEnd": 6
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:ce743ddb7b3384b23141da1aaf7fca7c9a1eef0b1dc7179bf0dbd9c8ad6d168f"
+    },
+    "context.src-api-api-package": {
+      "sourceFormat": "codex",
+      "sourcePath": "src/api/AGENTS.md",
+      "sourceHash": "sha256:62d1d549f57c662b475abec276a83e5ca5ab692cc325a74d0d883bc73e434fa6",
+      "span": {
+        "byteEnd": 88,
+        "lineStart": 1,
+        "lineEnd": 3
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:3270641510a072ea7118914c49c58da68444935991b8d732715103991881d484"
+    },
+    "context.testing": {
+      "sourceFormat": "codex",
+      "sourcePath": "AGENTS.md",
+      "sourceHash": "sha256:ed98612feea7e9e31513836424202ba1abec7eb22cffdc39783bd97ad9526b5d",
+      "span": {
+        "byteStart": 85,
+        "byteEnd": 133,
+        "lineStart": 7,
+        "lineEnd": 9
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:a0392f9bf10936380612cd30a996268a10efcb6d336ba5ff379baed3de837dd5"
+    },
+    "skill.deploy": {
+      "sourceFormat": "codex",
+      "sourcePath": ".agents/skills/deploy/SKILL.md",
+      "sourceHash": "sha256:62609c939cd2774d0b4473866334bec4b71c312aa4af8afd511255683ca2125d",
+      "span": {
+        "byteEnd": 106,
+        "lineStart": 1,
+        "lineEnd": 9
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:4c95e1a7cec00ba799b3cc519637191b3e6d6fcefe0a6e915f8ce38e852b1db5"
+    }
+  },
+  "opaqueBlocks": [
+    {
+      "id": "opaque.agents-override-md",
+      "provider": "codex",
+      "sourcePath": "AGENTS.override.md",
+      "content": "# Local overrides\n\nThis file uses semantics Stemma does not model.\n",
+      "span": {
+        "byteEnd": 67,
+        "lineStart": 1,
+        "lineEnd": 4
+      },
+      "reason": "AGENTS.override.md semantics are not modelled by Stemma; the file is preserved verbatim",
+      "hash": "sha256:318493ba54bbf28b1db7d40d074f68d426ed3a56053725e966f458f577b3c221",
+      "reemitForRoundTrip": true
+    }
+  ]
+}

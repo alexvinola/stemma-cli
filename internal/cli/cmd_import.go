@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/compiler"
@@ -16,6 +17,7 @@ import (
 type importData struct {
 	Format   string         `json:"format"`
 	Output   string         `json:"output"`
+	Removed  []string       `json:"removedEntityFiles,omitempty"`
 	Sources  []string       `json:"sources"`
 	Counts   map[string]int `json:"entityCounts"`
 	Preserve int            `json:"opaqueBlocks"`
@@ -26,7 +28,6 @@ func runImport(ctx context.Context, env Env, args []string) int {
 	jsonOut := fs.Bool("json", false, "emit JSON")
 	dir := fs.String("workspace", "", "repository root (default: current directory)")
 	from := fs.String("from", "auto", "source format: auto, github-copilot, claude, codex, kiro")
-	output := fs.String("output", store.ProjectFile, "where to write the canonical project")
 	overwrite := fs.Bool("overwrite", false, "replace an existing canonical project")
 	name := fs.String("name", "", "project name (default: the workspace directory name)")
 	var enable stringList
@@ -45,11 +46,7 @@ func runImport(ctx context.Context, env Env, args []string) int {
 	if err != nil {
 		return fail(env, "import", *jsonOut, ExitUsage, err, nil)
 	}
-	outPath, err := workspace.NormalizeRel(*output)
-	if err != nil {
-		return fail(env, "import", *jsonOut, ExitUsage,
-			fmt.Errorf("invalid --output: %w", err), nil)
-	}
+	outPath := store.ProjectFile
 
 	var format canonical.TargetFormat
 	if *from != "auto" && *from != "" {
@@ -148,39 +145,66 @@ func runImport(ctx context.Context, env Env, args []string) int {
 		result.Project.Targets = selected
 	}
 
-	data, err := canonical.MarshalProject(result.Project)
+	encoded, err := store.EncodeProject(result.Project)
 	if err != nil {
 		return fail(env, "import", *jsonOut, ExitInternal, err, nil)
 	}
-	tx := ws.Begin()
-	if err := tx.Add(workspace.WriteOp{Path: outPath, Content: data, Mode: 0o644}); err != nil {
-		return fail(env, "import", *jsonOut, ExitWriteFailed, err, nil)
+	m, merr := store.LoadManifest(ctx, ws)
+	if merr != nil {
+		return fail(env, "import", *jsonOut, ExitDiagnostics, merr, nil)
 	}
-	if outPath == store.ProjectFile {
-		m, merr := store.LoadManifest(ctx, ws)
-		if merr != nil {
-			return fail(env, "import", *jsonOut, ExitDiagnostics, merr, nil)
-		}
-		m.ImportedSources = result.Sources
-		m.ImportedFormat = string(result.Format)
-		if hash, herr := canonical.Hash(result.Project); herr == nil {
-			m.ProjectHash = hash
-		}
-		mdata, merr := manifest.Marshal(m)
-		if merr != nil {
-			return fail(env, "import", *jsonOut, ExitInternal, merr, nil)
-		}
-		if err := tx.Add(workspace.WriteOp{Path: store.ManifestFile, Content: mdata, Mode: 0o644}); err != nil {
+	m.ImportedSources = result.Sources
+	m.ImportedFormat = string(result.Format)
+	if hash, herr := canonical.Hash(result.Project); herr == nil {
+		m.ProjectHash = hash
+	}
+	mdata, merr := manifest.Marshal(m)
+	if merr != nil {
+		return fail(env, "import", *jsonOut, ExitInternal, merr, nil)
+	}
+	encoded.Files[store.ManifestFile] = mdata
+
+	tx := ws.Begin()
+	written := make([]string, 0, len(encoded.Files))
+	for rel := range encoded.Files {
+		written = append(written, rel)
+	}
+	sort.Strings(written)
+	for _, rel := range written {
+		if err := tx.Add(workspace.WriteOp{Path: rel, Content: encoded.Files[rel], Mode: 0o644}); err != nil {
 			return fail(env, "import", *jsonOut, ExitWriteFailed, err, nil)
+		}
+	}
+	// Replacing a project must not leave entities from the previous one behind:
+	// they would be loaded again on the next command. Only Stemma's own entity
+	// files are ever removed, and only when the import replaces the project.
+	var stale []string
+	if exists {
+		for _, entry := range store.EntityDirs() {
+			previous, lerr := store.EntityFiles(ctx, ws, entry.Dir)
+			if lerr != nil {
+				return fail(env, "import", *jsonOut, ExitDiagnostics, lerr, nil)
+			}
+			for _, rel := range previous {
+				if _, kept := encoded.Files[rel]; kept {
+					continue
+				}
+				if rerr := tx.Remove(rel); rerr != nil {
+					return fail(env, "import", *jsonOut, ExitWriteFailed, rerr, nil)
+				}
+				stale = append(stale, rel)
+			}
 		}
 	}
 	if err := tx.Commit(); err != nil {
 		return fail(env, "import", *jsonOut, ExitWriteFailed, err, nil)
 	}
+	sort.Strings(stale)
 
 	payload := importData{
 		Format:   string(result.Format),
 		Output:   outPath,
+		Removed:  stale,
 		Counts:   entityCounts(result.Project),
 		Preserve: len(result.Project.OpaqueBlocks),
 	}
@@ -204,7 +228,11 @@ func runImport(ctx context.Context, env Env, args []string) int {
 		fmt.Fprintf(env.Stdout, "  %-18s %d (content preserved without interpretation)\n",
 			"opaque blocks", payload.Preserve)
 	}
-	fmt.Fprintf(env.Stdout, "\nWrote %s\n", outPath)
+	fmt.Fprintf(env.Stdout, "\nWrote %s and %s entity file(s) under .stemma/\n",
+		outPath, fmt.Sprint(len(encoded.Files)-3))
+	for _, rel := range stale {
+		fmt.Fprintf(env.Stdout, "  removed  %s (no longer part of the project)\n", rel)
+	}
 	fmt.Fprintf(env.Stdout, "Targets enabled: %v\n", result.Project.Targets)
 	PrintDiagnostics(env.Stdout, result.Diagnostics, false)
 	return ExitOK

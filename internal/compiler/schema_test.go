@@ -29,7 +29,7 @@ func readSchema(t *testing.T, name string) map[string]any {
 // TestSchemasMatchTheCode keeps the published schemas honest: the documented
 // enums and versions must match what the compiler actually produces.
 func TestSchemasMatchTheCode(t *testing.T) {
-	canonicalSchema := readSchema(t, "canonical-v1.schema.json")
+	canonicalSchema := readSchema(t, "canonical-v2.schema.json")
 	props := canonicalSchema["properties"].(map[string]any)
 	if got := props["schemaVersion"].(map[string]any)["const"].(float64); int(got) != version.CanonicalSchemaVersion {
 		t.Errorf("canonical schema version = %v, code says %d", got, version.CanonicalSchemaVersion)
@@ -37,7 +37,7 @@ func TestSchemasMatchTheCode(t *testing.T) {
 	defs := canonicalSchema["$defs"].(map[string]any)
 	assertEnum(t, "canonical targetFormat", defs["targetFormat"], targetStrings())
 	assertEnum(t, "context kind",
-		defs["contextDocument"].(map[string]any)["properties"].(map[string]any)["kind"], kindStrings())
+		defs["contextFile"].(map[string]any)["properties"].(map[string]any)["kind"], kindStrings())
 	assertEnum(t, "activation type",
 		defs["activation"].(map[string]any)["properties"].(map[string]any)["type"], activationStrings())
 

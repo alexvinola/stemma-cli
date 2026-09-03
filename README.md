@@ -108,8 +108,44 @@ Imported github-copilot configuration from 5 files
   skills             1
   opaque blocks      1 (content preserved without interpretation)
 
-Wrote .stemma/project.json
+Wrote .stemma/project.json and 7 entity file(s) under .stemma/
 Targets enabled: [claude github-copilot]
+```
+
+The canonical project is a directory of Markdown files — one per entity, named
+after its id — plus a small metadata file:
+
+```
+.stemma/
+├── project.json     # name, targets, budgets
+├── context/         # architecture.md, testing.md, …
+├── rules/           # api-validation.md, …
+├── skills/  agents/  procedures/  decisions/
+├── provenance.json  # machine bookkeeping: where each entity came from
+└── manifest.json    # machine bookkeeping: what Stemma generated
+```
+
+A rule is an ordinary Markdown file. The body before any recognised heading is
+the instruction — the only part an agent ever sees — and `## Rationale`,
+`## Good examples` and `## Bad examples` keep the human documentation next to
+it without spending context tokens on it:
+
+```markdown
+---
+title: Validate at the boundary
+priority: must
+enabled: true
+activation:
+  type: path-scoped
+  include:
+    - src/api/**
+---
+
+Validate every request body at the boundary.
+
+## Rationale
+
+Keeps validation in one place, and makes it testable.
 ```
 
 See what compiling for Claude Code would do — this never writes anything:
@@ -169,14 +205,14 @@ stemma apply --all --yes
 
 Running `stemma plan --all` again now reports no changes.
 
-From here the loop is two commands: edit `.stemma/project.json`, then
+From here the loop is two commands: edit the Markdown under `.stemma/`, then
 `stemma apply --all --yes`.
 
 ## Commands
 
 | Command | What it does | Writes? |
 | --- | --- | --- |
-| `stemma init` | Creates an empty `.stemma/project.json` (optional: `import` creates one too) | yes |
+| `stemma init` | Creates an empty canonical project (optional: `import` creates one too) | yes |
 | `stemma scan [path]` | Detects supported agent configuration by path | no |
 | `stemma import [path]` | Imports one provider's files into the canonical project | yes |
 | `stemma validate` | Validates the project, profiles and manifest | no |

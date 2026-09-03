@@ -37,35 +37,6 @@ func HasProject(ws *workspace.Workspace) (bool, error) {
 	return ws.Exists(ProjectFile)
 }
 
-// LoadProject reads the canonical project.
-func LoadProject(ctx context.Context, ws *workspace.Workspace) (canonical.Project, error) {
-	exists, err := ws.Exists(ProjectFile)
-	if err != nil {
-		return canonical.Project{}, err
-	}
-	if !exists {
-		return canonical.Project{}, fmt.Errorf("%w at %s", ErrNoProject, ProjectFile)
-	}
-	f, err := ws.ReadFile(ctx, ProjectFile)
-	if err != nil {
-		return canonical.Project{}, fmt.Errorf("read %s: %w", ProjectFile, err)
-	}
-	p, err := canonical.UnmarshalProject(f.Data)
-	if err != nil {
-		return canonical.Project{}, fmt.Errorf("%s: %w", ProjectFile, err)
-	}
-	return p, nil
-}
-
-// SaveProject writes the canonical project atomically.
-func SaveProject(ws *workspace.Workspace, p canonical.Project) error {
-	data, err := canonical.MarshalProject(p)
-	if err != nil {
-		return err
-	}
-	return writeFile(ws, ProjectFile, data)
-}
-
 // LoadProfile reads a target profile, returning a default when absent.
 func LoadProfile(
 	ctx context.Context, ws *workspace.Workspace, target canonical.TargetFormat, override string,

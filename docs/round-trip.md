@@ -12,8 +12,8 @@ the following hold:
 - every entity written to that file records that file as its source path,
 - the file's hash still matches the hash recorded at import,
 - every one of those entities is still byte-for-byte what the importer produced
-  (each records a `contentHash`, so an edit to `.stemma/project.json` disables
-  reuse rather than being silently discarded),
+  (each records a `contentHash` in `.stemma/provenance.json`, so editing an
+  entity's Markdown file disables reuse rather than being silently discarded),
 - the set of entities written to the file is exactly the set imported from it,
 - no profile override changes inclusion, activation, directory, filename or
   content for any of those entities.

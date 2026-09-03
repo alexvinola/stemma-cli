@@ -33,7 +33,10 @@ that paths like `main.go` or `package.json` never classify.
 ## What Stemma writes
 
 - Provider files produced by the selected exporter.
-- `.stemma/project.json`, `.stemma/profiles/*.json`, `.stemma/manifest.json`.
+- The canonical project under `.stemma/`: `project.json`, the entity Markdown
+  files, `provenance.json`, `profiles/*.json` and `manifest.json`. Entity files
+  are only ever removed when an import explicitly replaces the project, and only
+  inside Stemma's own entity directories.
 - A plan file, when `--output-plan` is given.
 - `.stemma/recovery/` (mode 0700, files 0600) only when a rollback could not
   complete.

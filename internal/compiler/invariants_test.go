@@ -310,7 +310,7 @@ func TestAcceptedDiagnosticsStopBlocking(t *testing.T) {
 
 func mustReadFixtureProject(t *testing.T, dir string) canonical.Project {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join(testdataDir, dir, "project.json"))
+	data, err := os.ReadFile(filepath.Join(testdataDir, dir, "canonical.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
