@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/alexvinola/stemma/main/schema/canonical-v1.schema.json",
+  "title": "Stemma canonical project (v1)",
+  "description": "The provider-neutral source of truth stored at .stemma/project.json. This schema documents the format; Stemma itself validates with internal/canonical, which additionally checks entity id shapes, glob syntax, activation union invariants and opaque block hashes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "targets", "contextDocuments", "rules", "procedures", "skills", "agents", "decisions", "opaqueBlocks"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "minLength": 1, "description": "Stable project identifier." },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "language": { "type": "string" },
+    "framework": { "type": "string" },
+    "architectureStyle": { "type": "string" },
+    "targets": { "type": "array", "items": { "$ref": "#/$defs/targetFormat" } },
+    "tokenBudgets": { "$ref": "#/$defs/tokenBudgets" },
+    "contextDocuments": { "type": "array", "items": { "$ref": "#/$defs/contextDocument" } },
+    "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
+    "procedures": { "type": "array", "items": { "$ref": "#/$defs/procedure" } },
+    "skills": { "type": "array", "items": { "$ref": "#/$defs/skill" } },
+    "agents": { "type": "array", "items": { "$ref": "#/$defs/agent" } },
+    "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision" } },
+    "extensions": { "$ref": "#/$defs/extensions" },
+    "opaqueBlocks": { "type": "array", "items": { "$ref": "#/$defs/opaqueBlock" } }
+  },
+  "$defs": {
+    "targetFormat": { "enum": ["github-copilot", "claude", "codex", "kiro", "cursor"] },
+    "entityId": {
+      "type": "string",
+      "pattern": "^(context|rule|procedure|skill|agent|decision|opaque)\\.[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "\"<entityType>.<slug>\". Profile overrides are keyed by this id."
+    },
+    "tokenBudgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Advisory limits. Zero or absent means no budget.",
+      "properties": {
+        "alwaysOn": { "type": "integer", "minimum": 0 },
+        "worstCaseRequest": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "description": "Exhaustive tagged union. Fields that do not belong to the tag must be absent.",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["always", "path-scoped", "on-demand", "documentation-only"] },
+        "include": { "type": "array", "items": { "type": "string" } },
+        "exclude": { "type": "array", "items": { "type": "string" } },
+        "trigger": { "type": "string" },
+        "invocationName": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "path-scoped" } }, "required": ["type"] },
+          "then": { "required": ["include"], "properties": { "include": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "always" } }, "required": ["type"] },
+          "then": { "not": { "anyOf": [{ "required": ["include"] }, { "required": ["exclude"] }, { "required": ["trigger"] }] } }
+        }
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Provider-specific data Stemma preserves but does not interpret, keyed by provider identifier. Keys beginning with \"stemma.\" are reserved round-trip hints and are never written into generated provider files.",
+      "additionalProperties": { "type": "object" }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceFormat", "sourcePath", "sourceHash", "importerVersion", "disposition"],
+      "properties": {
+        "sourceFormat": { "type": "string" },
+        "sourcePath": { "type": "string" },
+        "sourceHash": { "type": "string", "description": "\"sha256:<hex>\" of the whole source file." },
+        "span": { "$ref": "#/$defs/span" },
+        "importerVersion": { "type": "string" },
+        "disposition": { "enum": ["parsed", "adapted", "preserved-opaque"] },
+        "contentHash": { "type": "string", "description": "Digest of the entity as the importer produced it, ignoring provenance. Re-emitting a source file verbatim requires this to still match, so a hand edit to the canonical project is never discarded." },
+        "mappings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "byteStart": { "type": "integer", "minimum": 0 },
+        "byteEnd": { "type": "integer", "minimum": 0 },
+        "lineStart": { "type": "integer", "minimum": 0 },
+        "lineEnd": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "contextDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "kind", "content", "audience", "activation", "provenance"],
+      "properties": {
+        "id": { "$ref": "#/$defs/entityId" },
+        "title": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["product", "technology", "architecture", "structure", "domain", "conventions", "security", "testing", "operations", "other"] },
+        "content": { "type": "string", "minLength": 1 },
+        "audience": { "enum": ["agent", "human", "both"] },
+        "activation": { "$ref": "#/$defs/activation" },
+        "enabled": { "type": "boolean" },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "instruction", "priority", "enabled", "activation", "provenance"],
+      "properties": {
+        "id": { "$ref": "#/$defs/entityId" },
+        "title": { "type": "string", "minLength": 1 },
+        "instruction": { "type": "string", "minLength": 1, "description": "The only necessarily agent-facing field." },
+        "priority": { "enum": ["must", "should", "may"] },
+        "enabled": { "type": "boolean" },
+        "activation": { "$ref": "#/$defs/activation" },
+        "rationale": { "type": "string", "description": "Human documentation; not exported to agent context by default." },
+        "goodExamples": { "type": "array", "items": { "type": "string" } },
+        "badExamples": { "type": "array", "items": { "type": "string" } },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "procedure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "content", "provenance"],
+      "properties": {
+        "id": { "$ref": "#/$defs/entityId" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "trigger": { "type": "string" },
+        "content": { "type": "string", "minLength": 1 },
+        "enabled": { "type": "boolean" },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "content", "provenance"],
+      "properties": {
+        "id": { "$ref": "#/$defs/entityId" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "content": { "type": "string", "minLength": 1 },
+        "allowedTools": { "type": "array", "items": { "type": "string" } },
+        "invocationPolicy": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "instructions", "provenance"],
+      "properties": {
+        "id": { "$ref": "#/$defs/entityId" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "instructions": { "type": "string", "minLength": 1 },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "modelPreference": { "type": "string", "description": "Opaque provider metadata. Stemma never translates model names between providers." },
+        "enabled": { "type": "boolean" },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "status", "provenance"],
+      "properties": {
+        "id": { "$ref": "#/$defs/entityId" },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["proposed", "accepted", "deprecated", "superseded"] },
+        "context": { "type": "string" },
+        "decision": { "type": "string" },
+        "consequences": { "type": "string" },
+        "agentConstraints": { "type": "array", "items": { "type": "string" }, "description": "The only part normally projected into agent-facing context." },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "opaqueBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "provider", "sourcePath", "content", "reason", "hash", "reemitForRoundTrip"],
+      "properties": {
+        "id": { "$ref": "#/$defs/entityId" },
+        "provider": { "type": "string" },
+        "sourcePath": { "type": "string" },
+        "content": { "type": "string" },
+        "span": { "$ref": "#/$defs/span" },
+        "reason": { "type": "string", "minLength": 1 },
+        "hash": { "type": "string" },
+        "reemitForRoundTrip": { "type": "boolean" }
+      }
+    }
+  }
+}

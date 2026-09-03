@@ -1,0 +1,58 @@
+[
+  {
+    "entityId": "context.overview",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  },
+  {
+    "entityId": "context.rationale",
+    "entityType": "context",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Not projected: activation is documentation-only, so the content is never sent to an agent."
+  },
+  {
+    "entityId": "context.runbook",
+    "entityType": "context",
+    "outcome": "adapted",
+    "files": [
+      ".agents/skills/incident-runbook/SKILL.md"
+    ],
+    "activation": "on demand (incident-runbook)",
+    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill."
+  },
+  {
+    "entityId": "decision.event-sourcing",
+    "entityType": "decision",
+    "outcome": "adapted",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Only the decision's agent constraints are projected; the rest stays human documentation."
+  },
+  {
+    "entityId": "rule.controller-repository",
+    "entityType": "rule",
+    "outcome": "lossy",
+    "files": [
+      "src/api/AGENTS.md"
+    ],
+    "activation": "paths src/api/** (excluding src/api/**/*_test.go)",
+    "explanation": "The target profile pins this entity to src/api/AGENTS.md, which cannot express the exclude patterns."
+  },
+  {
+    "entityId": "rule.legacy-naming",
+    "entityType": "rule",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "always-on",
+    "explanation": "Not projected: the entity is disabled in the canonical project."
+  }
+]

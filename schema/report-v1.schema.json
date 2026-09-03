@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/alexvinola/stemma/main/schema/report-v1.schema.json",
+  "title": "Stemma JSON output envelope (v1)",
+  "description": "Every command invoked with --json writes exactly one document of this shape to stdout and nothing else. Human prose and logs go to stderr.",
+  "type": "object",
+  "required": ["schemaVersion", "stemmaVersion", "command", "status", "exitCode", "diagnostics"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "stemmaVersion": { "type": "string" },
+    "command": { "enum": ["init", "scan", "import", "validate", "plan", "apply", "check", "explain", "version"] },
+    "status": { "enum": ["ok", "error"] },
+    "exitCode": { "type": "integer", "enum": [0, 1, 2, 3, 4, 5, 6] },
+    "error": { "type": "string" },
+    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } },
+    "data": { "description": "Command-specific payload. See $defs for plan and projection shapes." }
+  },
+  "$defs": {
+    "diagnostic": {
+      "type": "object",
+      "required": ["code", "severity", "summary", "blocking", "fingerprint"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^STEMMA[0-9]{4}_[A-Z_]+$" },
+        "severity": { "enum": ["info", "warning", "error"] },
+        "summary": { "type": "string" },
+        "detail": { "type": "string" },
+        "path": { "type": "string" },
+        "position": {
+          "type": "object",
+          "properties": {
+            "line": { "type": "integer", "minimum": 1 },
+            "column": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "entityId": { "type": "string" },
+        "target": { "type": "string" },
+        "suggestion": { "type": "string" },
+        "blocking": { "type": "boolean" },
+        "fingerprint": { "type": "string", "pattern": "^dg_[0-9a-f]{16}$" }
+      }
+    },
+    "projectionMapping": {
+      "type": "object",
+      "required": ["entityId", "entityType", "target", "outcome", "files", "diagnostics", "explanation", "activation"],
+      "properties": {
+        "entityId": { "type": "string" },
+        "entityType": { "enum": ["context", "rule", "procedure", "skill", "agent", "decision", "opaque"] },
+        "target": { "type": "string" },
+        "outcome": { "enum": ["exact", "adapted", "lossy", "blocked", "skipped-explicitly"] },
+        "files": { "type": "array", "items": { "type": "string" } },
+        "diagnostics": { "type": "array", "items": { "type": "string" } },
+        "explanation": { "type": "string" },
+        "activation": { "type": "object" },
+        "source": { "type": "object" },
+        "appliedOverride": { "type": "object" },
+        "estimatedTokens": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "change": {
+      "type": "object",
+      "required": ["path", "kind", "entities"],
+      "properties": {
+        "path": { "type": "string" },
+        "kind": { "enum": ["create", "update", "unchanged", "delete-proposed", "conflict"] },
+        "existingHash": { "type": "string" },
+        "newHash": { "type": "string" },
+        "trackedHash": { "type": "string" },
+        "content": { "type": "string" },
+        "reusedSource": { "type": "boolean" },
+        "entities": { "type": "array", "items": { "type": "string" } },
+        "reason": { "type": "string" }
+      }
+    },
+    "tokenReport": {
+      "type": "object",
+      "required": ["method", "approximate"],
+      "description": "Every value is an approximation produced by a local heuristic. No provider tokenizer is used.",
+      "properties": {
+        "method": { "type": "string" },
+        "approximate": { "const": true },
+        "sourceAlwaysOn": { "type": "integer" },
+        "targetAlwaysOn": { "type": "integer" },
+        "scopedTotal": { "type": "integer" },
+        "scopes": { "type": "array" },
+        "largestScope": { "type": "integer" },
+        "largestScopeName": { "type": "string" },
+        "worstCaseRequest": { "type": "integer" },
+        "onDemand": { "type": "integer" },
+        "documentationOnly": { "type": "integer" },
+        "generatedTotal": { "type": "integer" },
+        "reductionPercent": { "type": "integer" }
+      }
+    }
+  }
+}

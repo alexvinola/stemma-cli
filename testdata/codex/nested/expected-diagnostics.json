@@ -1,0 +1,11 @@
+[
+  {
+    "code": "STEMMA1203_OPAQUE_BLOCK_PRESERVED",
+    "severity": "info",
+    "summary": "content preserved without interpretation: AGENTS.override.md semantics are not modelled by Stemma; the file is preserved verbatim",
+    "path": "AGENTS.override.md",
+    "entityId": "opaque.agents-override-md",
+    "blocking": false,
+    "fingerprint": "dg_bf9e6622928aa4c8"
+  }
+]

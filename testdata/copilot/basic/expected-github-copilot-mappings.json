@@ -1,0 +1,82 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "exact",
+    "files": [
+      ".github/agents/reviewer.md"
+    ],
+    "activation": "on demand (reviewer)",
+    "explanation": "github-copilot supports specialist agents natively."
+  },
+  {
+    "entityId": "context.acme-ledger",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "context.api-layer-conventions",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/instructions/api.instructions.md"
+    ],
+    "activation": "paths src/api/**, src/handlers/**",
+    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+  },
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "context.testing",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "opaque.github-copilot-instructions-md",
+    "entityType": "opaque",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Preserved provider content was written back verbatim."
+  },
+  {
+    "entityId": "procedure.release",
+    "entityType": "procedure",
+    "outcome": "exact",
+    "files": [
+      ".github/prompts/release.prompt.md"
+    ],
+    "activation": "on demand (release)",
+    "explanation": "Procedures map to Copilot prompt files, which are invoked explicitly."
+  },
+  {
+    "entityId": "skill.release-checklist",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".github/skills/release-checklist/SKILL.md"
+    ],
+    "activation": "on demand (release-checklist)",
+    "explanation": "Copilot supports agent skills natively."
+  }
+]

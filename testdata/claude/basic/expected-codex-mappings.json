@@ -1,0 +1,62 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "lossy",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Flattened into always-on guidance because this target has no specialist-agent format."
+  },
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  },
+  {
+    "entityId": "context.commands",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  },
+  {
+    "entityId": "rule.api-request-validation",
+    "entityType": "rule",
+    "outcome": "lossy",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "paths src/api/**/*.go, src/handlers/**/*.go",
+    "explanation": "No single directory could be derived from src/api/**/*.go, src/handlers/**/*.go, so the content stays in the root AGENTS.md and is no longer scoped."
+  },
+  {
+    "entityId": "rule.formatting",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "The rule is written as a bullet in the root AGENTS.md."
+  },
+  {
+    "entityId": "skill.migration",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".agents/skills/migration/SKILL.md"
+    ],
+    "activation": "on demand (migration)",
+    "explanation": "Skills are supported natively."
+  }
+]

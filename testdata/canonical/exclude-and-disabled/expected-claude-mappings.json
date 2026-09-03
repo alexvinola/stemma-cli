@@ -1,0 +1,58 @@
+[
+  {
+    "entityId": "context.overview",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "context.rationale",
+    "entityType": "context",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Not projected: activation is documentation-only, so the content is never sent to an agent."
+  },
+  {
+    "entityId": "context.runbook",
+    "entityType": "context",
+    "outcome": "adapted",
+    "files": [
+      ".claude/skills/incident-runbook/SKILL.md"
+    ],
+    "activation": "on demand (incident-runbook)",
+    "explanation": "Claude Code has no on-demand context format other than skills, so the document is delivered as a skill that loads when invoked."
+  },
+  {
+    "entityId": "decision.event-sourcing",
+    "entityType": "decision",
+    "outcome": "adapted",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Only the decision's agent constraints are projected; the rest stays human documentation."
+  },
+  {
+    "entityId": "rule.controller-repository",
+    "entityType": "rule",
+    "outcome": "lossy",
+    "files": [
+      ".claude/rules/controllers-never-touch-the-database.md"
+    ],
+    "activation": "paths src/api/** (excluding src/api/**/*_test.go)",
+    "explanation": "The documented paths front matter has no negative pattern syntax, so the exclude patterns are only reproduced as a note in the file body."
+  },
+  {
+    "entityId": "rule.legacy-naming",
+    "entityType": "rule",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "always-on",
+    "explanation": "Not projected: the entity is disabled in the canonical project."
+  }
+]

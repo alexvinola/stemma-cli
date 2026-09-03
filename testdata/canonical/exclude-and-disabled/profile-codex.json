@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "target": "codex",
+  "overrides": {
+    "rule.controller-repository": {
+      "directory": "src/api"
+    }
+  },
+  "acceptedDiagnostics": []
+}

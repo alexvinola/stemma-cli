@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "id": "prj_fixture",
+  "name": "Fixture",
+  "targets": [
+    "github-copilot"
+  ],
+  "contextDocuments": [
+    {
+      "id": "context.acme-ledger",
+      "title": "Acme Ledger",
+      "kind": "other",
+      "content": "Acme Ledger is a double-entry accounting service.",
+      "audience": "agent",
+      "activation": {
+        "type": "always"
+      },
+      "provenance": {
+        "sourceFormat": "github-copilot",
+        "sourcePath": ".github/copilot-instructions.md",
+        "sourceHash": "sha256:00774b10dc6bbb605feefc8920d957824516429ed8f8531942472c65144ba82f",
+        "span": {
+          "byteEnd": 66,
+          "lineStart": 1,
+          "lineEnd": 4
+        },
+        "importerVersion": "1",
+        "disposition": "parsed",
+        "contentHash": "sha256:dbf2312ef025f97b5bef37e20db855ee02ac82040dc9bd40d39d2542360af9f3"
+      }
+    },
+    {
+      "id": "context.api-layer-conventions",
+      "title": "API layer conventions",
+      "kind": "other",
+      "content": "- Validate every request body at the boundary.\n- Return `application/problem+json` for errors.",
+      "audience": "agent",
+      "activation": {
+        "type": "path-scoped",
+        "include": [
+          "src/api/**",
+          "src/handlers/**"
+        ]
+      },
+      "provenance": {
+        "sourceFormat": "github-copilot",
+        "sourcePath": ".github/instructions/api.instructions.md",
+        "sourceHash": "sha256:1249c49fef1659d2f58bd43ee317ccb1b889304f7d102c52e9dd18d4e3f41bba",
+        "span": {
+          "byteEnd": 222,
+          "lineStart": 1,
+          "lineEnd": 11
+        },
+        "importerVersion": "1",
+        "disposition": "parsed",
+        "contentHash": "sha256:0a93158079ba9ce37e4582ebf4cc6b476fa84c8e0035d8c7673af19c1a903d7c"
+      },
+      "extensions": {
+        "github-copilot": {
+          "description": "API layer conventions",
+          "excludeAgent": "copilot-cli",
+          "stemma.instructionsFile": "api.instructions.md"
+        }
+      }
+    },
+    {
+      "id": "context.architecture",
+      "title": "Architecture",
+      "kind": "architecture",
+      "content": "The service is a modular monolith. HTTP handlers call services; services call repositories.\nRepositories are the only code allowed to touch the database.",
+      "audience": "agent",
+      "activation": {
+        "type": "always"
+      },
+      "provenance": {
+        "sourceFormat": "github-copilot",
+        "sourcePath": ".github/copilot-instructions.md",
+        "sourceHash": "sha256:00774b10dc6bbb605feefc8920d957824516429ed8f8531942472c65144ba82f",
+        "span": {
+          "byteStart": 66,
+          "byteEnd": 238,
+          "lineStart": 5,
+          "lineEnd": 9
+        },
+        "importerVersion": "1",
+        "disposition": "parsed",
+        "contentHash": "sha256:a1d508d1f4061f4155da2c154c91a476bbc47461d1b6c8bf172720c37a5560a5"
+      }
+    },
+    {
+      "id": "context.testing",
+      "title": "Testing",
+      "kind": "testing",
+      "content": "Unit tests live beside the code they cover. Run `go test ./...` before pushing.",
+      "audience": "agent",
+      "activation": {
+        "type": "always"
+      },
+      "provenance": {
+        "sourceFormat": "github-copilot",
+        "sourcePath": ".github/copilot-instructions.md",
+        "sourceHash": "sha256:00774b10dc6bbb605feefc8920d957824516429ed8f8531942472c65144ba82f",
+        "span": {
+          "byteStart": 238,
+          "byteEnd": 331,
+          "lineStart": 10,
+          "lineEnd": 13
+        },
+        "importerVersion": "1",
+        "disposition": "parsed",
+        "contentHash": "sha256:81f8ae68dcb7256c2f30b28cebbadce8f4041fbd0b0b5dc9be9229c9bc4786fa"
+      }
+    }
+  ],
+  "rules": [],
+  "procedures": [
+    {
+      "id": "procedure.release",
+      "name": "release",
+      "description": "Cut a release",
+      "content": "1. Update `CHANGELOG.md`.\n2. Tag the commit as `vX.Y.Z`.\n3. Push the tag.",
+      "provenance": {
+        "sourceFormat": "github-copilot",
+        "sourcePath": ".github/prompts/release.prompt.md",
+        "sourceHash": "sha256:a307614c1a9b28b514ef07bbcfadf0df2b8d0868e361c19829b74ab89e948a29",
+        "span": {
+          "byteEnd": 146,
+          "lineStart": 1,
+          "lineEnd": 12
+        },
+        "importerVersion": "1",
+        "disposition": "parsed",
+        "contentHash": "sha256:7689970e4cc0027961cebd59ed86f7f649d17dfe55ca0721aed28437368f581c"
+      },
+      "extensions": {
+        "github-copilot": {
+          "mode": "agent",
+          "model": "gpt-5",
+          "stemma.promptFile": "release.prompt.md"
+        }
+      }
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill.release-checklist",
+      "name": "release-checklist",
+      "description": "Verify a release build before publishing",
+      "content": "Check the build matrix and the changelog entry before publishing.",
+      "allowedTools": [
+        "bash",
+        "read"
+      ],
+      "provenance": {
+        "sourceFormat": "github-copilot",
+        "sourcePath": ".github/skills/release-checklist/SKILL.md",
+        "sourceHash": "sha256:12704cbcb93b746702c2be862cd130ffec0ecde12027c5a072f24d765a73b655",
+        "span": {
+          "byteEnd": 206,
+          "lineStart": 1,
+          "lineEnd": 10
+        },
+        "importerVersion": "1",
+        "disposition": "parsed",
+        "contentHash": "sha256:b45ec2fd400a761396d2bfcba0d8dd072abe665723474b3f65e2bb94b8da8b50"
+      },
+      "extensions": {
+        "github-copilot": {
+          "stemma.sourceDir": "release-checklist"
+        }
+      }
+    }
+  ],
+  "agents": [
+    {
+      "id": "agent.reviewer",
+      "name": "reviewer",
+      "description": "Reviews pull requests for API breakage",
+      "instructions": "Review diffs for backwards-incompatible API changes and flag them explicitly.",
+      "tools": [
+        "read",
+        "grep"
+      ],
+      "provenance": {
+        "sourceFormat": "github-copilot",
+        "sourcePath": ".github/agents/reviewer.md",
+        "sourceHash": "sha256:3a7aff096e39e57b28cc9db26fb5d67f9f2d8478341bff34fe31ce60f2c9cce3",
+        "span": {
+          "byteEnd": 174,
+          "lineStart": 1,
+          "lineEnd": 8
+        },
+        "importerVersion": "1",
+        "disposition": "parsed",
+        "contentHash": "sha256:e52dd503030048eb6d8f4210968bf93e36e16b844b3c9264d9e94869def19423"
+      },
+      "extensions": {
+        "github-copilot": {
+          "stemma.sourceFile": "reviewer.md"
+        }
+      }
+    }
+  ],
+  "decisions": [],
+  "opaqueBlocks": [
+    {
+      "id": "opaque.github-copilot-instructions-md",
+      "provider": "github-copilot",
+      "sourcePath": ".github/copilot-instructions.md",
+      "content": "## Notes for maintainers",
+      "span": {
+        "byteStart": 331,
+        "byteEnd": 356,
+        "lineStart": 14,
+        "lineEnd": 14
+      },
+      "reason": "heading with no content",
+      "hash": "sha256:aae13a3ea2fa9333825ce509ecf00f09f8c222018631c921e59e1f46c794710c",
+      "reemitForRoundTrip": true
+    }
+  ]
+}

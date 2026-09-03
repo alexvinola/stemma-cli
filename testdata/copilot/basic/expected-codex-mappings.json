@@ -1,0 +1,80 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "lossy",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Flattened into always-on guidance because this target has no specialist-agent format."
+  },
+  {
+    "entityId": "context.acme-ledger",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  },
+  {
+    "entityId": "context.api-layer-conventions",
+    "entityType": "context",
+    "outcome": "lossy",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "paths src/api/**, src/handlers/**",
+    "explanation": "No single directory could be derived from src/api/**, src/handlers/**, so the content stays in the root AGENTS.md and is no longer scoped."
+  },
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  },
+  {
+    "entityId": "context.testing",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  },
+  {
+    "entityId": "opaque.github-copilot-instructions-md",
+    "entityType": "opaque",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Preserved github-copilot content has no representation in codex; it stays in the canonical project."
+  },
+  {
+    "entityId": "procedure.release",
+    "entityType": "procedure",
+    "outcome": "adapted",
+    "files": [
+      ".agents/skills/release/SKILL.md"
+    ],
+    "activation": "on demand (release)",
+    "explanation": "There is no dedicated procedure format; the procedure is delivered as a skill."
+  },
+  {
+    "entityId": "skill.release-checklist",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".agents/skills/release-checklist/SKILL.md"
+    ],
+    "activation": "on demand (release-checklist)",
+    "explanation": "Skills are supported natively."
+  }
+]

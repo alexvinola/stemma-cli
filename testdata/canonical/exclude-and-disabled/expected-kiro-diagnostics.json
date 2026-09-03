@@ -1,0 +1,14 @@
+[
+  {
+    "code": "STEMMA3101_EXCLUDE_NOT_REPRESENTABLE",
+    "severity": "warning",
+    "summary": "exclude patterns cannot be represented in a Kiro fileMatchPattern",
+    "detail": "The canonical entity excludes src/api/**/*_test.go.",
+    "path": ".kiro/steering/controllers-never-touch-the-database.md",
+    "entityId": "rule.controller-repository",
+    "target": "kiro",
+    "suggestion": "Narrow the include patterns, or accept this diagnostic in the profile.",
+    "blocking": false,
+    "fingerprint": "dg_3be1336510b75727"
+  }
+]

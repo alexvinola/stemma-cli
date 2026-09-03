@@ -1,0 +1,10 @@
+# Build output
+/stemma
+/dist/
+
+# Go
+*.test
+*.out
+
+# Stemma recovery data must never be committed
+.stemma/recovery/

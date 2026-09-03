@@ -1,0 +1,58 @@
+[
+  {
+    "entityId": "context.overview",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "context.rationale",
+    "entityType": "context",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Not projected: activation is documentation-only, so the content is never sent to an agent."
+  },
+  {
+    "entityId": "context.runbook",
+    "entityType": "context",
+    "outcome": "adapted",
+    "files": [
+      ".github/prompts/incident-runbook.prompt.md"
+    ],
+    "activation": "on demand (incident-runbook)",
+    "explanation": "On-demand context has no dedicated Copilot format; it is delivered as a prompt file that a developer invokes explicitly."
+  },
+  {
+    "entityId": "decision.event-sourcing",
+    "entityType": "decision",
+    "outcome": "adapted",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Only the decision's agent constraints are projected; context, decision and consequences stay human documentation."
+  },
+  {
+    "entityId": "rule.controller-repository",
+    "entityType": "rule",
+    "outcome": "lossy",
+    "files": [
+      ".github/instructions/controllers-never-touch-the-database.instructions.md"
+    ],
+    "activation": "paths src/api/** (excluding src/api/**/*_test.go)",
+    "explanation": "Copilot applyTo has no negative pattern syntax, so the exclude patterns are only reproduced as a note in the file body."
+  },
+  {
+    "entityId": "rule.legacy-naming",
+    "entityType": "rule",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "always-on",
+    "explanation": "Not projected: the entity is disabled in the canonical project."
+  }
+]

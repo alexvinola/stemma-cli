@@ -1,0 +1,50 @@
+[
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "context.src-api-api-package",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/api-package.md"
+    ],
+    "activation": "paths src/api/**",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  },
+  {
+    "entityId": "context.testing",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "opaque.agents-override-md",
+    "entityType": "opaque",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Preserved codex content has no representation in claude; it stays in the canonical project."
+  },
+  {
+    "entityId": "skill.deploy",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".claude/skills/deploy/SKILL.md"
+    ],
+    "activation": "on demand (deploy)",
+    "explanation": "Claude Code supports skills natively."
+  }
+]

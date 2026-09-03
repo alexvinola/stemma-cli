@@ -1,0 +1,52 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "lossy",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Flattened into always-on guidance because this target has no specialist-agent format."
+  },
+  {
+    "entityId": "context.api-conventions",
+    "entityType": "context",
+    "outcome": "lossy",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "paths src/api/**, src/handlers/**",
+    "explanation": "No single directory could be derived from src/api/**, src/handlers/**, so the content stays in the root AGENTS.md and is no longer scoped."
+  },
+  {
+    "entityId": "context.incident-response",
+    "entityType": "context",
+    "outcome": "adapted",
+    "files": [
+      ".agents/skills/incident-response/SKILL.md"
+    ],
+    "activation": "on demand (incident-response)",
+    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill."
+  },
+  {
+    "entityId": "context.product",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  },
+  {
+    "entityId": "skill.audit",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".agents/skills/audit/SKILL.md"
+    ],
+    "activation": "on demand (audit)",
+    "explanation": "Skills are supported natively."
+  }
+]

@@ -1,0 +1,11 @@
+[
+  {
+    "code": "STEMMA1202_UNKNOWN_KEYS_PRESERVED",
+    "severity": "info",
+    "summary": "unrecognised agent fields preserved as kiro extensions: resources",
+    "path": ".kiro/agents/reviewer.json",
+    "entityId": "agent.reviewer",
+    "blocking": false,
+    "fingerprint": "dg_da7742a2fed7813c"
+  }
+]

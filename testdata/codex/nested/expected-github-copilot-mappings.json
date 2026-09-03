@@ -1,0 +1,50 @@
+[
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "context.src-api-api-package",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/instructions/api-package.instructions.md"
+    ],
+    "activation": "paths src/api/**",
+    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+  },
+  {
+    "entityId": "context.testing",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "opaque.agents-override-md",
+    "entityType": "opaque",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Preserved codex content has no representation in github-copilot; it stays in the canonical project."
+  },
+  {
+    "entityId": "skill.deploy",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".github/skills/deploy/SKILL.md"
+    ],
+    "activation": "on demand (deploy)",
+    "explanation": "Copilot supports agent skills natively."
+  }
+]

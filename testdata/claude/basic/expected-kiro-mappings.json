@@ -1,0 +1,62 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "lossy",
+    "files": [
+      ".kiro/agents/reviewer.json"
+    ],
+    "activation": "on demand (reviewer)",
+    "explanation": "kiro supports specialist agents, but the declared tool names come from claude and are not verified against this provider."
+  },
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/architecture.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context maps to a steering document with inclusion: always."
+  },
+  {
+    "entityId": "context.commands",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/commands.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context maps to a steering document with inclusion: always."
+  },
+  {
+    "entityId": "rule.api-request-validation",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/api-request-validation.md"
+    ],
+    "activation": "paths src/api/**/*.go, src/handlers/**/*.go",
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
+  },
+  {
+    "entityId": "rule.formatting",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/formatting.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context maps to a steering document with inclusion: always."
+  },
+  {
+    "entityId": "skill.migration",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".kiro/skills/migration/SKILL.md"
+    ],
+    "activation": "on demand (migration)",
+    "explanation": "Kiro supports skills natively."
+  }
+]

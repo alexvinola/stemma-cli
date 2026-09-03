@@ -1,0 +1,24 @@
+[
+  {
+    "code": "STEMMA3101_EXCLUDE_NOT_REPRESENTABLE",
+    "severity": "warning",
+    "summary": "exclude patterns cannot be represented by directory scoping",
+    "detail": "The canonical entity excludes src/api/**/*_test.go, but a nested AGENTS.md applies to everything under src/api.",
+    "path": "src/api/AGENTS.md",
+    "entityId": "rule.controller-repository",
+    "target": "codex",
+    "suggestion": "Narrow the include patterns, move the excluded files elsewhere, or accept this diagnostic in the profile.",
+    "blocking": false,
+    "fingerprint": "dg_184cf4cbcf883cfa"
+  },
+  {
+    "code": "STEMMA3402_ON_DEMAND_ADAPTED",
+    "severity": "info",
+    "summary": "on-demand content is delivered as a skill",
+    "path": ".agents/skills/incident-runbook/SKILL.md",
+    "entityId": "context.runbook",
+    "target": "codex",
+    "blocking": false,
+    "fingerprint": "dg_853802976cd829e6"
+  }
+]

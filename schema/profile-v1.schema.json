@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/alexvinola/stemma/main/schema/profile-v1.schema.json",
+  "title": "Stemma target projection profile (v1)",
+  "description": "Stored at .stemma/profiles/<target>.json. A profile controls delivery, never meaning: it may move an entity, change how it activates for one target, exclude it, or accept a known lossy mapping. Replacing the text requires contentOverride, which always produces STEMMA3601.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "target", "overrides", "acceptedDiagnostics"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "target": { "enum": ["github-copilot", "claude", "codex", "kiro", "cursor"] },
+    "overrides": {
+      "type": "object",
+      "description": "Keyed by canonical entity id.",
+      "additionalProperties": { "$ref": "#/$defs/override" }
+    },
+    "acceptedDiagnostics": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^dg_[0-9a-f]{16}$" },
+      "description": "Diagnostic fingerprints that have been reviewed. Accepted diagnostics are downgraded to info and stop blocking apply."
+    },
+    "options": { "type": "object", "description": "Target-wide, non-semantic switches." }
+  },
+  "$defs": {
+    "override": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include": { "type": "boolean", "description": "Force the entity in or out of this target. It can never re-enable an entity disabled in the canonical project." },
+        "activation": { "type": "object", "description": "Replaces the canonical activation for this target only. Same shape as the canonical activation union." },
+        "directory": { "type": "string", "description": "Repository-relative destination directory. Must not escape the workspace." },
+        "filename": { "type": "string", "description": "Destination file name. Must not contain a path separator." },
+        "acceptLossy": { "type": "boolean" },
+        "contentOverride": { "type": "string", "description": "Target-specific wording. Always reported with STEMMA3601." },
+        "options": { "type": "object" }
+      }
+    }
+  }
+}

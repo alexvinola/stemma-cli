@@ -1,0 +1,62 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "exact",
+    "files": [
+      ".claude/agents/reviewer.md"
+    ],
+    "activation": "on demand (reviewer)",
+    "explanation": "claude supports specialist agents natively."
+  },
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "context.commands",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "rule.api-request-validation",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/api.md"
+    ],
+    "activation": "paths src/api/**/*.go, src/handlers/**/*.go",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  },
+  {
+    "entityId": "rule.formatting",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/style.md"
+    ],
+    "activation": "always-on",
+    "explanation": "The rule keeps its own file under .claude/rules and loads unconditionally, because it has no paths front matter."
+  },
+  {
+    "entityId": "skill.migration",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".claude/skills/migration/SKILL.md"
+    ],
+    "activation": "on demand (migration)",
+    "explanation": "Claude Code supports skills natively."
+  }
+]

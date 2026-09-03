@@ -1,0 +1,52 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "lossy",
+    "files": [
+      ".github/agents/reviewer.md"
+    ],
+    "activation": "on demand (reviewer)",
+    "explanation": "github-copilot supports specialist agents, but the declared tool names come from kiro and are not verified against this provider."
+  },
+  {
+    "entityId": "context.api-conventions",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/instructions/api-conventions.instructions.md"
+    ],
+    "activation": "paths src/api/**, src/handlers/**",
+    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+  },
+  {
+    "entityId": "context.incident-response",
+    "entityType": "context",
+    "outcome": "adapted",
+    "files": [
+      ".github/prompts/incident-response.prompt.md"
+    ],
+    "activation": "on demand (incident-response)",
+    "explanation": "On-demand context has no dedicated Copilot format; it is delivered as a prompt file that a developer invokes explicitly."
+  },
+  {
+    "entityId": "context.product",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "skill.audit",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".github/skills/audit/SKILL.md"
+    ],
+    "activation": "on demand (audit)",
+    "explanation": "Copilot supports agent skills natively."
+  }
+]

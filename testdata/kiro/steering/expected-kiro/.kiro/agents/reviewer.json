@@ -1,0 +1,12 @@
+{
+  "description": "Reviews pull requests for API breakage",
+  "name": "reviewer",
+  "prompt": "Review diffs for backwards-incompatible API changes.",
+  "resources": [
+    "file://src/api"
+  ],
+  "tools": [
+    "read",
+    "grep"
+  ]
+}

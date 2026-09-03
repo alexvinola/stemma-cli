@@ -1,0 +1,52 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "exact",
+    "files": [
+      ".kiro/agents/reviewer.json"
+    ],
+    "activation": "on demand (reviewer)",
+    "explanation": "kiro supports specialist agents natively."
+  },
+  {
+    "entityId": "context.api-conventions",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/api.md"
+    ],
+    "activation": "paths src/api/**, src/handlers/**",
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
+  },
+  {
+    "entityId": "context.incident-response",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/incident.md"
+    ],
+    "activation": "on demand (incident-response)",
+    "explanation": "On-demand context maps to a steering document with inclusion: manual."
+  },
+  {
+    "entityId": "context.product",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/product.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context maps to a steering document with inclusion: always."
+  },
+  {
+    "entityId": "skill.audit",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".kiro/skills/audit/SKILL.md"
+    ],
+    "activation": "on demand (audit)",
+    "explanation": "Kiro supports skills natively."
+  }
+]

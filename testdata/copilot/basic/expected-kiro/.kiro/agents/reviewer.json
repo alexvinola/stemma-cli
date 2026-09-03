@@ -1,0 +1,9 @@
+{
+  "description": "Reviews pull requests for API breakage",
+  "instructions": "Review diffs for backwards-incompatible API changes and flag them explicitly.",
+  "name": "reviewer",
+  "tools": [
+    "read",
+    "grep"
+  ]
+}

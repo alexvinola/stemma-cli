@@ -1,0 +1,10 @@
+{
+  "description": "Reviews pull requests for API breakage",
+  "instructions": "Review diffs for backwards-incompatible API changes.",
+  "model": "opus",
+  "name": "reviewer",
+  "tools": [
+    "Read",
+    "Grep"
+  ]
+}

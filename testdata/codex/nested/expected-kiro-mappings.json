@@ -1,0 +1,50 @@
+[
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/architecture.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context maps to a steering document with inclusion: always."
+  },
+  {
+    "entityId": "context.src-api-api-package",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/api-package.md"
+    ],
+    "activation": "paths src/api/**",
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
+  },
+  {
+    "entityId": "context.testing",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/testing.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context maps to a steering document with inclusion: always."
+  },
+  {
+    "entityId": "opaque.agents-override-md",
+    "entityType": "opaque",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Preserved codex content has no representation in kiro; it stays in the canonical project."
+  },
+  {
+    "entityId": "skill.deploy",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".kiro/skills/deploy/SKILL.md"
+    ],
+    "activation": "on demand (deploy)",
+    "explanation": "Kiro supports skills natively."
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "code": "STEMMA3101_EXCLUDE_NOT_REPRESENTABLE",
+    "severity": "warning",
+    "summary": "exclude patterns cannot be represented in Copilot applyTo",
+    "detail": "The canonical entity excludes src/api/**/*_test.go. Copilot has no negative applyTo syntax, so the exclusion is written as a note in the generated file and is advisory only.",
+    "path": ".github/instructions/controllers-never-touch-the-database.instructions.md",
+    "entityId": "rule.controller-repository",
+    "target": "github-copilot",
+    "suggestion": "Narrow the include patterns instead, or accept this diagnostic in the profile.",
+    "blocking": false,
+    "fingerprint": "dg_825aee13cb8d657f"
+  },
+  {
+    "code": "STEMMA3402_ON_DEMAND_ADAPTED",
+    "severity": "info",
+    "summary": "on-demand content is delivered as a Copilot prompt file",
+    "path": ".github/prompts/incident-runbook.prompt.md",
+    "entityId": "context.runbook",
+    "target": "github-copilot",
+    "blocking": false,
+    "fingerprint": "dg_487a91855c42d98b"
+  }
+]

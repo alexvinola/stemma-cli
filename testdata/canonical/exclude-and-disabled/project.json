@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "id": "prj_fixture",
+  "name": "Exclusions",
+  "description": "Hand-authored canonical shapes that no importer can produce.",
+  "targets": [
+    "claude",
+    "codex",
+    "github-copilot",
+    "kiro"
+  ],
+  "tokenBudgets": {
+    "alwaysOn": 40
+  },
+  "contextDocuments": [
+    {
+      "id": "context.overview",
+      "title": "Overview",
+      "kind": "product",
+      "content": "Acme Ledger is a double-entry accounting service.",
+      "audience": "agent",
+      "activation": {
+        "type": "always"
+      },
+      "provenance": {
+        "sourceFormat": "",
+        "sourcePath": "",
+        "sourceHash": "",
+        "importerVersion": "1",
+        "disposition": "parsed"
+      }
+    },
+    {
+      "id": "context.rationale",
+      "title": "Why a modular monolith",
+      "kind": "architecture",
+      "content": "Recorded for people, not for agents.",
+      "audience": "human",
+      "activation": {
+        "type": "documentation-only"
+      },
+      "provenance": {
+        "sourceFormat": "",
+        "sourcePath": "",
+        "sourceHash": "",
+        "importerVersion": "1",
+        "disposition": "parsed"
+      }
+    },
+    {
+      "id": "context.runbook",
+      "title": "Incident runbook",
+      "kind": "operations",
+      "content": "Page the on-call engineer, then open an incident channel.",
+      "audience": "agent",
+      "activation": {
+        "type": "on-demand",
+        "trigger": "a production incident is being investigated",
+        "invocationName": "incident-runbook"
+      },
+      "provenance": {
+        "sourceFormat": "",
+        "sourcePath": "",
+        "sourceHash": "",
+        "importerVersion": "1",
+        "disposition": "parsed"
+      }
+    }
+  ],
+  "rules": [
+    {
+      "id": "rule.controller-repository",
+      "title": "Controllers never touch the database",
+      "instruction": "Controllers must call a service; only repositories may touch the database.",
+      "priority": "must",
+      "enabled": true,
+      "activation": {
+        "type": "path-scoped",
+        "include": [
+          "src/api/**"
+        ],
+        "exclude": [
+          "src/api/**/*_test.go"
+        ]
+      },
+      "rationale": "Keeps transaction boundaries in one layer.",
+      "goodExamples": [
+        "handler -> service -> repository"
+      ],
+      "badExamples": [
+        "handler -> db.Query"
+      ],
+      "provenance": {
+        "sourceFormat": "",
+        "sourcePath": "",
+        "sourceHash": "",
+        "importerVersion": "1",
+        "disposition": "parsed"
+      }
+    },
+    {
+      "id": "rule.legacy-naming",
+      "title": "Legacy naming scheme",
+      "instruction": "Prefix legacy tables with lgc_.",
+      "priority": "may",
+      "enabled": false,
+      "activation": {
+        "type": "always"
+      },
+      "provenance": {
+        "sourceFormat": "",
+        "sourcePath": "",
+        "sourceHash": "",
+        "importerVersion": "1",
+        "disposition": "parsed"
+      }
+    }
+  ],
+  "procedures": [],
+  "skills": [],
+  "agents": [],
+  "decisions": [
+    {
+      "id": "decision.event-sourcing",
+      "title": "Use an append-only ledger table",
+      "status": "accepted",
+      "context": "We need an auditable history of every entry.",
+      "decision": "Entries are append-only; corrections are new entries.",
+      "consequences": "Deleting an entry is never allowed.",
+      "agentConstraints": [
+        "Never write an UPDATE or DELETE against the entries table."
+      ],
+      "provenance": {
+        "sourceFormat": "",
+        "sourcePath": "",
+        "sourceHash": "",
+        "importerVersion": "1",
+        "disposition": "parsed"
+      }
+    }
+  ],
+  "opaqueBlocks": []
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "lossy",
+    "files": [
+      ".github/agents/reviewer.md"
+    ],
+    "activation": "on demand (reviewer)",
+    "explanation": "github-copilot supports specialist agents, but the declared tool names come from claude and are not verified against this provider."
+  },
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "context.commands",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "rule.api-request-validation",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".github/instructions/api-request-validation.instructions.md"
+    ],
+    "activation": "paths src/api/**/*.go, src/handlers/**/*.go",
+    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+  },
+  {
+    "entityId": "rule.formatting",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "The rule is written as a bullet in the repository-wide instructions file."
+  },
+  {
+    "entityId": "skill.migration",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".github/skills/migration/SKILL.md"
+    ],
+    "activation": "on demand (migration)",
+    "explanation": "Copilot supports agent skills natively."
+  }
+]

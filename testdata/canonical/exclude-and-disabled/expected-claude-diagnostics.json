@@ -1,0 +1,24 @@
+[
+  {
+    "code": "STEMMA3101_EXCLUDE_NOT_REPRESENTABLE",
+    "severity": "warning",
+    "summary": "exclude patterns cannot be represented in Claude paths front matter",
+    "detail": "The canonical entity excludes src/api/**/*_test.go.",
+    "path": ".claude/rules/controllers-never-touch-the-database.md",
+    "entityId": "rule.controller-repository",
+    "target": "claude",
+    "suggestion": "Narrow the include patterns, or accept this diagnostic in the profile.",
+    "blocking": false,
+    "fingerprint": "dg_1af44c4e6e8b0b47"
+  },
+  {
+    "code": "STEMMA3402_ON_DEMAND_ADAPTED",
+    "severity": "info",
+    "summary": "on-demand content is delivered as a Claude skill",
+    "path": ".claude/skills/incident-runbook/SKILL.md",
+    "entityId": "context.runbook",
+    "target": "claude",
+    "blocking": false,
+    "fingerprint": "dg_38181f12d8e905a9"
+  }
+]

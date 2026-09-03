@@ -1,0 +1,8 @@
+---
+paths:
+  - "../../etc/**"
+---
+
+# Escape
+
+body

@@ -1,0 +1,80 @@
+[
+  {
+    "entityId": "agent.reviewer",
+    "entityType": "agent",
+    "outcome": "lossy",
+    "files": [
+      ".claude/agents/reviewer.md"
+    ],
+    "activation": "on demand (reviewer)",
+    "explanation": "claude supports specialist agents, but the declared tool names come from github-copilot and are not verified against this provider."
+  },
+  {
+    "entityId": "context.acme-ledger",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "context.api-layer-conventions",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/api-layer-conventions.md"
+    ],
+    "activation": "paths src/api/**, src/handlers/**",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  },
+  {
+    "entityId": "context.architecture",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "context.testing",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "opaque.github-copilot-instructions-md",
+    "entityType": "opaque",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Preserved github-copilot content has no representation in claude; it stays in the canonical project."
+  },
+  {
+    "entityId": "procedure.release",
+    "entityType": "procedure",
+    "outcome": "adapted",
+    "files": [
+      ".claude/skills/release/SKILL.md"
+    ],
+    "activation": "on demand (release)",
+    "explanation": "Claude Code has no dedicated procedure format; the procedure is delivered as a skill."
+  },
+  {
+    "entityId": "skill.release-checklist",
+    "entityType": "skill",
+    "outcome": "exact",
+    "files": [
+      ".claude/skills/release-checklist/SKILL.md"
+    ],
+    "activation": "on demand (release-checklist)",
+    "explanation": "Claude Code supports skills natively."
+  }
+]

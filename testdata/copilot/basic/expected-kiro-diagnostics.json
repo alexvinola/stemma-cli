@@ -1,0 +1,33 @@
+[
+  {
+    "code": "STEMMA3002_TARGET_NOT_ENABLED",
+    "severity": "warning",
+    "summary": "target \"kiro\" is not listed in the canonical project",
+    "detail": "Compilation proceeds, but `stemma check --all` will not verify this target.",
+    "target": "kiro",
+    "suggestion": "Add \"kiro\" to \"targets\" in .stemma/project.json.",
+    "blocking": false,
+    "fingerprint": "dg_5de48ef2403f01d3"
+  },
+  {
+    "code": "STEMMA3301_AGENT_TOOLS_REQUIRE_REVIEW",
+    "severity": "warning",
+    "summary": "agent tool names were carried over from another provider and need review",
+    "detail": "The agent was imported from \"github-copilot\" and declares tools: read, grep. Stemma never translates tool names between providers.",
+    "entityId": "agent.reviewer",
+    "target": "kiro",
+    "suggestion": "Check that each tool name exists in kiro, or remove the list.",
+    "blocking": false,
+    "fingerprint": "dg_40df176697eb9a8a"
+  },
+  {
+    "code": "STEMMA3402_ON_DEMAND_ADAPTED",
+    "severity": "info",
+    "summary": "procedure delivered as a Kiro skill",
+    "path": ".kiro/skills/release/SKILL.md",
+    "entityId": "procedure.release",
+    "target": "kiro",
+    "blocking": false,
+    "fingerprint": "dg_70257ab9988f2314"
+  }
+]

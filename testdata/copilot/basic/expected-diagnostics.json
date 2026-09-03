@@ -1,0 +1,37 @@
+[
+  {
+    "code": "STEMMA1202_UNKNOWN_KEYS_PRESERVED",
+    "severity": "info",
+    "summary": "unrecognised front matter keys preserved as github-copilot extensions: excludeAgent",
+    "path": ".github/instructions/api.instructions.md",
+    "position": {
+      "line": 1,
+      "column": 1
+    },
+    "entityId": "context.api-layer-conventions",
+    "blocking": false,
+    "fingerprint": "dg_8f53d2d366de4eec"
+  },
+  {
+    "code": "STEMMA1202_UNKNOWN_KEYS_PRESERVED",
+    "severity": "info",
+    "summary": "unrecognised front matter keys preserved as github-copilot extensions: mode, model",
+    "path": ".github/prompts/release.prompt.md",
+    "position": {
+      "line": 1,
+      "column": 1
+    },
+    "entityId": "procedure.release",
+    "blocking": false,
+    "fingerprint": "dg_b76a8e4d0c7e36b5"
+  },
+  {
+    "code": "STEMMA1203_OPAQUE_BLOCK_PRESERVED",
+    "severity": "info",
+    "summary": "content preserved without interpretation: heading with no content",
+    "path": ".github/copilot-instructions.md",
+    "entityId": "opaque.github-copilot-instructions-md",
+    "blocking": false,
+    "fingerprint": "dg_2fa8fd94f7b38041"
+  }
+]

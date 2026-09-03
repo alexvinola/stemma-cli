@@ -1,0 +1,23 @@
+[
+  {
+    "code": "STEMMA3002_TARGET_NOT_ENABLED",
+    "severity": "warning",
+    "summary": "target \"github-copilot\" is not listed in the canonical project",
+    "detail": "Compilation proceeds, but `stemma check --all` will not verify this target.",
+    "target": "github-copilot",
+    "suggestion": "Add \"github-copilot\" to \"targets\" in .stemma/project.json.",
+    "blocking": false,
+    "fingerprint": "dg_178726ca77de4a98"
+  },
+  {
+    "code": "STEMMA3301_AGENT_TOOLS_REQUIRE_REVIEW",
+    "severity": "warning",
+    "summary": "agent tool names were carried over from another provider and need review",
+    "detail": "The agent was imported from \"claude\" and declares tools: Read, Grep. Stemma never translates tool names between providers.",
+    "entityId": "agent.reviewer",
+    "target": "github-copilot",
+    "suggestion": "Check that each tool name exists in github-copilot, or remove the list.",
+    "blocking": false,
+    "fingerprint": "dg_14239299d6bd8bbe"
+  }
+]
