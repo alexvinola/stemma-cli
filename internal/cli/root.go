@@ -11,6 +11,7 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/capabilities"
 	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/store"
 	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
@@ -125,6 +126,79 @@ func openWorkspace(env Env, dir string) (*workspace.Workspace, error) {
 		dir = "."
 	}
 	return workspace.Open(dir, workspace.DefaultLimits())
+}
+
+// resolveTargetList resolves the targets a command should act on: either the
+// ones given with --target (repeatable), or every target the canonical project
+// enables when --all is used.
+func resolveTargetList(
+	ctx context.Context, env Env, dir string, targets []string, all bool,
+) ([]canonical.TargetFormat, int, error) {
+	if all && len(targets) > 0 {
+		return nil, ExitUsage, errors.New("use either --all or --target, not both")
+	}
+	if all {
+		ws, err := openWorkspace(env, dir)
+		if err != nil {
+			return nil, ExitUsage, err
+		}
+		project, err := store.LoadProject(ctx, ws)
+		if err != nil {
+			return nil, ExitDiagnostics, err
+		}
+		if len(project.Targets) == 0 {
+			return nil, ExitUsage, errors.New(
+				"--all needs targets in .stemma/project.json; add them there, or name one with --target")
+		}
+		out := make([]canonical.TargetFormat, 0, len(project.Targets))
+		for _, t := range project.Targets {
+			resolved, err := resolveTarget(string(t))
+			if err != nil {
+				return nil, ExitUnsupportedTarget, err
+			}
+			out = append(out, resolved)
+		}
+		return out, ExitOK, nil
+	}
+	if len(targets) == 0 {
+		return nil, ExitUsage, errors.New(
+			"a target is required: pass --target <target>, or --all to use the project's targets")
+	}
+	out := make([]canonical.TargetFormat, 0, len(targets))
+	seen := map[canonical.TargetFormat]struct{}{}
+	for _, name := range targets {
+		t, err := resolveTarget(name)
+		if err != nil {
+			code := ExitUsage
+			if t != "" {
+				code = ExitUnsupportedTarget
+			}
+			return nil, code, err
+		}
+		if _, dup := seen[t]; dup {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	return out, ExitOK, nil
+}
+
+// stringList collects a flag that may be repeated.
+type stringList []string
+
+// String implements flag.Value.
+func (s *stringList) String() string { return strings.Join(*s, ",") }
+
+// Set implements flag.Value, also splitting comma-separated values so that
+// both "--target a --target b" and "--target a,b" work.
+func (s *stringList) Set(v string) error {
+	for _, part := range strings.Split(v, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			*s = append(*s, part)
+		}
+	}
+	return nil
 }
 
 // resolveTarget validates a target identifier and its availability.

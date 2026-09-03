@@ -7,6 +7,7 @@ import (
 
 	"github.com/alexvinola/stemma-cli/internal/adapters"
 	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/store"
 	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
 	"github.com/alexvinola/stemma-cli/internal/workspace"
@@ -16,7 +17,9 @@ func runPlan(ctx context.Context, env Env, args []string) int {
 	fs := newFlagSet(env, "plan")
 	jsonOut := fs.Bool("json", false, "emit JSON")
 	dir := fs.String("workspace", "", "repository root (default: current directory)")
-	target := fs.String("target", "", "target format to compile")
+	var targets stringList
+	fs.Var(&targets, "target", "target format to compile (repeatable, or comma-separated)")
+	all := fs.Bool("all", false, "compile every target enabled in the canonical project")
 	profilePath := fs.String("profile", "", "target profile to use (default: .stemma/profiles/<target>.json)")
 	showUnchanged := fs.Bool("show-unchanged", false, "list files that would not change")
 	explain := fs.Bool("explain", false, "print per-entity projection details")
@@ -26,10 +29,26 @@ func runPlan(ctx context.Context, env Env, args []string) int {
 		return code
 	}
 
-	plan, ws, code, err := buildPlan(ctx, env, *dir, *target, *profilePath, *adopt)
+	selected, code, err := resolveTargetList(ctx, env, *dir, targets, *all)
 	if err != nil {
 		return fail(env, "plan", *jsonOut, code, err, nil)
 	}
+	if len(selected) > 1 && *outputPlan != "" {
+		return fail(env, "plan", *jsonOut, ExitUsage,
+			fmt.Errorf("--output-plan writes a single plan; name one target with --target"), nil)
+	}
+
+	plans := make([]compiler.Plan, 0, len(selected))
+	var ws *workspace.Workspace
+	for _, t := range selected {
+		plan, planWS, code, err := buildPlan(ctx, env, *dir, string(t), *profilePath, *adopt)
+		if err != nil {
+			return fail(env, "plan", *jsonOut, code, err, nil)
+		}
+		plans = append(plans, plan)
+		ws = planWS
+	}
+	plan := plans[0]
 
 	if *outputPlan != "" {
 		path, perr := workspace.NormalizeRel(*outputPlan)
@@ -50,21 +69,40 @@ func runPlan(ctx context.Context, env Env, args []string) int {
 	}
 
 	exit := ExitOK
-	if len(plan.Blocking()) > 0 {
-		exit = ExitDiagnostics
+	var allDiags []diagnostics.Diagnostic
+	for _, p := range plans {
+		allDiags = append(allDiags, p.Diagnostics...)
+		if len(p.Blocking()) > 0 {
+			exit = ExitDiagnostics
+		}
 	}
 	if *jsonOut {
-		if err := WriteJSON(env, NewEnvelope("plan", exit, plan.Diagnostics, plan)); err != nil {
+		// One target keeps the plan as the payload; several are wrapped, so a
+		// consumer can tell the two shapes apart by the presence of "targets".
+		var payload any = plan
+		if len(plans) > 1 {
+			payload = map[string]any{"targets": plans}
+		}
+		if err := WriteJSON(env, NewEnvelope("plan", exit, allDiags, payload)); err != nil {
 			return ExitInternal
 		}
 		return exit
 	}
-	printPlan(env, plan, *showUnchanged, *explain)
+	for i, p := range plans {
+		if i > 0 {
+			fmt.Fprintln(env.Stdout)
+		}
+		printPlan(env, p, *showUnchanged, *explain)
+	}
 	if *outputPlan != "" {
 		fmt.Fprintf(env.Stdout, "\nPlan written to %s\n", *outputPlan)
 	}
-	fmt.Fprintf(env.Stdout, "\nNothing was modified. Run `stemma apply --target %s` to write these changes.\n",
-		plan.Target)
+	if len(plans) == 1 {
+		fmt.Fprintf(env.Stdout, "\nNothing was modified. Run `stemma apply --target %s` to write these changes.\n",
+			plan.Target)
+	} else {
+		fmt.Fprintf(env.Stdout, "\nNothing was modified. Run `stemma apply --all` to write these changes.\n")
+	}
 	return exit
 }
 

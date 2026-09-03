@@ -93,11 +93,11 @@ Visited 5 files; skipped 0 directories.
 No files were read or modified.
 ```
 
-Create the canonical project and import into it:
+Import it into a canonical project, saying which agents you want to compile
+for. This creates `.stemma/project.json`; there is no separate setup step:
 
 ```bash
-stemma init
-stemma import --from github-copilot
+stemma import --from github-copilot --targets claude,github-copilot
 ```
 
 ```
@@ -109,13 +109,7 @@ Imported github-copilot configuration from 5 files
   opaque blocks      1 (content preserved without interpretation)
 
 Wrote .stemma/project.json
-```
-
-Tell the project which targets it compiles to, by adding them to `targets` in
-`.stemma/project.json`:
-
-```json
-"targets": ["claude", "github-copilot"]
+Targets enabled: [claude github-copilot]
 ```
 
 See what compiling for Claude Code would do — this never writes anything:
@@ -166,24 +160,28 @@ Ask why one entity is mapped the way it is:
 stemma explain context.api-layer-conventions --target codex
 ```
 
-Apply when you are happy with the plan:
+Apply when you are happy with the plan. `--all` compiles every target the
+project enables, so one command keeps them all in sync:
 
 ```bash
-stemma apply --target claude --yes
+stemma apply --all --yes
 ```
 
-Running `stemma plan --target claude` again now reports no changes.
+Running `stemma plan --all` again now reports no changes.
+
+From here the loop is two commands: edit `.stemma/project.json`, then
+`stemma apply --all --yes`.
 
 ## Commands
 
 | Command | What it does | Writes? |
 | --- | --- | --- |
-| `stemma init` | Creates `.stemma/project.json` (and default profiles with `--with-profiles`) | yes |
+| `stemma init` | Creates an empty `.stemma/project.json` (optional: `import` creates one too) | yes |
 | `stemma scan [path]` | Detects supported agent configuration by path | no |
 | `stemma import [path]` | Imports one provider's files into the canonical project | yes |
 | `stemma validate` | Validates the project, profiles and manifest | no |
-| `stemma plan --target T` | Compiles and classifies every file change | no |
-| `stemma apply --target T` | Applies a plan transactionally (needs `--yes` or a TTY) | yes |
+| `stemma plan --target T` / `--all` | Compiles and classifies every file change | no |
+| `stemma apply --target T` / `--all` | Applies a plan transactionally (needs `--yes` or a TTY) | yes |
 | `stemma check --target T` / `--all` | Fails when generated output is stale (for CI) | no |
 | `stemma explain ID --target T` | Explains one entity's projection | no |
 | `stemma version` | Prints versions, schema versions and the compatibility baseline | no |

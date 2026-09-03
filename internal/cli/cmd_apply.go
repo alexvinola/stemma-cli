@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/compiler"
 	"github.com/alexvinola/stemma-cli/internal/store"
 )
@@ -13,7 +14,9 @@ func runApply(ctx context.Context, env Env, args []string) int {
 	fs := newFlagSet(env, "apply")
 	jsonOut := fs.Bool("json", false, "emit JSON")
 	dir := fs.String("workspace", "", "repository root (default: current directory)")
-	target := fs.String("target", "", "target format to compile")
+	var targets stringList
+	fs.Var(&targets, "target", "target format to compile (repeatable, or comma-separated)")
+	all := fs.Bool("all", false, "apply every target enabled in the canonical project")
 	profilePath := fs.String("profile", "", "target profile to use")
 	planPath := fs.String("plan", "", "apply a plan previously saved with --output-plan")
 	yes := fs.Bool("yes", false, "apply without asking for confirmation")
@@ -22,36 +25,70 @@ func runApply(ctx context.Context, env Env, args []string) int {
 		return code
 	}
 
-	ws, err := openWorkspace(env, *dir)
+	if *planPath != "" && (*all || len(targets) > 1) {
+		return fail(env, "apply", *jsonOut, ExitUsage,
+			fmt.Errorf("--plan applies a single saved plan; drop --all and extra --target flags"), nil)
+	}
+
+	var selected []canonical.TargetFormat
+	if *planPath == "" {
+		var code int
+		var err error
+		selected, code, err = resolveTargetList(ctx, env, *dir, targets, *all)
+		if err != nil {
+			return fail(env, "apply", *jsonOut, code, err, nil)
+		}
+	} else {
+		selected = []canonical.TargetFormat{""} // the target comes from the saved plan
+	}
+
+	exit := ExitOK
+	for _, t := range selected {
+		code := applyOne(ctx, env, *dir, string(t), *profilePath, *planPath, *jsonOut, *adopt, *yes)
+		if code != ExitOK {
+			// Stop at the first failure: later targets would compile against a
+			// repository that is now in an unexpected state.
+			return code
+		}
+	}
+	return exit
+}
+
+// applyOne applies exactly one target, or one saved plan.
+func applyOne(
+	ctx context.Context, env Env, dir, target, profilePath, planPath string,
+	jsonOut, adopt, yes bool,
+) int {
+	ws, err := openWorkspace(env, dir)
 	if err != nil {
-		return fail(env, "apply", *jsonOut, ExitUsage, err, nil)
+		return fail(env, "apply", jsonOut, ExitUsage, err, nil)
 	}
 
 	var plan compiler.Plan
-	if *planPath != "" {
-		f, rerr := ws.ReadFile(ctx, *planPath)
+	if planPath != "" {
+		f, rerr := ws.ReadFile(ctx, planPath)
 		if rerr != nil {
-			return fail(env, "apply", *jsonOut, ExitDiagnostics, rerr, nil)
+			return fail(env, "apply", jsonOut, ExitDiagnostics, rerr, nil)
 		}
 		plan, err = compiler.UnmarshalPlan(f.Data)
 		if err != nil {
-			return fail(env, "apply", *jsonOut, ExitDiagnostics, err, nil)
+			return fail(env, "apply", jsonOut, ExitDiagnostics, err, nil)
 		}
-		if *target != "" && string(plan.Target) != *target {
-			return fail(env, "apply", *jsonOut, ExitUsage,
-				fmt.Errorf("saved plan targets %q but --target says %q", plan.Target, *target), nil)
+		if target != "" && string(plan.Target) != target {
+			return fail(env, "apply", jsonOut, ExitUsage,
+				fmt.Errorf("saved plan targets %q but --target says %q", plan.Target, target), nil)
 		}
 	} else {
 		var code int
-		plan, _, code, err = buildPlan(ctx, env, *dir, *target, *profilePath, *adopt)
+		plan, _, code, err = buildPlan(ctx, env, dir, target, profilePath, adopt)
 		if err != nil {
-			return fail(env, "apply", *jsonOut, code, err, nil)
+			return fail(env, "apply", jsonOut, code, err, nil)
 		}
 	}
 
 	writable := plan.Writable()
 	if len(plan.Blocking()) > 0 {
-		if *jsonOut {
+		if jsonOut {
 			doc := NewEnvelope("apply", ExitDiagnostics, plan.Diagnostics, nil)
 			doc.Error = "blocking diagnostics prevent apply"
 			if werr := WriteJSON(env, doc); werr != nil {
@@ -63,8 +100,19 @@ func runApply(ctx context.Context, env Env, args []string) int {
 		fmt.Fprintf(env.Stderr, "stemma: apply refused; resolve the errors above and re-plan.\n")
 		return ExitDiagnostics
 	}
-	if len(writable) == 0 {
-		if *jsonOut {
+	// A plan with nothing to write still has to run: the manifest is how Stemma
+	// records which files it owns, and a target whose output is already correct
+	// (the format you imported from, typically) would otherwise stay untracked
+	// and be reported as a conflict on the next real change.
+	needsOwnership := false
+	for _, c := range plan.Changes {
+		if c.Kind == compiler.ChangeUnchanged {
+			needsOwnership = true
+			break
+		}
+	}
+	if len(writable) == 0 && !needsOwnership {
+		if jsonOut {
 			if werr := WriteJSON(env, NewEnvelope("apply", ExitOK, plan.Diagnostics,
 				compiler.ApplyResult{Written: []string{}, Unchanged: []string{}, Skipped: []string{}})); werr != nil {
 				return ExitInternal
@@ -75,9 +123,9 @@ func runApply(ctx context.Context, env Env, args []string) int {
 		return ExitOK
 	}
 
-	if !*yes {
-		if *jsonOut || !env.StdinIsTTY {
-			return fail(env, "apply", *jsonOut, ExitUsage,
+	if !yes && len(writable) > 0 {
+		if jsonOut || !env.StdinIsTTY {
+			return fail(env, "apply", jsonOut, ExitUsage,
 				fmt.Errorf("apply needs confirmation: re-run with --yes to authorize %s",
 					Plural(len(writable), "file write", "file writes")), nil)
 		}
@@ -97,7 +145,7 @@ func runApply(ctx context.Context, env Env, args []string) int {
 
 	m, err := store.LoadManifest(ctx, ws)
 	if err != nil {
-		return fail(env, "apply", *jsonOut, ExitDiagnostics, err, nil)
+		return fail(env, "apply", jsonOut, ExitDiagnostics, err, nil)
 	}
 	result, err := compiler.Apply(ctx, ws, plan, compiler.ApplyOptions{
 		Manifest:     m,
@@ -111,7 +159,7 @@ func runApply(ctx context.Context, env Env, args []string) int {
 		if isWriteFailure(err) {
 			code = ExitWriteFailed
 		}
-		if *jsonOut {
+		if jsonOut {
 			doc := NewEnvelope("apply", code, result.Diagnostics, result)
 			doc.Error = err.Error()
 			if werr := WriteJSON(env, doc); werr != nil {
@@ -124,7 +172,7 @@ func runApply(ctx context.Context, env Env, args []string) int {
 		return code
 	}
 
-	if *jsonOut {
+	if jsonOut {
 		if werr := WriteJSON(env, NewEnvelope("apply", ExitOK, result.Diagnostics, result)); werr != nil {
 			return ExitInternal
 		}

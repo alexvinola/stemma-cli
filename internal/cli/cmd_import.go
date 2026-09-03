@@ -29,6 +29,9 @@ func runImport(ctx context.Context, env Env, args []string) int {
 	output := fs.String("output", store.ProjectFile, "where to write the canonical project")
 	overwrite := fs.Bool("overwrite", false, "replace an existing canonical project")
 	name := fs.String("name", "", "project name (default: the workspace directory name)")
+	var enable stringList
+	fs.Var(&enable, "targets", "targets to enable in the project (repeatable, or comma-separated). "+
+		"Default: the imported format only")
 	positional, code, ok := parsePositional(fs, args)
 	if !ok {
 		return code
@@ -128,6 +131,23 @@ func runImport(ctx context.Context, env Env, args []string) int {
 		return code
 	}
 
+	if len(enable) > 0 {
+		selected := make([]canonical.TargetFormat, 0, len(enable))
+		for _, n := range enable {
+			t, terr := resolveTarget(n)
+			if terr != nil {
+				code := ExitUsage
+				if t != "" {
+					code = ExitUnsupportedTarget
+				}
+				return fail(env, "import", *jsonOut, code, terr, nil)
+			}
+			selected = append(selected, t)
+		}
+		canonical.SortTargets(selected)
+		result.Project.Targets = selected
+	}
+
 	data, err := canonical.MarshalProject(result.Project)
 	if err != nil {
 		return fail(env, "import", *jsonOut, ExitInternal, err, nil)
@@ -185,6 +205,7 @@ func runImport(ctx context.Context, env Env, args []string) int {
 			"opaque blocks", payload.Preserve)
 	}
 	fmt.Fprintf(env.Stdout, "\nWrote %s\n", outPath)
+	fmt.Fprintf(env.Stdout, "Targets enabled: %v\n", result.Project.Targets)
 	PrintDiagnostics(env.Stdout, result.Diagnostics, false)
 	return ExitOK
 }
