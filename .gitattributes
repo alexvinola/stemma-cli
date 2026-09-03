@@ -1,0 +1,5 @@
+# Stemma compares files byte for byte: golden fixtures, generated output and
+# round-trip guarantees all depend on the exact bytes on disk. Git must never
+# rewrite line endings on checkout, or the test suite fails on Windows, where
+# core.autocrlf is enabled by default.
+* -text

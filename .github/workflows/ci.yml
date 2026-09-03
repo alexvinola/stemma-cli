@@ -22,6 +22,7 @@ jobs:
         with:
           go-version: '1.24'
           check-latest: true
+          cache: false
       - name: gofmt
         if: runner.os != 'Windows'
         run: |
@@ -42,6 +43,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache: false
       - run: go test -run xxx -fuzz FuzzParse -fuzztime 60s ./internal/parser
       - run: go test -run xxx -fuzz FuzzFrontMatter -fuzztime 60s ./internal/parser
       - run: go test -run xxx -fuzz FuzzNormalizeRel -fuzztime 30s ./internal/workspace
@@ -55,4 +57,5 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache: false
       - run: make cross

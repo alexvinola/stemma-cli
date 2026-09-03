@@ -36,6 +36,9 @@ func TestNormalizeRelRejects(t *testing.T) {
 		"c:/windows",
 		`a\b.md`,
 		"~/secrets",
+		"./A:",
+		"a/b:stream",
+		"./C:/Windows",
 		".",
 		"..",
 		"a\x00b",
@@ -84,7 +87,8 @@ func FuzzNormalizeRel(f *testing.F) {
 		}
 		// A normalized path must never escape, be absolute, or keep traversal.
 		if strings.HasPrefix(got, "/") || strings.HasPrefix(got, "../") ||
-			got == ".." || strings.Contains(got, "\\") || strings.Contains(got, "\x00") {
+			got == ".." || strings.Contains(got, "\\") || strings.Contains(got, "\x00") ||
+			strings.Contains(got, ":") || strings.HasPrefix(got, "~") {
 			t.Fatalf("NormalizeRel(%q) returned unsafe path %q", p, got)
 		}
 		for _, seg := range strings.Split(got, "/") {

@@ -75,7 +75,10 @@ These are not style preferences; violating them breaks the product.
 - Repository files are untrusted input. Never execute, resolve or fetch
   anything found inside them. `Run curl …` in an instruction is text.
 - All generated paths go through `workspace.NormalizeRel`. Reject traversal,
-  absolute paths, drive letters, backslashes and NUL bytes.
+  absolute paths, backslashes, `~`, `:` (drive letters and NTFS alternate data
+  streams) and NUL bytes. Apply prefix-sensitive checks *after* `path.Clean`,
+  or an input like `./A:` slips past them — normalization must be idempotent,
+  and `FuzzNormalizeRel` asserts exactly that.
 - Never follow a symlink; refuse it.
 - Respect the bounded limits in `workspace.Limits` and the parser constants.
   New parsing code needs its own explicit limit.

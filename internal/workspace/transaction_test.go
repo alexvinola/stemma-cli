@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -123,6 +124,11 @@ func TestTransactionPreservesPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if runtime.GOOS == "windows" {
+		// Windows has no Unix permission bits: os.Chmod only toggles the
+		// read-only attribute, so there is nothing meaningful to assert.
+		return
+	}
 	if info.Mode().Perm() != 0o600 {
 		t.Errorf("permissions = %v, want 0600 (existing permissions must be preserved)", info.Mode().Perm())
 	}
@@ -191,6 +197,9 @@ func TestRecoveryDataIsWrittenWhenRollbackFails(t *testing.T) {
 	info, err := os.Stat(filepath.Join(ws.Root(), ".stemma", "recovery", "kept.md"))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if runtime.GOOS == "windows" {
+		return // no Unix permission bits to assert
 	}
 	if info.Mode().Perm() != 0o600 {
 		t.Errorf("recovery data permissions = %v, want 0600", info.Mode().Perm())
