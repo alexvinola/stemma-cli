@@ -71,6 +71,13 @@ go install github.com/alexvinola/stemma-cli/cmd/stemma@latest
 Supported build targets: darwin/amd64, darwin/arm64, linux/amd64, linux/arm64,
 windows/amd64, windows/arm64 (`make cross`).
 
+Prebuilt binaries for all six platforms are attached to the
+[`latest` release](https://github.com/alexvinola/stemma-cli/releases/tag/latest),
+rebuilt automatically from the tip of `master` on every push. It is a rolling
+build, not a stable version — `stemma version` reports which commit a
+downloaded binary came from. Windows binaries need no installer and no
+administrator rights: drop `stemma-windows-<arch>.exe` anywhere on your `PATH`.
+
 ## Five-minute workflow
 
 Starting from a repository that already has GitHub Copilot instructions:

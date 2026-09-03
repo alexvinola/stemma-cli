@@ -6,7 +6,14 @@
 package version
 
 // Version is the Stemma CLI version.
-const Version = "0.1.0"
+//
+// This is a var, not a const, so a release build can override it with
+// -ldflags "-X .../internal/version.Version=...". An ordinary `go build` or
+// `go install` leaves it at this default. Overriding it only changes what
+// `stemma version` reports; it never affects compilation, hashing or any
+// other behaviour, which is why version.go documents everything else here as
+// a compile-time constant.
+var Version = "0.1.0"
 
 // CanonicalSchemaVersion is the version of the canonical project layout.
 //

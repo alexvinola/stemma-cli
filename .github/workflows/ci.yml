@@ -59,3 +59,38 @@ jobs:
           go-version: '1.24'
           cache: false
       - run: make cross
+
+  # Publishes a rolling "latest" release from every push to master, once test,
+  # fuzz and cross-compile have all passed. It is not a versioned release: it
+  # always reflects the tip of master, is marked as a pre-release so it never
+  # steals GitHub's "Latest" badge from an actual version tag, and its assets
+  # are replaced wholesale on the next push rather than accumulating.
+  release-latest:
+    name: publish latest build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [test, fuzz, cross]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+      - name: Build release binaries
+        run: make cross VERSION="0.0.0-dev+${GITHUB_SHA::7}"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build (master @ ${{ github.sha }})
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          body: |
+            Automatic build from the tip of `master`. Not a versioned release —
+            replaced on every push. For a stable version, use a tagged release
+            once one exists.
+
+            Commit: ${{ github.sha }}
+          files: dist/*
