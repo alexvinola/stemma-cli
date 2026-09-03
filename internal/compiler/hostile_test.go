@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/cli"
-	"github.com/alexvinola/stemma/internal/compiler"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/profiles"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/cli"
+	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/profiles"
 )
 
 // TestMalformedInputProducesDiagnosticsNotPanics imports deliberately broken

@@ -8,16 +8,16 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/alexvinola/stemma/internal/adapters"
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/manifest"
-	"github.com/alexvinola/stemma/internal/optimizer"
-	"github.com/alexvinola/stemma/internal/profiles"
-	"github.com/alexvinola/stemma/internal/provenance"
-	"github.com/alexvinola/stemma/internal/tokenestimate"
-	"github.com/alexvinola/stemma/internal/version"
-	"github.com/alexvinola/stemma/internal/workspace"
+	"github.com/alexvinola/stemma-cli/internal/adapters"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/manifest"
+	"github.com/alexvinola/stemma-cli/internal/optimizer"
+	"github.com/alexvinola/stemma-cli/internal/profiles"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
+	"github.com/alexvinola/stemma-cli/internal/version"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 // ChangeKind classifies what applying a plan would do to one file.

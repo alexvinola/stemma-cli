@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/adapters"
-	"github.com/alexvinola/stemma/internal/compiler"
-	"github.com/alexvinola/stemma/internal/store"
-	"github.com/alexvinola/stemma/internal/tokenestimate"
-	"github.com/alexvinola/stemma/internal/workspace"
+	"github.com/alexvinola/stemma-cli/internal/adapters"
+	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/store"
+	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 func runPlan(ctx context.Context, env Env, args []string) int {

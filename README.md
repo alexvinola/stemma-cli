@@ -62,7 +62,7 @@ go build -o stemma ./cmd/stemma
 Or install it onto your `PATH` (into `$GOBIN`, usually `~/go/bin`):
 
 ```bash
-go install github.com/alexvinola/stemma/cmd/stemma@latest
+go install github.com/alexvinola/stemma-cli/cmd/stemma@latest
 ```
 
 > Installing from the remote works once this repository has been published and

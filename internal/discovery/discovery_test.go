@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/workspace"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 func TestClassify(t *testing.T) {

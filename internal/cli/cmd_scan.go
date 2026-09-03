@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alexvinola/stemma/internal/discovery"
+	"github.com/alexvinola/stemma-cli/internal/discovery"
 )
 
 func runScan(ctx context.Context, env Env, args []string) int {

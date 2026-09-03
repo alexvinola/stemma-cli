@@ -1,7 +1,7 @@
 package canonical
 
 import (
-	"github.com/alexvinola/stemma/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
 // Extensions carries provider-specific data that Stemma preserves but does not

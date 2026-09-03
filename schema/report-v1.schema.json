@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/alexvinola/stemma/main/schema/report-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/alexvinola/stemma-cli/master/schema/report-v1.schema.json",
   "title": "Stemma JSON output envelope (v1)",
   "description": "Every command invoked with --json writes exactly one document of this shape to stdout and nothing else. Human prose and logs go to stderr.",
   "type": "object",

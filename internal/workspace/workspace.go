@@ -12,7 +12,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/alexvinola/stemma/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
 // Limits bound how much of a repository Stemma is willing to inspect.

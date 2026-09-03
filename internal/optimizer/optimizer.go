@@ -10,9 +10,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/tokenestimate"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
 )
 
 // Dropped records an entity removed by an optimization pass.

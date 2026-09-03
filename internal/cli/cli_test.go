@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexvinola/stemma/internal/cli"
+	"github.com/alexvinola/stemma-cli/internal/cli"
 )
 
 // harness runs CLI commands against a temporary repository.

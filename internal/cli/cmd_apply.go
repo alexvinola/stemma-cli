@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/compiler"
-	"github.com/alexvinola/stemma/internal/store"
+	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/store"
 )
 
 func runApply(ctx context.Context, env Env, args []string) int {

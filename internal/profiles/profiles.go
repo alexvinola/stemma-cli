@@ -13,12 +13,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/globs"
-	"github.com/alexvinola/stemma/internal/provenance"
-	"github.com/alexvinola/stemma/internal/version"
-	"github.com/alexvinola/stemma/internal/workspace"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/globs"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/version"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 // MaxProfileBytes bounds a profile document.

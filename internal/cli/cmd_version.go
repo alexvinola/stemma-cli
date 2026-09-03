@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/alexvinola/stemma/internal/adapters/registry"
-	"github.com/alexvinola/stemma/internal/capabilities"
-	"github.com/alexvinola/stemma/internal/version"
+	"github.com/alexvinola/stemma-cli/internal/adapters/registry"
+	"github.com/alexvinola/stemma-cli/internal/capabilities"
+	"github.com/alexvinola/stemma-cli/internal/version"
 )
 
 type versionData struct {

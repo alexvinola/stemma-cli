@@ -3,7 +3,7 @@ package canonical
 import (
 	"encoding/json"
 
-	"github.com/alexvinola/stemma/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
 // EntityFingerprint returns a digest of an entity's canonical content,

@@ -3,9 +3,9 @@ package optimizer
 import (
 	"testing"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/tokenestimate"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
 )
 
 func TestDeduplicateExactContext(t *testing.T) {

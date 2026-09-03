@@ -7,10 +7,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/alexvinola/stemma/internal/adapters"
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/compiler"
-	"github.com/alexvinola/stemma/internal/version"
+	"github.com/alexvinola/stemma-cli/internal/adapters"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/version"
 )
 
 func readSchema(t *testing.T, name string) map[string]any {

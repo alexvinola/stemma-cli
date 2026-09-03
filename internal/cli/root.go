@@ -8,10 +8,10 @@ import (
 	"io"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/capabilities"
-	"github.com/alexvinola/stemma/internal/compiler"
-	"github.com/alexvinola/stemma/internal/workspace"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/capabilities"
+	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 const usage = `stemma - a deterministic compiler for coding-agent context

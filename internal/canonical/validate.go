@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/globs"
-	"github.com/alexvinola/stemma/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/globs"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
 // Validate checks canonical invariants and returns diagnostics. It never

@@ -5,11 +5,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/provenance"
-	"github.com/alexvinola/stemma/internal/tokenestimate"
-	"github.com/alexvinola/stemma/internal/workspace"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 // Builder accumulates the output of one export run.

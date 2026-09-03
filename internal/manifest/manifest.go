@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/alexvinola/stemma/internal/provenance"
-	"github.com/alexvinola/stemma/internal/version"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/version"
 )
 
 // MaxManifestBytes bounds a manifest document.

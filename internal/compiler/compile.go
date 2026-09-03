@@ -12,15 +12,15 @@ import (
 	"sort"
 	"unicode/utf8"
 
-	"github.com/alexvinola/stemma/internal/adapters"
-	"github.com/alexvinola/stemma/internal/adapters/registry"
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/capabilities"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/optimizer"
-	"github.com/alexvinola/stemma/internal/profiles"
-	"github.com/alexvinola/stemma/internal/tokenestimate"
-	"github.com/alexvinola/stemma/internal/workspace"
+	"github.com/alexvinola/stemma-cli/internal/adapters"
+	"github.com/alexvinola/stemma-cli/internal/adapters/registry"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/capabilities"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/optimizer"
+	"github.com/alexvinola/stemma-cli/internal/profiles"
+	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 // GeneratedFile is a file the compiler wants written.

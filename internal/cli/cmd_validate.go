@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/profiles"
-	"github.com/alexvinola/stemma/internal/store"
-	"github.com/alexvinola/stemma/internal/workspace"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/profiles"
+	"github.com/alexvinola/stemma-cli/internal/store"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 type validateData struct {

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/version"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/version"
 )
 
 // Env carries the process environment a command needs. Commands never touch

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 )
 
 func sampleProject() canonical.Project {

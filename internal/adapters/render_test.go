@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/parser"
-	"github.com/alexvinola/stemma/internal/profiles"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/parser"
+	"github.com/alexvinola/stemma-cli/internal/profiles"
 )
 
 func TestRenderFrontMatterIsParseableBack(t *testing.T) {

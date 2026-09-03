@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/alexvinola/stemma/internal/globs"
+	"github.com/alexvinola/stemma-cli/internal/globs"
 )
 
 // ActivationType is the tag of the exhaustive activation union.

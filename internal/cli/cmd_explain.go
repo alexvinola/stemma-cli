@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/adapters"
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/capabilities"
-	"github.com/alexvinola/stemma/internal/compiler"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/store"
+	"github.com/alexvinola/stemma-cli/internal/adapters"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/capabilities"
+	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/store"
 )
 
 type explainData struct {

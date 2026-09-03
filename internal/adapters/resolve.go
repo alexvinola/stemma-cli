@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/profiles"
-	"github.com/alexvinola/stemma/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/profiles"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
 // Resolution is the outcome of applying a target profile to one entity.

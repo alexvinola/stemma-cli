@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/alexvinola/stemma/main/schema/profile-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/alexvinola/stemma-cli/master/schema/profile-v1.schema.json",
   "title": "Stemma target projection profile (v1)",
   "description": "Stored at .stemma/profiles/<target>.json. A profile controls delivery, never meaning: it may move an entity, change how it activates for one target, exclude it, or accept a known lossy mapping. Replacing the text requires contentOverride, which always produces STEMMA3601.",
   "type": "object",

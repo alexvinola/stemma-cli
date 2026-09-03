@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
 )
 
 // KV is an ordered front matter entry.

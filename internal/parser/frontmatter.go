@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 )
 
 // Front matter limits.

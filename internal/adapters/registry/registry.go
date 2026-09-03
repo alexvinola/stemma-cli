@@ -6,12 +6,12 @@
 package registry
 
 import (
-	"github.com/alexvinola/stemma/internal/adapters"
-	"github.com/alexvinola/stemma/internal/adapters/claude"
-	"github.com/alexvinola/stemma/internal/adapters/codex"
-	"github.com/alexvinola/stemma/internal/adapters/copilot"
-	"github.com/alexvinola/stemma/internal/adapters/kiro"
-	"github.com/alexvinola/stemma/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/adapters"
+	"github.com/alexvinola/stemma-cli/internal/adapters/claude"
+	"github.com/alexvinola/stemma-cli/internal/adapters/codex"
+	"github.com/alexvinola/stemma-cli/internal/adapters/copilot"
+	"github.com/alexvinola/stemma-cli/internal/adapters/kiro"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
 )
 
 // Importer returns the importer for a format, if one is implemented.

@@ -3,8 +3,8 @@ package capabilities
 import (
 	"testing"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/version"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/version"
 )
 
 func TestEveryDeclaredTargetHasARow(t *testing.T) {

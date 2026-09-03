@@ -3,9 +3,9 @@ package adapters
 import (
 	"strings"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/parser"
-	"github.com/alexvinola/stemma/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/parser"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
 // Unit is a heading-delimited part of an aggregate instructions file.

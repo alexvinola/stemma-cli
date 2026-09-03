@@ -7,11 +7,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/manifest"
-	"github.com/alexvinola/stemma/internal/provenance"
-	"github.com/alexvinola/stemma/internal/version"
-	"github.com/alexvinola/stemma/internal/workspace"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/manifest"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/version"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 // ErrStalePlan reports that the repository changed after the plan was built.

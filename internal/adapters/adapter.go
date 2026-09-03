@@ -10,13 +10,13 @@ import (
 	"io/fs"
 	"sort"
 
-	"github.com/alexvinola/stemma/internal/canonical"
-	"github.com/alexvinola/stemma/internal/capabilities"
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/discovery"
-	"github.com/alexvinola/stemma/internal/profiles"
-	"github.com/alexvinola/stemma/internal/provenance"
-	"github.com/alexvinola/stemma/internal/tokenestimate"
+	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/capabilities"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/discovery"
+	"github.com/alexvinola/stemma-cli/internal/profiles"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
 )
 
 // SourceFile is a configuration file handed to an importer.

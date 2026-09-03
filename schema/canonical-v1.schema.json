@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/alexvinola/stemma/main/schema/canonical-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/alexvinola/stemma-cli/master/schema/canonical-v1.schema.json",
   "title": "Stemma canonical project (v1)",
   "description": "The provider-neutral source of truth stored at .stemma/project.json. This schema documents the format; Stemma itself validates with internal/canonical, which additionally checks entity id shapes, glob syntax, activation union invariants and opaque block hashes.",
   "type": "object",

@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/alexvinola/stemma/internal/cli"
+	"github.com/alexvinola/stemma-cli/internal/cli"
 )
 
 func main() {

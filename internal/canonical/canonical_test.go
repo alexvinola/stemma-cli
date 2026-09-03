@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexvinola/stemma/internal/diagnostics"
-	"github.com/alexvinola/stemma/internal/provenance"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
 func TestSlug(t *testing.T) {
