@@ -334,12 +334,16 @@ func UnmarshalPlan(data []byte) (Plan, error) {
 	if err := dec.Decode(&p); err != nil {
 		return Plan{}, fmt.Errorf("decode plan: %w", err)
 	}
-	if p.SchemaVersion != version.PlanSchemaVersion {
-		return Plan{}, fmt.Errorf("unsupported plan schema version %d (this build supports %d)",
-			p.SchemaVersion, version.PlanSchemaVersion)
+	// One document per plan file. Without this, content appended after the
+	// first document is accepted and silently ignored.
+	if dec.More() {
+		return Plan{}, fmt.Errorf("%w: plan file contains more than one JSON document", ErrPlanRejected)
 	}
-	if !canonical.KnownTarget(p.Target) {
-		return Plan{}, fmt.Errorf("plan targets unknown format %q", p.Target)
+	// Decoding is the only way a plan enters from outside, so the structural
+	// checks live here rather than at each call site, where one caller could
+	// forget them.
+	if err := VerifyPlanStructure(p); err != nil {
+		return Plan{}, err
 	}
 	return p, nil
 }

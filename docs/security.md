@@ -44,6 +44,23 @@ that paths like `main.go` or `package.json` never classify.
 Nothing else, ever, and nothing at all under `scan`, `plan`, `check` or
 `explain`.
 
+## Saved plans are untrusted input
+
+A plan passed with `--plan` is a file on disk that may have been edited. It is
+never treated as authority to write. Before anything is written, Stemma checks
+the document structurally (origin build, implemented target, unique normalized
+paths, known change kinds, `newHash` matching its own content, exactly one JSON
+document), rebuilds the plan from the current canonical project, and refuses
+unless the two describe the same thing. The apply then runs against the
+**rebuilt** plan, so the bytes written are always the ones this binary just
+produced.
+
+The consequence worth stating plainly: editing a saved plan can stop an apply,
+but it cannot redirect one. Ownership rules — Stemma never overwrites a file it
+did not write, without `--adopt-untracked` — hold for saved plans exactly as
+they do for a fresh compile. Every rejection happens before the transaction
+opens, so the repository is left byte-identical.
+
 ## Transactional writes
 
 1. Refuse to start if any blocking diagnostic is present.
