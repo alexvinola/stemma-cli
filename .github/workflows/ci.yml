@@ -1,88 +1,171 @@
 name: ci
 
 on:
+  # Ejecuta la CI antes de permitir merges tanto a develop como a master.
+  pull_request:
+    branches: [develop, master]
+
+  # Ejecuta la CI después de entrar código en master
+  # y al publicar un tag de versión.
   push:
     branches: [master]
     tags: ['v*']
-  pull_request:
 
+# Cancela ejecuciones antiguas de la misma PR/rama si llega un commit nuevo.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Permisos mínimos por defecto.
 permissions:
   contents: read
 
+
 jobs:
+
+  # ---------------------------------------------------------------------------
+  # Tests
+  # ---------------------------------------------------------------------------
+
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
           go-version: '1.24'
           check-latest: true
           cache: false
+
       - name: gofmt
         if: runner.os != 'Windows'
         run: |
           out="$(gofmt -l .)"
-          if [ -n "$out" ]; then echo "gofmt needed:"; echo "$out"; exit 1; fi
+
+          if [ -n "$out" ]; then
+            echo "gofmt needed:"
+            echo "$out"
+            exit 1
+          fi
+
       - name: vet
         run: go vet ./...
+
       - name: test
         run: go test ./...
+
       - name: race
         run: go test -race ./...
+
+
+  # ---------------------------------------------------------------------------
+  # Fuzz tests
+  # ---------------------------------------------------------------------------
 
   fuzz:
     name: fuzz (smoke)
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
           go-version: '1.24'
           cache: false
-      - run: go test -run xxx -fuzz FuzzParse -fuzztime 60s ./internal/parser
-      - run: go test -run xxx -fuzz FuzzFrontMatter -fuzztime 60s ./internal/parser
-      - run: go test -run xxx -fuzz FuzzNormalizeRel -fuzztime 30s ./internal/workspace
-      - run: go test -run xxx -fuzz FuzzClassify -fuzztime 30s ./internal/discovery
+
+      - name: Fuzz Parse
+        run: go test -run xxx -fuzz FuzzParse -fuzztime 60s ./internal/parser
+
+      - name: Fuzz FrontMatter
+        run: go test -run xxx -fuzz FuzzFrontMatter -fuzztime 60s ./internal/parser
+
+      - name: Fuzz NormalizeRel
+        run: go test -run xxx -fuzz FuzzNormalizeRel -fuzztime 30s ./internal/workspace
+
+      - name: Fuzz Classify
+        run: go test -run xxx -fuzz FuzzClassify -fuzztime 30s ./internal/discovery
+
+
+  # ---------------------------------------------------------------------------
+  # Cross compilation
+  # ---------------------------------------------------------------------------
 
   cross:
     name: cross-compile
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
           go-version: '1.24'
           cache: false
-      - run: make cross
 
-  # Publishes a rolling "latest" release from every push to master, once test,
-  # fuzz and cross-compile have all passed. It is not a versioned release: it
-  # always reflects the tip of master, is marked as a pre-release so it never
-  # steals GitHub's "Latest" badge from an actual version tag, and its assets
-  # are replaced wholesale on the next push rather than accumulating.
+      - name: Cross compile
+        run: make cross
+
+
+  # ---------------------------------------------------------------------------
+  # Rolling latest release
+  #
+  # Currently disabled.
+  # ---------------------------------------------------------------------------
+
   release-latest:
     name: publish latest build
-    #   if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    # Enable in the future with:
+    #
+    # if: >
+    #   github.event_name == 'push' &&
+    #   github.ref == 'refs/heads/master'
+
     if: false
-    needs: [test, fuzz, cross]
+
+    needs:
+      - test
+      - fuzz
+      - cross
+
     runs-on: ubuntu-latest
+
     permissions:
       contents: write
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
           go-version: '1.24'
           cache: false
+
       - name: Build release binaries
         run: make cross VERSION="0.0.0-dev+${GITHUB_SHA::7}"
-      - uses: softprops/action-gh-release@v2
+
+      - name: Publish latest release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: Latest build (master @ ${{ github.sha }})
@@ -91,51 +174,67 @@ jobs:
           make_latest: false
           body: |
             Automatic build from the tip of `master`. Not a versioned release —
-            replaced on every push. For a stable version, use a tagged release
-            once one exists.
+            replaced on every push.
+
+            For a stable version, use a tagged release.
 
             Commit: ${{ github.sha }}
           files: dist/*
 
-  # Publishes a real, numbered release when a version tag is pushed — e.g.
-  #   gh release create v0.2.0 --generate-notes
-  # or a bare `git tag v0.2.0 && git push origin v0.2.0`.
+
+  # ---------------------------------------------------------------------------
+  # Versioned release
   #
-  # This job never decides the version or writes the release notes: that is
-  # deliberately a human decision. It verifies (same test + fuzz + cross gate
-  # as every push), compiles with the tagged version baked in, and attaches
-  # the binaries plus a checksums file to whatever release already exists for
-  # that tag. It never touches the release body or sets generate-notes, so a
-  # re-run can never overwrite notes a human already wrote.
-  #
-  # Recommended flow, so a release with notes already exists before this job
-  # runs: `gh release create v0.2.0 --generate-notes` (or --notes "...").
-  # A bare `git tag` + `git push` still works, but creates an empty-body
-  # release with just the binaries attached — edit its description afterward.
+  # Runs when a version tag such as v0.2.0 is pushed.
+  # ---------------------------------------------------------------------------
+
   release-version:
     name: publish version release
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [test, fuzz, cross]
+
+    if: >
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v')
+
+    needs:
+      - test
+      - fuzz
+      - cross
+
     runs-on: ubuntu-latest
+
+    # Only this job gets write access.
     permissions:
       contents: write
+
     steps:
-      - name: Validate the tag looks like a version
+      - name: Validate version tag
+        shell: bash
         run: |
           if ! [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::${GITHUB_REF_NAME} does not look like a version tag (expected vX.Y.Z, optionally -pre.release or +build)"
+            echo "::error::${GITHUB_REF_NAME} does not look like a version tag"
+            echo "::error::Expected vX.Y.Z, optionally followed by -pre.release or +build"
             exit 1
           fi
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
           go-version: '1.24'
           cache: false
+
       - name: Build release binaries
         run: make cross VERSION="${GITHUB_REF_NAME#v}"
-      - name: Checksums
-        run: (cd dist && sha256sum * > checksums.txt)
-      - uses: softprops/action-gh-release@v2
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+
+      - name: Publish version release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           prerelease: ${{ contains(github.ref_name, '-') }}
