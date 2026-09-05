@@ -70,14 +70,31 @@ func applyOne(
 		if rerr != nil {
 			return fail(env, "apply", jsonOut, ExitDiagnostics, rerr, nil)
 		}
-		plan, err = compiler.UnmarshalPlan(f.Data)
-		if err != nil {
-			return fail(env, "apply", jsonOut, ExitDiagnostics, err, nil)
+		saved, uerr := compiler.UnmarshalPlan(f.Data)
+		if uerr != nil {
+			return fail(env, "apply", jsonOut, ExitDiagnostics, uerr, nil)
 		}
-		if target != "" && string(plan.Target) != target {
+		if target != "" && string(saved.Target) != target {
 			return fail(env, "apply", jsonOut, ExitUsage,
-				fmt.Errorf("saved plan targets %q but --target says %q", plan.Target, target), nil)
+				fmt.Errorf("saved plan targets %q but --target says %q", saved.Target, target), nil)
 		}
+		// A saved plan states what compiling the project would produce. It is
+		// not authority to write: the file lives in the repository, and the
+		// workflow it exists for — commit a plan, review it, replay it in CI —
+		// is exactly the one where a pull request can rewrite it.
+		//
+		// So rebuild from the canonical project, refuse unless the saved plan
+		// agrees, and then apply the rebuild. The bytes written are always the
+		// ones this binary just produced, never the ones the file carried, so
+		// the ownership rules in classify() cannot be bypassed by editing it.
+		rebuilt, _, code, berr := buildPlan(ctx, env, dir, string(saved.Target), profilePath, adopt)
+		if berr != nil {
+			return fail(env, "apply", jsonOut, code, berr, nil)
+		}
+		if verr := compiler.VerifyPlanMatches(saved, rebuilt); verr != nil {
+			return fail(env, "apply", jsonOut, ExitStalePlan, verr, nil)
+		}
+		plan = rebuilt
 	} else {
 		var code int
 		plan, _, code, err = buildPlan(ctx, env, dir, target, profilePath, adopt)

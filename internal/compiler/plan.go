@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"sort"
 
 	"github.com/alexvinola/stemma-cli/internal/adapters"
@@ -334,12 +335,20 @@ func UnmarshalPlan(data []byte) (Plan, error) {
 	if err := dec.Decode(&p); err != nil {
 		return Plan{}, fmt.Errorf("decode plan: %w", err)
 	}
-	if p.SchemaVersion != version.PlanSchemaVersion {
-		return Plan{}, fmt.Errorf("unsupported plan schema version %d (this build supports %d)",
-			p.SchemaVersion, version.PlanSchemaVersion)
+	// Require EOF after one document. More only checks for another array or
+	// object element, so a stray closing delimiter can make it return false
+	// even when unread (and invalid) content remains.
+	var trailing json.RawMessage
+	if err := dec.Decode(&trailing); err == nil {
+		return Plan{}, fmt.Errorf("%w: plan file contains more than one JSON document", ErrPlanRejected)
+	} else if err != io.EOF {
+		return Plan{}, fmt.Errorf("%w: invalid content after plan document: %w", ErrPlanRejected, err)
 	}
-	if !canonical.KnownTarget(p.Target) {
-		return Plan{}, fmt.Errorf("plan targets unknown format %q", p.Target)
+	// Decoding is the only way a plan enters from outside, so the structural
+	// checks live here rather than at each call site, where one caller could
+	// forget them.
+	if err := VerifyPlanStructure(p); err != nil {
+		return Plan{}, err
 	}
 	return p, nil
 }
