@@ -106,6 +106,11 @@ the repository:
    the project, the profile, the ownership of a destination or the flags in use
    is refused with exit code 4.
 
+Diagnostic comparison checks the code, severity, location, entity, target,
+blocking status and fingerprint against the rebuild. A fingerprint supplied by
+the saved file is not trusted as proof of those fields. Human-readable summary,
+detail and suggestion wording may differ without invalidating the plan.
+
 Only then does the apply proceed, and it proceeds with the **rebuilt** plan. The
 saved document is an assertion about what compiling would do, so editing it can
 change whether the apply is allowed, never what gets written. In particular a

@@ -152,23 +152,28 @@ func VerifyPlanMatches(saved, rebuilt Plan) error {
 		}
 	}
 
-	// Diagnostics decide whether applying is allowed at all, so a plan that
-	// carries a different set is not the plan that was reviewed. Fingerprints
-	// exclude prose, so wording changes within a build cannot trip this.
-	savedFP := fingerprints(saved.Diagnostics)
-	rebuiltFP := fingerprints(rebuilt.Diagnostics)
-	if err := verifyStringSlice("diagnostics", savedFP, rebuiltFP); err != nil {
-		return err
-	}
-	return nil
+	return verifyDiagnostics(saved.Diagnostics, rebuilt.Diagnostics)
 }
 
-func fingerprints(ds []diagnostics.Diagnostic) []string {
-	out := make([]string, 0, len(ds))
-	for _, d := range ds {
-		out = append(out, d.Fingerprint)
+func verifyDiagnostics(saved, rebuilt []diagnostics.Diagnostic) error {
+	if len(saved) != len(rebuilt) {
+		return fmt.Errorf("%w: plan carries %d diagnostics, the current project produces %d",
+			ErrPlanRejected, len(saved), len(rebuilt))
 	}
-	return out
+	for i, a := range saved {
+		b := rebuilt[i]
+		// A fingerprint read from JSON is only another untrusted field. Check
+		// the structured values too, including position and blocking status,
+		// which are not part of the fingerprint. Prose may evolve freely.
+		if a.Code != b.Code || a.Severity != b.Severity ||
+			a.Path != b.Path || a.Position != b.Position ||
+			a.EntityID != b.EntityID || a.Target != b.Target ||
+			a.Blocking != b.Blocking || a.Fingerprint != b.Fingerprint {
+			return fmt.Errorf("%w: diagnostics differ from the current project at entry %d",
+				ErrPlanRejected, i+1)
+		}
+	}
+	return nil
 }
 
 func verifyStringSlice(what string, saved, rebuilt []string) error {

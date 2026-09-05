@@ -7,6 +7,7 @@ import (
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/version"
 )
 
@@ -147,5 +148,19 @@ func TestVerifyPlanMatchesNamesWhatDrifted(t *testing.T) {
 
 	if err := compiler.VerifyPlanMatches(base, base); err != nil {
 		t.Fatalf("a plan should match itself: %v", err)
+	}
+}
+
+func TestVerifyPlanMatchesAllowsDiagnosticWordingChanges(t *testing.T) {
+	d := diagnostics.New(diagnostics.DirectoryScopeAmbig, diagnostics.SeverityWarning, "original wording")
+	rebuilt := validPlan()
+	rebuilt.Diagnostics = []diagnostics.Diagnostic{d}
+	saved := rebuilt
+	saved.Diagnostics = []diagnostics.Diagnostic{
+		d.WithDetail("older detail").WithSuggestion("older suggestion"),
+	}
+	saved.Diagnostics[0].Summary = "older summary"
+	if err := compiler.VerifyPlanMatches(saved, rebuilt); err != nil {
+		t.Fatalf("wording alone must not invalidate a saved plan: %v", err)
 	}
 }

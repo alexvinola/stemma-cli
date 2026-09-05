@@ -166,6 +166,54 @@ func TestSavedPlanWithTrailingDocumentIsRejected(t *testing.T) {
 	assertRejectedWithoutWriting(t, h, "more than one JSON document")
 }
 
+func TestSavedPlanWithTrailingContentIsRejected(t *testing.T) {
+	for _, suffix := range []string{
+		"]", "}", "]\n{\"ignored\":true}", "}\n{\"ignored\":true}",
+		"garbage", "{", "null", "[]",
+	} {
+		t.Run(suffix, func(t *testing.T) {
+			h := planHarness(t)
+			h.write("plan.json", h.read("plan.json")+suffix)
+			assertRejectedWithoutWriting(t, h, "saved plan rejected")
+		})
+	}
+}
+
+func TestSavedPlanWithForgedDiagnosticsIsRejected(t *testing.T) {
+	for _, tc := range []struct {
+		field string
+		value any
+	}{
+		{"code", "STEMMA0000_FAKE"},
+		{"severity", "info"},
+		{"path", "forged.md"},
+		{"position", map[string]any{"line": 999, "column": 999}},
+		{"entityId", "context.forged"},
+		{"target", "kiro"},
+		{"blocking", true},
+		{"fingerprint", "dg_forged"},
+	} {
+		t.Run(tc.field, func(t *testing.T) {
+			h := planHarness(t)
+			// This projection has warnings about lost scope and native agents.
+			if res := h.run("plan", "--target", "codex", "--output-plan", "plan.json"); res.code != cli.ExitOK {
+				t.Fatalf("plan exit = %d, stderr = %s", res.code, res.stderr)
+			}
+			editPlan(t, h, func(plan map[string]any) {
+				ds := plan["diagnostics"].([]any)
+				if len(ds) == 0 {
+					t.Fatal("expected diagnostics to tamper with")
+				}
+				d := ds[0].(map[string]any)
+				// In particular, changing a semantic field leaves the original
+				// fingerprint intact: that string cannot vouch for the fields.
+				d[tc.field] = tc.value
+			})
+			assertRejectedWithoutWriting(t, h, "diagnostics")
+		})
+	}
+}
+
 func TestSavedPlanIsRejectedAfterCanonicalDrift(t *testing.T) {
 	// The plan was reviewed against a project that no longer exists. Applying
 	// it would write content nobody reviewed.
@@ -232,6 +280,8 @@ func TestUntamperedSavedPlanStillApplies(t *testing.T) {
 	// for. Without this, every test above passes if apply --plan simply stops
 	// working.
 	h := planHarness(t)
+	// Whitespace after the single document is valid JSON and must stay valid.
+	h.write("plan.json", h.read("plan.json")+" \t\r\n")
 	res := h.run("apply", "--plan", "plan.json", "--yes")
 	if res.code != cli.ExitOK {
 		t.Fatalf("replaying an untouched plan exit = %d, stderr = %s", res.code, res.stderr)
