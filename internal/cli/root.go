@@ -11,6 +11,7 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/capabilities"
 	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/store"
 	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
@@ -250,13 +251,22 @@ func exitCodeForError(err error) int {
 
 // fail reports an error in the requested output mode.
 func fail(env Env, command string, jsonOut bool, code int, err error, data any) int {
+	var loadErr *store.ProjectLoadError
+	var diags []diagnostics.Diagnostic
+	if errors.As(err, &loadErr) {
+		diags = loadErr.Diagnostics
+	}
 	if jsonOut {
-		doc := NewEnvelope(command, code, nil, data)
+		doc := NewEnvelope(command, code, diags, data)
 		doc.Error = err.Error()
 		if writeErr := WriteJSON(env, doc); writeErr != nil {
 			fmt.Fprintf(env.Stderr, "stemma: %v\n", writeErr)
 			return ExitInternal
 		}
+		return code
+	}
+	if len(diags) > 0 {
+		PrintDiagnostics(env.Stderr, diags, true)
 		return code
 	}
 	fmt.Fprintf(env.Stderr, "stemma: %s\n", SanitizeLine(err.Error()))

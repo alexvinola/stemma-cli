@@ -56,6 +56,9 @@ fuzz:
 	$(GO) test -run xxx -fuzz FuzzNormalizeRel -fuzztime 30s ./internal/workspace
 	$(GO) test -run xxx -fuzz FuzzUnmarshalProject -fuzztime 30s ./internal/canonical
 	$(GO) test -run xxx -fuzz FuzzClassify -fuzztime 30s ./internal/discovery
+	@set -e; for entity in Context Rule Procedure Skill Agent Decision; do \
+		$(GO) test -run xxx -fuzz "^FuzzDecode$$entity$$" -fuzztime 30s ./internal/store; \
+	done
 
 .PHONY: cross
 cross:
