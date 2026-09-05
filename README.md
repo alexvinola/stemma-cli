@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="docs/assets/stemma-mark.svg" width="88" height="88" alt="Stemma">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/stemma-lockup-dark.png">
+    <img src="docs/assets/stemma-lockup-light.png" width="420" alt="Stemma">
+  </picture>
 </p>
-
-<h1 align="center">Stemma</h1>
 
 <p align="center">
   <b>A deterministic, local-first compiler for coding-agent context.</b><br>
@@ -10,15 +11,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/alexvinola/stemma-cli/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/alexvinola/stemma-cli/ci.yml?branch=master&label=CI&style=flat-square&color=27B7A4"></a>
-  <a href="https://github.com/alexvinola/stemma-cli/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/alexvinola/stemma-cli?style=flat-square&color=0F6675"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/alexvinola/stemma-cli?style=flat-square&color=0F6675"></a>
-  <img alt="Go" src="https://img.shields.io/github/go-mod/go-version/alexvinola/stemma-cli?style=flat-square&color=0F6675">
-  <img alt="Dependencies" src="https://img.shields.io/badge/dependencies-none-27B7A4?style=flat-square">
+  <a href="https://github.com/alexvinola/stemma-cli/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/alexvinola/stemma-cli/ci.yml?branch=master&label=CI&style=flat-square&color=02A28D"></a>
+  <a href="https://github.com/alexvinola/stemma-cli/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/alexvinola/stemma-cli?style=flat-square&color=04665A"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/alexvinola/stemma-cli?style=flat-square&color=04665A"></a>
+  <img alt="Go" src="https://img.shields.io/github/go-mod/go-version/alexvinola/stemma-cli?style=flat-square&color=04665A">
+  <img alt="Dependencies" src="https://img.shields.io/badge/dependencies-none-02A28D?style=flat-square">
 </p>
 
 <p align="center">
-  <a href="https://alexvinola.com"><img alt="Portfolio" src="https://img.shields.io/badge/%E2%86%92_built_by-alexvinola.com-0F6675?style=for-the-badge&labelColor=27B7A4"></a>
+  <a href="https://alexvinola.com"><img alt="Portfolio" src="https://img.shields.io/badge/%E2%86%92_built_by-alexvinola.com-04665A?style=for-the-badge&labelColor=02A28D"></a>
 </p>
 
 ---

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
@@ -20,33 +21,72 @@ type decoded struct {
 // decodeFile parses an entity file and splits its body.
 func decodeFile(path string, data []byte) decoded {
 	doc := parser.Parse(path, data)
+	if doc.FrontMatter == nil && !diagnostics.HasBlocking(doc.Diagnostics) {
+		doc.Diagnostics = append(doc.Diagnostics, diagf(path, "entity file requires a front matter block delimited by '---'"))
+	}
 	main, sections, lists := splitBody(doc)
 	return decoded{doc: doc, main: main, sections: sections, lists: lists, diags: doc.Diagnostics}
 }
 
-func (d decoded) str(key string) string {
-	v, _ := d.doc.FrontMatter.String(key)
+// field distinguishes an absent field from a present value of the wrong type.
+// Reading a nil map is safe in Go; dereferencing a nil *FrontMatter is not.
+func (d decoded) field(key string) (any, bool) {
+	if d.doc.FrontMatter == nil {
+		return nil, false
+	}
+	v, ok := d.doc.FrontMatter.Fields[key]
+	return v, ok
+}
+
+func (d *decoded) invalidType(key, want string) {
+	d.diags = append(d.diags, diagnostics.New(diagnostics.InvalidFrontMatter, diagnostics.SeverityError,
+		fmt.Sprintf("front matter field %q must be %s", key, want)).WithPath(d.doc.Path))
+}
+
+func (d *decoded) str(key string) string {
+	raw, exists := d.field(key)
+	if !exists {
+		return ""
+	}
+	v, ok := raw.(string)
+	if !ok {
+		d.invalidType(key, "a string")
+		return ""
+	}
 	return strings.TrimSpace(v)
 }
 
-func (d decoded) boolPtr(key string) *bool {
-	v, ok := d.doc.FrontMatter.Bool(key)
+func (d *decoded) boolPtr(key string) *bool {
+	raw, exists := d.field(key)
+	if !exists {
+		return nil
+	}
+	v, ok := raw.(bool)
 	if !ok {
+		d.invalidType(key, "a boolean")
 		return nil
 	}
 	return &v
 }
 
-func (d decoded) list(key string) []string {
-	v, ok := d.doc.FrontMatter.StringList(key)
+func (d *decoded) list(key string) []string {
+	raw, exists := d.field(key)
+	if !exists {
+		return nil
+	}
+	v, ok := stringList(raw)
 	if !ok {
+		d.invalidType(key, "a string or a list of strings")
 		return nil
 	}
 	return v
 }
 
 func (d decoded) activation(path string) (canonical.Activation, []diagnostics.Diagnostic) {
-	raw, ok := d.doc.FrontMatter.Fields["activation"]
+	if d.doc.FrontMatter == nil {
+		return canonical.Activation{}, nil
+	}
+	raw, ok := d.field("activation")
 	if !ok {
 		return canonical.Activation{}, []diagnostics.Diagnostic{
 			diagf(path, "entity file is missing the required \"activation\" front matter"),
@@ -61,8 +101,23 @@ func (d decoded) activation(path string) (canonical.Activation, []diagnostics.Di
 	return a, nil
 }
 
-func (d decoded) extensions() canonical.Extensions {
-	return parseExtensions(d.doc.FrontMatter.Fields["extensions"])
+func (d *decoded) extensions() canonical.Extensions {
+	raw, exists := d.field("extensions")
+	if !exists {
+		return nil
+	}
+	m, ok := raw.(map[string]any)
+	if !ok {
+		d.invalidType("extensions", "a mapping")
+		return nil
+	}
+	// Sorting keeps diagnostics stable even when several provider entries are invalid.
+	for _, provider := range kvSorted(m) {
+		if _, ok := m[provider].(map[string]any); !ok {
+			d.invalidType("extensions."+provider, "a mapping")
+		}
+	}
+	return parseExtensions(m)
 }
 
 // DecodeContext reads a context document file.
@@ -118,7 +173,7 @@ func DecodeRule(id, path string, data []byte) (canonical.Rule, []diagnostics.Dia
 // DecodeProcedure reads a procedure file.
 func DecodeProcedure(id, path string, data []byte) (canonical.Procedure, []diagnostics.Diagnostic) {
 	d := decodeFile(path, data)
-	return canonical.Procedure{
+	e := canonical.Procedure{
 		ID:          id,
 		Name:        d.str("name"),
 		Description: d.str("description"),
@@ -126,13 +181,14 @@ func DecodeProcedure(id, path string, data []byte) (canonical.Procedure, []diagn
 		Content:     d.main,
 		Enabled:     d.boolPtr("enabled"),
 		Extensions:  d.extensions(),
-	}, d.diags
+	}
+	return e, d.diags
 }
 
 // DecodeSkill reads a skill file.
 func DecodeSkill(id, path string, data []byte) (canonical.Skill, []diagnostics.Diagnostic) {
 	d := decodeFile(path, data)
-	return canonical.Skill{
+	e := canonical.Skill{
 		ID:               id,
 		Name:             d.str("name"),
 		Description:      d.str("description"),
@@ -141,13 +197,14 @@ func DecodeSkill(id, path string, data []byte) (canonical.Skill, []diagnostics.D
 		InvocationPolicy: d.str("invocationPolicy"),
 		Enabled:          d.boolPtr("enabled"),
 		Extensions:       d.extensions(),
-	}, d.diags
+	}
+	return e, d.diags
 }
 
 // DecodeAgent reads a specialist agent file.
 func DecodeAgent(id, path string, data []byte) (canonical.Agent, []diagnostics.Diagnostic) {
 	d := decodeFile(path, data)
-	return canonical.Agent{
+	e := canonical.Agent{
 		ID:              id,
 		Name:            d.str("name"),
 		Description:     d.str("description"),
@@ -156,7 +213,8 @@ func DecodeAgent(id, path string, data []byte) (canonical.Agent, []diagnostics.D
 		ModelPreference: d.str("modelPreference"),
 		Enabled:         d.boolPtr("enabled"),
 		Extensions:      d.extensions(),
-	}, d.diags
+	}
+	return e, d.diags
 }
 
 // DecodeDecision reads an architecture decision file.
@@ -166,7 +224,7 @@ func DecodeDecision(id, path string, data []byte) (canonical.Decision, []diagnos
 	if status == "" {
 		status = canonical.DecisionProposed
 	}
-	return canonical.Decision{
+	e := canonical.Decision{
 		ID:               id,
 		Title:            d.str("title"),
 		Status:           status,
@@ -175,5 +233,6 @@ func DecodeDecision(id, path string, data []byte) (canonical.Decision, []diagnos
 		Consequences:     d.sections[sectionConsequences],
 		AgentConstraints: d.lists[sectionConstraints],
 		Extensions:       d.extensions(),
-	}, d.diags
+	}
+	return e, d.diags
 }
