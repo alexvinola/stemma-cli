@@ -108,7 +108,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(proc.ID, canonical.EntityProcedure, res, proc.Provenance)
 			continue
 		}
-		name := adapters.FileSlug(proc.Name, proc.ID)
+		name := adapters.FileSlug(proc.ID)
 		file := name + ".prompt.md"
 		if v, ok := proc.Extensions.GetString(string(canonical.TargetCopilot), "stemma.promptFile"); ok && safeName(v) {
 			file = v
@@ -139,12 +139,12 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(skill.ID, canonical.EntitySkill, res, skill.Provenance)
 			continue
 		}
-		name := adapters.FileSlug(skill.Name, skill.ID)
+		name := adapters.SkillSlug(skill.ID)
 		if v, ok := skill.Extensions.GetString(string(canonical.TargetCopilot), "stemma.sourceDir"); ok && safeName(v) {
 			name = v
 		}
 		dest := b.Path(res, path.Join(skillsDir, name), "SKILL.md")
-		entries := []adapters.KV{{Key: "name", Value: skill.Name}}
+		entries := []adapters.KV{{Key: "name", Value: b.SkillName(skill.ID, skill.Name, dest)}}
 		if skill.Description != "" {
 			entries = append(entries, adapters.KV{Key: "description", Value: skill.Description})
 		}
@@ -168,7 +168,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(agent.ID, canonical.EntityAgent, res, agent.Provenance)
 			continue
 		}
-		fileName := adapters.FileSlug(agent.Name, agent.ID) + ".md"
+		fileName := adapters.FileSlug(agent.ID) + ".md"
 		if v, ok := agent.Extensions.GetString(string(canonical.TargetCopilot), "stemma.sourceFile"); ok && safeName(v) {
 			fileName = v
 		}
@@ -219,7 +219,7 @@ func exportScoped(
 	description string,
 	pinnedFile string,
 ) {
-	name := adapters.FileSlug(title, id)
+	name := adapters.FileSlug(id)
 	file := name + ".instructions.md"
 	if pinnedFile != "" && safeName(pinnedFile) {
 		file = pinnedFile
@@ -295,7 +295,7 @@ func exportOnDemand(
 	res adapters.Resolution,
 	prov provenance.Provenance,
 ) {
-	name := adapters.FileSlug(title, id)
+	name := adapters.FileSlug(id)
 	dest := b.Path(res, promptsDir, name+".prompt.md")
 	entries := []adapters.KV{}
 	if res.Activation.Trigger != "" {

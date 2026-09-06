@@ -4,11 +4,11 @@
     "severity": "warning",
     "summary": "an include pattern contains a comma, which Copilot applyTo cannot represent",
     "detail": "applyTo joins patterns with commas, so Copilot will read reports/summary,draft.md as several patterns and the scope will not match the files the canonical entity names.",
-    "path": ".github/instructions/generated-reports-are-read-only.instructions.md",
+    "path": ".github/instructions/rule-generated-reports.instructions.md",
     "entityId": "rule.generated-reports",
     "target": "github-copilot",
     "suggestion": "Split the pattern into several comma-free patterns.",
     "blocking": false,
-    "fingerprint": "dg_44b19a7be5a64fa1"
+    "fingerprint": "dg_acaa4267ee903145"
   }
 ]

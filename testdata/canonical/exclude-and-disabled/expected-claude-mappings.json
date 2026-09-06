@@ -22,10 +22,10 @@
     "entityType": "context",
     "outcome": "adapted",
     "files": [
-      ".claude/skills/incident-runbook/SKILL.md"
+      ".claude/skills/context-runbook/SKILL.md"
     ],
     "activation": "on demand (incident-runbook)",
-    "explanation": "Claude Code has no on-demand context format other than skills, so the document is delivered as a skill that loads when invoked."
+    "explanation": "Claude Code has no on-demand context format other than skills, so the document is delivered as a skill that loads when invoked. The skill invocation name is \"context-runbook\" to match its destination directory."
   },
   {
     "entityId": "decision.event-sourcing",
@@ -42,7 +42,7 @@
     "entityType": "rule",
     "outcome": "lossy",
     "files": [
-      ".claude/rules/controllers-never-touch-the-database.md"
+      ".claude/rules/rule-controller-repository.md"
     ],
     "activation": "paths src/api/** (excluding src/api/**/*_test.go)",
     "explanation": "The documented paths front matter has no negative pattern syntax, so the exclude patterns are only reproduced as a note in the file body."

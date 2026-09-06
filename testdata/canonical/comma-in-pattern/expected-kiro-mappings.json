@@ -4,7 +4,7 @@
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/generated-reports-are-read-only.md"
+      ".kiro/steering/rule-generated-reports.md"
     ],
     "activation": "paths reports/summary,draft.md",
     "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."

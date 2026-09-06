@@ -1,0 +1,22 @@
+[
+  {
+    "entityId": "rule.testing",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/backend/testing.md"
+    ],
+    "activation": "paths api/**",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  },
+  {
+    "entityId": "rule.testing-2",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/frontend/testing.md"
+    ],
+    "activation": "paths web/**",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  }
+]

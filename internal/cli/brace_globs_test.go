@@ -33,7 +33,7 @@ func TestHandwrittenBraceScopeSurvivesApplyAndReimport(t *testing.T) {
 	if r := h.run("apply", "--target", "github-copilot", "--yes"); r.code != 0 {
 		t.Fatalf("apply: %+v", r)
 	}
-	content := h.read(".github/instructions/api.instructions.md")
+	content := h.read(".github/instructions/rule-api.instructions.md")
 	if !strings.Contains(content, "applyTo: src/**/*.ts,src/**/*.tsx\n") {
 		t.Fatalf("scope not expanded: %s", content)
 	}
@@ -49,7 +49,7 @@ func TestHandwrittenBraceScopeSurvivesApplyAndReimport(t *testing.T) {
 	if r := back.run("apply", "--target", "claude", "--yes"); r.code != 0 {
 		t.Fatalf("apply Claude: %+v", r)
 	}
-	content = back.read(".claude/rules/api.md")
+	content = back.read(".claude/rules/context-api.md")
 	if !strings.Contains(content, "src/**/*.ts\n") || !strings.Contains(content, "src/**/*.tsx\n") || strings.Contains(content, "{ts,tsx}") {
 		t.Fatalf("round trip changed the scope: %s", content)
 	}
