@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "entities": {},
+  "opaqueBlocks": [
+    {
+      "id": "opaque.claude-agents-reviewer-md",
+      "provider": "claude",
+      "sourcePath": ".claude/agents/reviewer.md",
+      "content": "---\ndescription: 42\nmodel: {}\n---\n# Review\n\nPreserve this instruction and its original metadata.\n",
+      "span": {
+        "byteEnd": 97,
+        "lineStart": 1,
+        "lineEnd": 8
+      },
+      "reason": "recognized front matter fields have invalid types; the file is preserved verbatim",
+      "hash": "sha256:d6d60b11c2deaba45cc299bf02707060507e707d1f007aa22fb7d73c6a938927",
+      "reemitForRoundTrip": true
+    },
+    {
+      "id": "opaque.claude-rules-scoped-md",
+      "provider": "claude",
+      "sourcePath": ".claude/rules/scoped.md",
+      "content": "---\npaths: [\"src/**\", null]\nenabled: []\npriority: false\n---\n# Review\n\nPreserve this instruction and its original metadata.\n",
+      "span": {
+        "byteEnd": 123,
+        "lineStart": 1,
+        "lineEnd": 9
+      },
+      "reason": "recognized front matter fields have invalid types; the file is preserved verbatim",
+      "hash": "sha256:f8f3cc91ffb455f2f5e1ec8627a1dc2594aa452dfb26b1777ec2d0b480d9b0d4",
+      "reemitForRoundTrip": true
+    },
+    {
+      "id": "opaque.claude-skills-review-skill-md",
+      "provider": "claude",
+      "sourcePath": ".claude/skills/review/SKILL.md",
+      "content": "---\nallowed-tools: [read]\ntools: null\n---\n# Review\n\nPreserve this instruction and its original metadata.\n",
+      "span": {
+        "byteEnd": 105,
+        "lineStart": 1,
+        "lineEnd": 8
+      },
+      "reason": "recognized front matter fields have invalid types; the file is preserved verbatim",
+      "hash": "sha256:0d2ecf1dea9bacd5878a95e21c660e089c882fb8cf19b5938e819d609ba38599",
+      "reemitForRoundTrip": true
+    }
+  ]
+}

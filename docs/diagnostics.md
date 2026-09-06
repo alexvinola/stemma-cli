@@ -47,7 +47,7 @@ human and JSON output use this order.
 | `STEMMA1002_LIMIT_REACHED` | warning/error | A scan or document limit stopped the work early |
 | `STEMMA1003_FILE_UNREADABLE` | error | A configuration file could not be read |
 | `STEMMA1004_INVALID_ENCODING` | error | The file is not valid UTF-8; it is preserved, not interpreted |
-| `STEMMA1101_INVALID_FRONT_MATTER` | warning/error | Front matter could not be parsed in the supported subset, or a canonical field has the wrong type (error) |
+| `STEMMA1101_INVALID_FRONT_MATTER` | warning/error | Front matter could not be parsed in the supported subset, or a recognized provider/canonical field has the wrong type (error; names the key and found type) |
 | `STEMMA1102_FRONT_MATTER_TOO_LARGE` | error | Front matter exceeded a size, line or key limit |
 | `STEMMA1103_UNSAFE_YAML_CONSTRUCT` | error | A tag, anchor, alias or merge key was refused |
 | `STEMMA1201_UNKNOWN_SECTION_PRESERVED` | info/warning | A section was kept without being modelled |

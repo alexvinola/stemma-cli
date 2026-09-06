@@ -19,6 +19,7 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/discovery"
 	"github.com/alexvinola/stemma-cli/internal/globs"
+	"github.com/alexvinola/stemma-cli/internal/parser"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
@@ -46,13 +47,13 @@ func (Importer) Import(ctx context.Context, in adapters.ImportInput) (adapters.I
 		case discovery.RolePrompt:
 			importPrompt(c, &project, file)
 		case discovery.RoleSkill:
-			doc, ok := c.ParseDocument(file)
+			doc, ok := c.ParseDocument(file, adapters.SkillFields()...)
 			if !ok {
 				continue
 			}
 			project.Skills = append(project.Skills, c.SkillFromDocument(file, doc, discovery.SkillName(file.Path)))
 		case discovery.RoleAgent:
-			doc, ok := c.ParseDocument(file)
+			doc, ok := c.ParseDocument(file, adapters.AgentFields()...)
 			if !ok {
 				continue
 			}
@@ -118,7 +119,10 @@ func importRootInstructions(c *adapters.ImportCtx, project *canonical.Project, f
 // importScopedInstructions maps a .instructions.md file to a path-scoped
 // context document. applyTo is a comma-separated glob list.
 func importScopedInstructions(c *adapters.ImportCtx, project *canonical.Project, file adapters.SourceFile) {
-	doc, ok := c.ParseDocument(file)
+	doc, ok := c.ParseDocument(file,
+		parser.FieldSpec{Key: "applyTo", Type: parser.StringField},
+		parser.FieldSpec{Key: "description", Type: parser.StringField},
+	)
 	if !ok {
 		return
 	}
@@ -181,7 +185,10 @@ func importScopedInstructions(c *adapters.ImportCtx, project *canonical.Project,
 
 // importPrompt maps a .prompt.md file to a canonical procedure.
 func importPrompt(c *adapters.ImportCtx, project *canonical.Project, file adapters.SourceFile) {
-	doc, ok := c.ParseDocument(file)
+	doc, ok := c.ParseDocument(file,
+		parser.FieldSpec{Key: "name", Type: parser.StringField},
+		parser.FieldSpec{Key: "description", Type: parser.StringField},
+	)
 	if !ok {
 		return
 	}

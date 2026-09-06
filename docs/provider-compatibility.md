@@ -34,6 +34,42 @@ Status vocabulary used below:
 | Agent tool allowlist | yes | yes | no | yes | — |
 | Opaque provider content re-emitted | yes | yes | yes | yes | — |
 
+## Recognized metadata types
+
+Stemma checks recognized fields before creating any entity. Missing optional
+fields keep their existing defaults; a present value of the wrong type,
+including `null`, is a blocking `STEMMA1101` error. The diagnostic names the
+source file, key, expected type and found type. A malformed list also identifies
+the first non-string member. The entire provider file is preserved verbatim as
+an opaque block; the CLI aborts the import without writing or replacing the
+canonical project. Invalid metadata cannot become always-on context or silently
+remove a tool restriction.
+
+| Import surface | Strings | String or list of strings | Boolean |
+| --- | --- | --- | --- |
+| Copilot instructions | `applyTo`, `description` | — | — |
+| Copilot prompts | `name`, `description` | — | — |
+| Claude rules | `description`, `priority` | `paths` | `enabled` |
+| Kiro steering | `inclusion`, `name`, `description` | `fileMatchPattern` | — |
+| Skills (all four providers) | `name`, `description` | `allowed-tools`, `allowedTools`, `tools` | — |
+| Copilot / Claude Markdown agents | `name`, `description`, `model` | `tools`, `allowed-tools`, `allowedTools` | — |
+
+This table describes Stemma's import contract, including its existing tool-key
+aliases and Claude rule `priority`/`enabled` metadata; it does not claim that
+all providers interpret these fields. All aliases are checked even if another
+alias takes precedence. Unknown metadata and prompt `mode`/`model` values remain
+provider extensions, without coercion or interpretation. Existing handling of
+valid empty strings/lists is unchanged.
+
+Kiro JSON agents use the same policy with `STEMMA1501`: `name`, `description`,
+`prompt`, `instructions` and `model` must be strings; `tools` must be an array of
+strings. JSON `null` is not an absent field or an empty tool name. The existing
+`instructions` alias remains supported.
+
+Canonical entity files also reject wrong types, including nested activation
+fields and extension-provider mappings, and report the found type. Arbitrary
+values inside a valid provider extension mapping remain preserved.
+
 ## GitHub Copilot
 
 | Item | Status | Notes |
@@ -50,7 +86,7 @@ Status vocabulary used below:
 | `excludeAgent` and other unknown keys | Partial | Preserved as provider extensions; not interpreted |
 | `AGENTS.md` / `CLAUDE.md` fallbacks | Unsupported by design | Copilot also reads these, but Stemma never writes them *for the Copilot target*, so two targets never own one file |
 
-Instruction format rechecked 2026-09-06; skill and agent sources last verified 2026-09-02:
+Instruction, skill and agent metadata sources last verified 2026-09-06:
 
 - [Adding repository custom instructions for GitHub Copilot](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions)
   — confirms the three instruction file locations, the `applyTo` front matter,
@@ -59,8 +95,8 @@ Instruction format rechecked 2026-09-06; skill and agent sources last verified 2
 - [About agent skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills)
   — confirms `.github/skills`, `.claude/skills` and `.agents/skills` with
   `SKILL.md`.
-- [Creating custom agents for Copilot cloud agent](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/create-custom-agents)
-  — confirms Markdown agent profiles with YAML front matter.
+- [Custom agents configuration](https://docs.github.com/en/copilot/reference/custom-agents-configuration)
+  — specifies string metadata and string/string-list tools.
 
 ## Claude Code
 
@@ -84,6 +120,10 @@ Source, last verified 2026-09-06:
 discovery, `paths:` front matter with multiple glob patterns and brace
 expansion, and that `@`-imports still load into context at launch.
 
+Skill and agent metadata sources, last verified 2026-09-06:
+[Extend Claude with skills](https://code.claude.com/docs/en/skills) and
+[Create custom subagents](https://code.claude.com/docs/en/sub-agents).
+
 ## Codex / `AGENTS.md`
 
 | Item | Status | Notes |
@@ -103,6 +143,10 @@ Source, last verified 2026-09-02:
 package, that the nearest file in the tree takes precedence, and that the format
 is plain Markdown with no front matter or glob scoping.
 
+Skill metadata source, last verified 2026-09-06:
+[Build skills](https://learn.chatgpt.com/docs/build-skills) — confirms the
+`name`/`description` metadata and repository `.agents/skills/` location.
+
 ## Kiro
 
 | Item | Status | Notes |
@@ -119,10 +163,14 @@ is plain Markdown with no front matter or glob scoping.
 | Global `~/.kiro/steering/` | Unsupported | Outside the repository |
 | Procedures | Adapted | Delivered as skills |
 
-Source, last verified 2026-09-02:
+Source, last verified 2026-09-06:
 [Kiro steering documents](https://kiro.dev/docs/steering/) — confirms
 `.kiro/steering/`, the four inclusion modes, that `fileMatchPattern` accepts
 single or multiple patterns, and the three foundation files.
+
+Skill and agent metadata sources, last verified 2026-09-06:
+[Kiro agent skills](https://kiro.dev/docs/skills/) and
+[Custom agent configuration reference](https://kiro.dev/docs/custom-agents/configuration-reference/).
 
 ## Cursor
 

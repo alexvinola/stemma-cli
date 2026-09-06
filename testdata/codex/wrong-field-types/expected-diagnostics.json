@@ -1,0 +1,47 @@
+[
+  {
+    "code": "STEMMA1101_INVALID_FRONT_MATTER",
+    "severity": "error",
+    "summary": "front matter field \"allowed-tools\" must be a string or a list of strings; found boolean",
+    "path": ".agents/skills/review/SKILL.md",
+    "position": {
+      "line": 1,
+      "column": 1
+    },
+    "blocking": true,
+    "fingerprint": "dg_fb0473ca097f1d38"
+  },
+  {
+    "code": "STEMMA1101_INVALID_FRONT_MATTER",
+    "severity": "error",
+    "summary": "front matter field \"description\" must be a string; found number",
+    "path": ".agents/skills/review/SKILL.md",
+    "position": {
+      "line": 1,
+      "column": 1
+    },
+    "blocking": true,
+    "fingerprint": "dg_fb0473ca097f1d38"
+  },
+  {
+    "code": "STEMMA1101_INVALID_FRONT_MATTER",
+    "severity": "error",
+    "summary": "front matter field \"name\" must be a string; found array",
+    "path": ".agents/skills/review/SKILL.md",
+    "position": {
+      "line": 1,
+      "column": 1
+    },
+    "blocking": true,
+    "fingerprint": "dg_fb0473ca097f1d38"
+  },
+  {
+    "code": "STEMMA1203_OPAQUE_BLOCK_PRESERVED",
+    "severity": "info",
+    "summary": "content preserved without interpretation: recognized front matter fields have invalid types; the file is preserved verbatim",
+    "path": ".agents/skills/review/SKILL.md",
+    "entityId": "opaque.agents-skills-review-skill-md",
+    "blocking": false,
+    "fingerprint": "dg_215793000476077e"
+  }
+]

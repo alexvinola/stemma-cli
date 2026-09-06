@@ -1,0 +1,12 @@
+[
+  {
+    "code": "STEMMA3002_TARGET_NOT_ENABLED",
+    "severity": "warning",
+    "summary": "target \"claude\" is not listed in the canonical project",
+    "detail": "Compilation proceeds, but `stemma check --all` will not verify this target.",
+    "target": "claude",
+    "suggestion": "Add \"claude\" to \"targets\" in .stemma/project.json.",
+    "blocking": false,
+    "fingerprint": "dg_44ca6dbcd2ab6595"
+  }
+]

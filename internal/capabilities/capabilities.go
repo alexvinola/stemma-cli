@@ -101,7 +101,8 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"has no negative pattern syntax, so canonical exclude patterns cannot be represented. " +
 			"Copilot also reads AGENTS.md and CLAUDE.md; Stemma never writes those files for this " +
 			"target, to avoid two targets owning one file. Unknown keys such as excludeAgent are " +
-			"preserved as provider extensions rather than interpreted.",
+			"preserved as provider extensions rather than interpreted. Recognized front matter fields " +
+			"are checked without type coercion; wrong types block import and preserve the file verbatim.",
 		Sources: []Source{
 			{
 				Title:        "Adding repository custom instructions for GitHub Copilot",
@@ -111,12 +112,12 @@ var table = map[canonical.TargetFormat]Capabilities{
 			{
 				Title:        "About agent skills",
 				URL:          "https://docs.github.com/en/copilot/concepts/agents/about-agent-skills",
-				LastVerified: "2026-09-02",
+				LastVerified: "2026-09-06",
 			},
 			{
-				Title:        "Creating custom agents for Copilot cloud agent",
-				URL:          "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/create-custom-agents",
-				LastVerified: "2026-09-02",
+				Title:        "Custom agents configuration",
+				URL:          "https://docs.github.com/en/copilot/reference/custom-agents-configuration",
+				LastVerified: "2026-09-06",
 			},
 		},
 	},
@@ -151,10 +152,19 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"imports as a context reduction. Claude's glob dialect supports brace expansion, and " +
 			"Stemma expands groups on import and projection, including handwritten canonical patterns. " +
 			"Stemma rejects patterns exceeding 1000 alternatives or 32 nested groups, and preserves " +
-			"literal braces in character classes.",
+			"literal braces in character classes. Recognized front matter fields require strings, " +
+			"string lists or booleans as appropriate; wrong types block import and preserve the file verbatim.",
 		Sources: []Source{{
 			Title:        "How Claude remembers your project (CLAUDE.md and .claude/rules/)",
 			URL:          "https://code.claude.com/docs/en/memory",
+			LastVerified: "2026-09-06",
+		}, {
+			Title:        "Extend Claude with skills",
+			URL:          "https://code.claude.com/docs/en/skills",
+			LastVerified: "2026-09-06",
+		}, {
+			Title:        "Create custom subagents",
+			URL:          "https://code.claude.com/docs/en/sub-agents",
 			LastVerified: "2026-09-06",
 		}},
 	},
@@ -185,11 +195,16 @@ var table = map[canonical.TargetFormat]Capabilities{
 		Notes: "Scoping is expressed only by file location: a nested AGENTS.md applies to its " +
 			"directory subtree. Glob patterns have no representation, so a path-scoped rule is " +
 			"only projected natively when its patterns resolve to a single concrete directory. " +
-			"There is no native specialist-agent format.",
+			"There is no native specialist-agent format. Recognized skill metadata is type-checked; " +
+			"wrong types block import and preserve the SKILL.md file verbatim.",
 		Sources: []Source{{
 			Title:        "AGENTS.md open format (nested files, nearest file wins)",
 			URL:          "https://agents.md/",
 			LastVerified: "2026-09-02",
+		}, {
+			Title:        "Build skills (Codex SKILL.md metadata)",
+			URL:          "https://learn.chatgpt.com/docs/build-skills",
+			LastVerified: "2026-09-06",
 		}},
 	},
 	canonical.TargetKiro: {
@@ -219,11 +234,20 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"additionally carries name and description; Stemma preserves that mode as an " +
 			"on-demand activation with a trigger description. product.md, tech.md and " +
 			"structure.md are the documented foundation files, which is why Stemma assigns " +
-			"context kinds to them by filename.",
+			"context kinds to them by filename. Wrong types in recognized steering, skill and JSON " +
+			"agent fields (including null) block import and preserve the original file verbatim.",
 		Sources: []Source{{
 			Title:        "Kiro steering documents",
 			URL:          "https://kiro.dev/docs/steering/",
-			LastVerified: "2026-09-02",
+			LastVerified: "2026-09-06",
+		}, {
+			Title:        "Kiro agent skills",
+			URL:          "https://kiro.dev/docs/skills/",
+			LastVerified: "2026-09-06",
+		}, {
+			Title:        "Kiro custom agent configuration reference",
+			URL:          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+			LastVerified: "2026-09-06",
 		}},
 	},
 	canonical.TargetCursor: {

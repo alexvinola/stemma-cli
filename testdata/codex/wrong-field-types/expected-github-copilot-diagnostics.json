@@ -1,0 +1,12 @@
+[
+  {
+    "code": "STEMMA3002_TARGET_NOT_ENABLED",
+    "severity": "warning",
+    "summary": "target \"github-copilot\" is not listed in the canonical project",
+    "detail": "Compilation proceeds, but `stemma check --all` will not verify this target.",
+    "target": "github-copilot",
+    "suggestion": "Add \"github-copilot\" to \"targets\" in .stemma/project.json.",
+    "blocking": false,
+    "fingerprint": "dg_178726ca77de4a98"
+  }
+]
