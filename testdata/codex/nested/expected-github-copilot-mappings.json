@@ -14,7 +14,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".github/instructions/api-package.instructions.md"
+      ".github/instructions/context-src-api-api-package.instructions.md"
     ],
     "activation": "paths src/api/**",
     "explanation": "Copilot applyTo represents the canonical include patterns directly."
@@ -40,11 +40,11 @@
   {
     "entityId": "skill.deploy",
     "entityType": "skill",
-    "outcome": "exact",
+    "outcome": "adapted",
     "files": [
-      ".github/skills/deploy/SKILL.md"
+      ".github/skills/skill-deploy/SKILL.md"
     ],
     "activation": "on demand (deploy)",
-    "explanation": "Copilot supports agent skills natively."
+    "explanation": "Copilot supports agent skills natively. The skill invocation name is \"skill-deploy\" to match its destination directory."
   }
 ]

@@ -70,6 +70,32 @@ Canonical entity files also reject wrong types, including nested activation
 fields and extension-provider mappings, and report the found type. Arbitrary
 values inside a valid provider extension mapping remain preserved.
 
+## Generated names and destination collisions
+
+Fallback filenames use the complete canonical ID with its type prefix, for
+example `rule.testing` becomes `rule-testing.instructions.md` for Copilot.
+Titles may be identical without merging entities, including entities of different
+types. Imported filename/directory hints and explicit profile destinations still
+have precedence. Conflicting destinations (including file/parent-directory
+conflicts) produce blocking `STEMMA6001_INTERNAL_INVARIANT`, blocked mappings and
+CLI exit 6. Independently emitted files are never concatenated or overwritten.
+Intentional `CLAUDE.md`, `AGENTS.md` and Copilot root aggregates remain supported.
+
+Regenerated skills use their directory as the front matter `name`, as required
+by the [Agent Skills specification](https://agentskills.io/specification)
+(verified 2026-09-06). A changed invocation name is reported as `adapted` and
+explained in its mapping. Fallback skill directories exceeding 64 characters
+use the full SHA-256 digest of the canonical ID. Unchanged imported originals
+remain eligible for byte-identical reuse.
+
+**Existing projects:** cross-provider output without a preserved target hint may
+move from a title-based filename to an ID-based filename. Review `plan` before
+applying: Stemma proposes deletion of old generated paths but never deletes them.
+Remove obsolete provider files yourself after reviewing their replacements to
+avoid loading both versions. Profile destinations can keep an existing name if
+it does not conflict. Skill invocations may change alongside their directories;
+the mapping explains the new name.
+
 ## GitHub Copilot
 
 | Item | Status | Notes |

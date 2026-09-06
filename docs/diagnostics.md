@@ -136,3 +136,8 @@ to report adapting them.
 
 Detailed causes always remain available through diagnostics; the exit code set
 is deliberately small.
+
+`STEMMA6001_INTERNAL_INVARIANT` also blocks colliding generated destinations,
+including conflicting imported hints and profile pins. All affected mappings
+are blocked; the CLI returns 6 and writes no files. Aggregates must be assembled
+by the adapter and emitted exactly once.

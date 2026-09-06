@@ -4,7 +4,7 @@
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".claude/rules/strict-typing.md"
+      ".claude/rules/rule-strict-typing.md"
     ],
     "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go",
     "explanation": "Claude rules accept the canonical include patterns in their paths front matter."

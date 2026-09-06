@@ -22,10 +22,10 @@
     "entityType": "context",
     "outcome": "adapted",
     "files": [
-      ".agents/skills/incident-runbook/SKILL.md"
+      ".agents/skills/context-runbook/SKILL.md"
     ],
     "activation": "on demand (incident-runbook)",
-    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill."
+    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill. The skill invocation name is \"context-runbook\" to match its destination directory."
   },
   {
     "entityId": "decision.event-sourcing",

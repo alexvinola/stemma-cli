@@ -62,7 +62,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(dec.ID, canonical.EntityDecision, res, dec.Provenance)
 			continue
 		}
-		dest := b.Path(res, SteeringDir, adapters.FileSlug(dec.Title, dec.ID)+".md")
+		dest := b.Path(res, SteeringDir, adapters.FileSlug(dec.ID)+".md")
 		entries := []adapters.KV{{Key: "inclusion", Value: InclusionAlways}}
 		var md adapters.Markdown
 		md.Heading(1, dec.Title)
@@ -112,7 +112,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(agent.ID, canonical.EntityAgent, res, agent.Provenance)
 			continue
 		}
-		fileName := adapters.FileSlug(agent.Name, agent.ID) + ".json"
+		fileName := adapters.FileSlug(agent.ID) + ".json"
 		if v, ok := agent.Extensions.GetString(string(canonical.TargetKiro), "stemma.sourceFile"); ok && safeName(v) {
 			fileName = v
 		}
@@ -147,7 +147,7 @@ func exportSteering(
 	res adapters.Resolution,
 	prov provenance.Provenance,
 ) {
-	file := adapters.FileSlug(title, id) + ".md"
+	file := adapters.FileSlug(id) + ".md"
 	if v, ok := ext.GetString(string(canonical.TargetKiro), "stemma.steeringFile"); ok && safeName(v) {
 		file = v
 	}
@@ -238,12 +238,12 @@ func writeSkill(
 	content string,
 	ext canonical.Extensions,
 ) string {
-	dirName := adapters.FileSlug(name, id)
+	dirName := adapters.SkillSlug(id)
 	if v, ok := ext.GetString(string(canonical.TargetKiro), "stemma.sourceDir"); ok && safeName(v) {
 		dirName = v
 	}
 	dest := b.Path(res, path.Join(SkillsDir, dirName), "SKILL.md")
-	entries := []adapters.KV{{Key: "name", Value: name}}
+	entries := []adapters.KV{{Key: "name", Value: b.SkillName(id, name, dest)}}
 	if description != "" {
 		entries = append(entries, adapters.KV{Key: "description", Value: description})
 	}

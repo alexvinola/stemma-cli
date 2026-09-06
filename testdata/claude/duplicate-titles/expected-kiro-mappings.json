@@ -1,0 +1,22 @@
+[
+  {
+    "entityId": "rule.testing",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/rule-testing.md"
+    ],
+    "activation": "paths api/**",
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
+  },
+  {
+    "entityId": "rule.testing-2",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/rule-testing-2.md"
+    ],
+    "activation": "paths web/**",
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
+  }
+]

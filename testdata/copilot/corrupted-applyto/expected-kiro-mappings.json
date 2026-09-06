@@ -4,7 +4,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/acme-frontend.md"
+      ".kiro/steering/context-acme-frontend.md"
     ],
     "activation": "always-on",
     "explanation": "Always-on context maps to a steering document with inclusion: always."
