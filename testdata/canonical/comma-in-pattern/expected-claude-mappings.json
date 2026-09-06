@@ -1,0 +1,12 @@
+[
+  {
+    "entityId": "rule.generated-reports",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/generated-reports-are-read-only.md"
+    ],
+    "activation": "paths reports/summary,draft.md",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  }
+]

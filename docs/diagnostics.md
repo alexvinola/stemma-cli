@@ -69,6 +69,7 @@ human and JSON output use this order.
 | `STEMMA2004_UNSUPPORTED_SCHEMA_VERSION` | error | The project was written by another schema version |
 | `STEMMA2005_INVALID_ACTIVATION` | error | The activation union invariants were violated |
 | `STEMMA2101_INVALID_GLOB` | error/warning | A pattern is invalid or escapes the repository |
+| `STEMMA2102_GLOB_EXPANSION_LIMIT` | error | Import rejected: brace expansion exceeds 1000 alternatives or 32 nested groups; split the pattern into smaller groups |
 | `STEMMA2201_DANGLING_PROVENANCE` | warning/error | Provenance is incomplete or inconsistent |
 | `STEMMA2301_INVALID_PROFILE` | error/warning | A profile is malformed or unsafe |
 | `STEMMA2302_PROFILE_OVERRIDES_UNKNOWN_ENTITY` | warning | A profile overrides an entity that does not exist |
@@ -81,6 +82,7 @@ human and JSON output use this order.
 | `STEMMA3001_TARGET_UNAVAILABLE` | error | The target is declared but not implemented (exit code 3) |
 | `STEMMA3002_TARGET_NOT_ENABLED` | warning | The target is not listed in the canonical project |
 | `STEMMA3101_EXCLUDE_NOT_REPRESENTABLE` | warning | The provider has no negative pattern syntax |
+| `STEMMA3102_PATTERN_NOT_REPRESENTABLE` | warning | A pattern contains a comma, which a comma-separated pattern list cannot represent |
 | `STEMMA3201_DIRECTORY_SCOPE_AMBIGUOUS` | warning | Patterns do not resolve to one directory; Stemma will not invent one |
 | `STEMMA3202_DIRECTORY_SCOPE_BROADENED` | warning | Directory scoping matches more files than the canonical patterns |
 | `STEMMA3301_AGENT_TOOLS_REQUIRE_REVIEW` | warning/error | Tool names crossed providers, or are unsafe |

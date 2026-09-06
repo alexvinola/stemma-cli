@@ -39,17 +39,20 @@ Status vocabulary used below:
 | Item | Status | Notes |
 | --- | --- | --- |
 | `.github/copilot-instructions.md` | Implemented | Split into always-on context documents by heading |
-| `.github/instructions/**/*.instructions.md` | Implemented | `applyTo` is a comma-separated glob list |
+| `.github/instructions/**/*.instructions.md` | Implemented | `applyTo` is a comma-separated glob list; the split honours brace nesting, so a comma inside `{ts,tsx}` is not read as a separator |
 | `.github/prompts/**/*.prompt.md` | Implemented | Imported as procedures; `mode`, `model` and other keys preserved as extensions |
 | `.github/skills/*/SKILL.md` | Implemented | Skills round-trip natively |
 | `.github/agents/*.md` | Implemented | Markdown with `name`, `description`, `tools` front matter |
 | `applyTo` exclude patterns | Lossy | The documented front matter has no negative syntax. Canonical excludes produce `STEMMA3101` and are written only as a scope note in the file body |
+| Brace expansion (`{ts,tsx}`) | Implemented | Groups are expanded on import and projection, including handwritten canonical entities and profiles. Oversized groups are rejected on import with blocking `STEMMA2102`; literal commas remain `lossy` with `STEMMA3102` |
+| A pattern carrying a literal comma | Lossy | `applyTo` cannot represent it unambiguously: `STEMMA3102`, plus a scope note in the file body |
+| An unclosed brace group in `applyTo` | Rejected | The signature of a group already split on its own comma. `STEMMA2101` names the file rather than importing a scope that matches nothing |
 | `excludeAgent` and other unknown keys | Partial | Preserved as provider extensions; not interpreted |
 | `AGENTS.md` / `CLAUDE.md` fallbacks | Unsupported by design | Copilot also reads these, but Stemma never writes them *for the Copilot target*, so two targets never own one file |
 
-Sources, last verified 2026-09-02:
+Instruction format rechecked 2026-09-06; skill and agent sources last verified 2026-09-02:
 
-- [Adding repository custom instructions for GitHub Copilot](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions)
+- [Adding repository custom instructions for GitHub Copilot](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions)
   — confirms the three instruction file locations, the `applyTo` front matter,
   comma-separated multiple patterns, and that Copilot also reads `AGENTS.md`
   and `CLAUDE.md`.
@@ -71,11 +74,11 @@ Sources, last verified 2026-09-02:
 | Exclude patterns | Lossy | `paths` has no documented negative syntax; `STEMMA3101` |
 | Procedures | Lossy → Adapted | No native procedure format; exported as skills, reported as `adapted` |
 | `@path` imports | Partial | Preserved verbatim as text, never resolved. Stemma warns that imported files still enter the context window, so imports are **not** presented as a context reduction |
-| Brace expansion (`{ts,tsx}`) | Partial | Passed through verbatim; Stemma's own matcher treats braces literally |
+| Brace expansion (`{ts,tsx}`) | Implemented | Expanded on import and projection, bounded at 1000 alternatives and 32 nested groups. Oversized groups are rejected on import with blocking `STEMMA2102`; braces inside character classes are preserved |
 | `CLAUDE.local.md`, user- and policy-scope files | Unsupported | Personal or machine-level files are out of scope for a repository compiler |
 | Auto memory (`~/.claude/projects/**`) | Unsupported | Machine-local, written by the agent, not repository configuration |
 
-Source, last verified 2026-09-02:
+Source, last verified 2026-09-06:
 [How Claude remembers your project](https://code.claude.com/docs/en/memory)
 — confirms `CLAUDE.md` and `.claude/CLAUDE.md`, `.claude/rules/` with recursive
 discovery, `paths:` front matter with multiple glob patterns and brace

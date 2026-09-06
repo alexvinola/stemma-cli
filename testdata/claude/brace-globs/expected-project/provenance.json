@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "entities": {
+    "context.acme-frontend": {
+      "sourceFormat": "claude",
+      "sourcePath": "CLAUDE.md",
+      "sourceHash": "sha256:881f78aaf4913784bbe89c1a16bb690f1a66356e1513369811416391434b7985",
+      "span": {
+        "byteEnd": 71,
+        "lineStart": 1,
+        "lineEnd": 4
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:dc883cf7a7ce00ea5dd46db57b71064e4c92f1f7094d55f8a9471c0874da5c6d"
+    },
+    "context.conventions": {
+      "sourceFormat": "claude",
+      "sourcePath": "CLAUDE.md",
+      "sourceHash": "sha256:881f78aaf4913784bbe89c1a16bb690f1a66356e1513369811416391434b7985",
+      "span": {
+        "byteStart": 71,
+        "byteEnd": 124,
+        "lineStart": 5,
+        "lineEnd": 7
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:35c729f1b5e1d88a395ba6e7f010ab191545e90d15bfc216e22951114d49f1ed"
+    },
+    "rule.asset-conventions": {
+      "sourceFormat": "claude",
+      "sourcePath": ".claude/rules/assets.md",
+      "sourceHash": "sha256:877a4d5626673e0f3c751e87a23fe539a9c5734c3a553f7095662c52da0c2224",
+      "span": {
+        "byteEnd": 157,
+        "lineStart": 1,
+        "lineEnd": 8
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:3c00ab909dcbd7e1b9ca6af6274a27b3da30ea030405880b83c63461108339ab"
+    },
+    "rule.strict-typing": {
+      "sourceFormat": "claude",
+      "sourcePath": ".claude/rules/api.md",
+      "sourceHash": "sha256:45546c9cae3fb7babaa381ed0c01dd5b669a4bb42f39db319c8c1bfbc115d95b",
+      "span": {
+        "byteEnd": 126,
+        "lineStart": 1,
+        "lineEnd": 9
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:99126c7fa8aa439c1709d818eb1149aa1d58daadd189e2ba5d019556c833bb61"
+    }
+  },
+  "opaqueBlocks": []
+}

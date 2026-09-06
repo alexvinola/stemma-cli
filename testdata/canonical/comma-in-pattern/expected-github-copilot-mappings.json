@@ -1,0 +1,12 @@
+[
+  {
+    "entityId": "rule.generated-reports",
+    "entityType": "rule",
+    "outcome": "lossy",
+    "files": [
+      ".github/instructions/generated-reports-are-read-only.instructions.md"
+    ],
+    "activation": "paths reports/summary,draft.md",
+    "explanation": "Copilot applyTo is a comma-separated list, so the include patterns that themselves contain a comma cannot be represented unambiguously."
+  }
+]

@@ -37,7 +37,7 @@ exporters), plus a transactional writer.
 | --- | --- |
 | `internal/version` | Compile-time versions and the compatibility baseline |
 | `internal/diagnostics` | Stable codes, severities, fingerprints, ordering |
-| `internal/globs` | The glob dialect: matching, validation, directory derivation |
+| `internal/globs` | The glob dialect: matching, validation, bounded brace expansion, directory derivation |
 | `internal/provenance` | Where content came from; hashing |
 | `internal/canonical` | The provider-neutral model, IDs, JSON codec, validation |
 | `internal/tokenestimate` | Replaceable local estimator and the cost report |

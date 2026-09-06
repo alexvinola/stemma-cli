@@ -1,0 +1,12 @@
+[
+  {
+    "entityId": "context.acme-frontend",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  }
+]

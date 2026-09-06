@@ -1,0 +1,42 @@
+[
+  {
+    "entityId": "context.acme-frontend",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "context.conventions",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".github/copilot-instructions.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the repository-wide instructions file."
+  },
+  {
+    "entityId": "rule.asset-conventions",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".github/instructions/asset-conventions.instructions.md"
+    ],
+    "activation": "paths app/**/*.css, app/**/*.scss, packages/**/*.css, packages/**/*.scss",
+    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+  },
+  {
+    "entityId": "rule.strict-typing",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".github/instructions/strict-typing.instructions.md"
+    ],
+    "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go",
+    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+  }
+]

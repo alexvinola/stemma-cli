@@ -1,0 +1,32 @@
+[
+  {
+    "entityId": "context.acme-frontend",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/acme-frontend.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context maps to a steering document with inclusion: always."
+  },
+  {
+    "entityId": "context.strict-typing",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/strict-typing.md"
+    ],
+    "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go, app/**/*.css, packages/**/*.css",
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
+  },
+  {
+    "entityId": "context.ui-conventions",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/ui-conventions.md"
+    ],
+    "activation": "paths ui/**/*.js, ui/**/*.css, ui/**/*.html",
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
+  }
+]

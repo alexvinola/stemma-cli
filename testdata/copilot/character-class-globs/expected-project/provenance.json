@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "entities": {
+    "context.braces": {
+      "sourceFormat": "github-copilot",
+      "sourcePath": ".github/instructions/braces.instructions.md",
+      "sourceHash": "sha256:75c303f583589da0d947464f31b81c156fc9a97976d82239c99d26ecefaa3d93",
+      "span": {
+        "byteEnd": 60,
+        "lineStart": 1,
+        "lineEnd": 5
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:936f730a186e06f78b16392a8b9c39bfe104c0dea1494e511dba523507b3fc98"
+    }
+  },
+  "opaqueBlocks": []
+}
