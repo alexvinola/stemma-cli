@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
@@ -38,9 +37,9 @@ func (d decoded) field(key string) (any, bool) {
 	return v, ok
 }
 
-func (d *decoded) invalidType(key, want string) {
+func (d *decoded) invalidType(key, want string, raw any) {
 	d.diags = append(d.diags, diagnostics.New(diagnostics.InvalidFrontMatter, diagnostics.SeverityError,
-		fmt.Sprintf("front matter field %q must be %s", key, want)).WithPath(d.doc.Path))
+		"front matter "+parser.TypeMismatch(key, want, raw)).WithPath(d.doc.Path))
 }
 
 func (d *decoded) str(key string) string {
@@ -50,7 +49,7 @@ func (d *decoded) str(key string) string {
 	}
 	v, ok := raw.(string)
 	if !ok {
-		d.invalidType(key, "a string")
+		d.invalidType(key, "a string", raw)
 		return ""
 	}
 	return strings.TrimSpace(v)
@@ -63,7 +62,7 @@ func (d *decoded) boolPtr(key string) *bool {
 	}
 	v, ok := raw.(bool)
 	if !ok {
-		d.invalidType(key, "a boolean")
+		d.invalidType(key, "a boolean", raw)
 		return nil
 	}
 	return &v
@@ -76,7 +75,7 @@ func (d *decoded) list(key string) []string {
 	}
 	v, ok := stringList(raw)
 	if !ok {
-		d.invalidType(key, "a string or a list of strings")
+		d.invalidType(key, "a string or a list of strings", raw)
 		return nil
 	}
 	return v
@@ -108,13 +107,13 @@ func (d *decoded) extensions() canonical.Extensions {
 	}
 	m, ok := raw.(map[string]any)
 	if !ok {
-		d.invalidType("extensions", "a mapping")
+		d.invalidType("extensions", "a mapping", raw)
 		return nil
 	}
 	// Sorting keeps diagnostics stable even when several provider entries are invalid.
 	for _, provider := range kvSorted(m) {
 		if _, ok := m[provider].(map[string]any); !ok {
-			d.invalidType("extensions."+provider, "a mapping")
+			d.invalidType("extensions."+provider, "a mapping", m[provider])
 		}
 	}
 	return parseExtensions(m)

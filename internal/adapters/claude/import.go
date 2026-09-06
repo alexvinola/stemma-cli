@@ -17,6 +17,7 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/discovery"
 	"github.com/alexvinola/stemma-cli/internal/globs"
+	"github.com/alexvinola/stemma-cli/internal/parser"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
@@ -45,13 +46,13 @@ func (Importer) Import(ctx context.Context, in adapters.ImportInput) (adapters.I
 		case discovery.RoleRule:
 			importRule(c, &project, file)
 		case discovery.RoleSkill:
-			doc, ok := c.ParseDocument(file)
+			doc, ok := c.ParseDocument(file, adapters.SkillFields()...)
 			if !ok {
 				continue
 			}
 			project.Skills = append(project.Skills, c.SkillFromDocument(file, doc, discovery.SkillName(file.Path)))
 		case discovery.RoleAgent:
-			doc, ok := c.ParseDocument(file)
+			doc, ok := c.ParseDocument(file, adapters.AgentFields()...)
 			if !ok {
 				continue
 			}
@@ -124,7 +125,12 @@ func importMemory(c *adapters.ImportCtx, project *canonical.Project, file adapte
 // The directory name makes the intent structurally explicit, which is why
 // these files become rules rather than context documents.
 func importRule(c *adapters.ImportCtx, project *canonical.Project, file adapters.SourceFile) {
-	doc, ok := c.ParseDocument(file)
+	doc, ok := c.ParseDocument(file,
+		parser.FieldSpec{Key: "paths", Type: parser.StringListField},
+		parser.FieldSpec{Key: "description", Type: parser.StringField},
+		parser.FieldSpec{Key: "priority", Type: parser.StringField},
+		parser.FieldSpec{Key: "enabled", Type: parser.BoolField},
+	)
 	if !ok {
 		return
 	}

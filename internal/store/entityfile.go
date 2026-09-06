@@ -49,9 +49,12 @@ func renderActivation(a canonical.Activation) adapters.Ordered {
 func parseActivation(v any, path string) (canonical.Activation, error) {
 	m, ok := v.(map[string]any)
 	if !ok {
-		return canonical.Activation{}, fmt.Errorf("%s: activation must be a mapping", path)
+		return canonical.Activation{}, fmt.Errorf("%s: %s", path, parser.TypeMismatch("activation", "a mapping", v))
 	}
-	typeVal, _ := m["type"].(string)
+	typeVal, validType := m["type"].(string)
+	if raw, exists := m["type"]; exists && !validType {
+		return canonical.Activation{}, fmt.Errorf("%s: %s", path, parser.TypeMismatch("activation.type", "a string", raw))
+	}
 	a := canonical.Activation{Type: canonical.ActivationType(typeVal)}
 	if !canonical.KnownActivationType(a.Type) {
 		return canonical.Activation{}, fmt.Errorf("%s: unknown activation type %q", path, typeVal)
@@ -65,7 +68,7 @@ func parseActivation(v any, path string) (canonical.Activation, error) {
 		if raw, exists := m[field.key]; exists {
 			list, ok := stringList(raw)
 			if !ok {
-				return canonical.Activation{}, fmt.Errorf("%s: activation.%s must be a string or a list of strings", path, field.key)
+				return canonical.Activation{}, fmt.Errorf("%s: %s", path, parser.TypeMismatch("activation."+field.key, "a string or a list of strings", raw))
 			}
 			*field.dest = list
 		}
@@ -79,7 +82,7 @@ func parseActivation(v any, path string) (canonical.Activation, error) {
 		if raw, exists := m[field.key]; exists {
 			value, ok := raw.(string)
 			if !ok {
-				return canonical.Activation{}, fmt.Errorf("%s: activation.%s must be a string", path, field.key)
+				return canonical.Activation{}, fmt.Errorf("%s: %s", path, parser.TypeMismatch("activation."+field.key, "a string", raw))
 			}
 			*field.dest = value
 		}

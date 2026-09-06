@@ -272,7 +272,9 @@ func TestGoldenCanonical(t *testing.T) {
 	}
 }
 
-// compileTargets compiles every "expected-<target>" directory in a case.
+// compileTargets compiles every target with an expected mappings report,
+// including targets that produce no output directory (for example, a blocked
+// or opaque-only import).
 func compileTargets(
 	t *testing.T, ctx context.Context, caseDir string, project canonical.Project, ws *workspace.Workspace,
 ) {
@@ -283,8 +285,8 @@ func compileTargets(
 	}
 	var targets []string
 	for _, e := range entries {
-		if e.IsDir() && strings.HasPrefix(e.Name(), "expected-") && e.Name() != "expected-project" {
-			targets = append(targets, strings.TrimPrefix(e.Name(), "expected-"))
+		if !e.IsDir() && strings.HasPrefix(e.Name(), "expected-") && strings.HasSuffix(e.Name(), "-mappings.json") {
+			targets = append(targets, strings.TrimSuffix(strings.TrimPrefix(e.Name(), "expected-"), "-mappings.json"))
 		}
 	}
 	// When updating, compile every implemented target so new fixtures appear.

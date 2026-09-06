@@ -20,6 +20,7 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/discovery"
 	"github.com/alexvinola/stemma-cli/internal/globs"
+	"github.com/alexvinola/stemma-cli/internal/parser"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
@@ -67,7 +68,7 @@ func (Importer) Import(ctx context.Context, in adapters.ImportInput) (adapters.I
 		case discovery.RoleSteering:
 			importSteering(c, &project, file)
 		case discovery.RoleSkill:
-			doc, ok := c.ParseDocument(file)
+			doc, ok := c.ParseDocument(file, adapters.SkillFields()...)
 			if !ok {
 				continue
 			}
@@ -85,7 +86,12 @@ func (Importer) Import(ctx context.Context, in adapters.ImportInput) (adapters.I
 
 // importSteering maps a steering document to a canonical context document.
 func importSteering(c *adapters.ImportCtx, project *canonical.Project, file adapters.SourceFile) {
-	doc, ok := c.ParseDocument(file)
+	doc, ok := c.ParseDocument(file,
+		parser.FieldSpec{Key: "inclusion", Type: parser.StringField},
+		parser.FieldSpec{Key: "fileMatchPattern", Type: parser.StringListField},
+		parser.FieldSpec{Key: "description", Type: parser.StringField},
+		parser.FieldSpec{Key: "name", Type: parser.StringField},
+	)
 	if !ok {
 		return
 	}
@@ -199,6 +205,33 @@ func importAgent(c *adapters.ImportCtx, project *canonical.Project, file adapter
 			"the agent definition is not valid JSON").
 			WithPath(file.Path).WithDetail("%v", err))
 		c.AddOpaque(file, string(file.Data), "the agent definition could not be parsed as JSON",
+			provenance.Span{ByteStart: 0, ByteEnd: len(file.Data)}, true)
+		return
+	}
+	// encoding/json accepts null for strings and string-list members. Validate
+	// presence and shape first so null cannot silently become an empty default.
+	invalid := false
+	if raw == nil {
+		c.Bag.Add(diagnostics.New(diagnostics.InvalidAgentJSON, diagnostics.SeverityError,
+			"the agent definition must be an object; found null").WithPath(file.Path))
+		invalid = true
+	}
+	for _, field := range []parser.FieldSpec{
+		{Key: "name", Type: parser.StringField},
+		{Key: "description", Type: parser.StringField},
+		{Key: "prompt", Type: parser.StringField},
+		{Key: "instructions", Type: parser.StringField},
+		{Key: "tools", Type: parser.ListField},
+		{Key: "model", Type: parser.StringField},
+	} {
+		if value, exists := raw[field.Key]; exists && !field.Type.Accepts(value) {
+			c.Bag.Add(diagnostics.New(diagnostics.InvalidAgentJSON, diagnostics.SeverityError,
+				"agent "+parser.TypeMismatch(field.Key, string(field.Type), value)).WithPath(file.Path))
+			invalid = true
+		}
+	}
+	if invalid {
+		c.AddOpaque(file, string(file.Data), "the agent definition had unexpected field types",
 			provenance.Span{ByteStart: 0, ByteEnd: len(file.Data)}, true)
 		return
 	}

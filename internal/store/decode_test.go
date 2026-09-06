@@ -90,3 +90,68 @@ func TestEntityDecoderPreservesOptionalDefaultsAndStringShorthand(t *testing.T) 
 		t.Fatalf("extension values changed: %#v", skill.Extensions)
 	}
 }
+
+func TestCanonicalRecognizedFieldsReportFoundTypes(t *testing.T) {
+	for _, dec := range entityDecoders() {
+		stringsByEntity := map[string][]string{
+			"context": {"title", "kind", "audience"}, "rule": {"title", "priority"},
+			"procedure": {"name", "description", "trigger"}, "skill": {"name", "description", "invocationPolicy"},
+			"agent": {"name", "description", "modelPreference"}, "decision": {"title", "status"},
+		}
+		fields := append([]string{}, stringsByEntity[dec.name]...)
+		fields = append(fields, "extensions", "extensions.provider")
+		if dec.name != "decision" {
+			fields = append(fields, "enabled")
+		}
+		if dec.name == "skill" {
+			fields = append(fields, "allowedTools")
+		}
+		if dec.name == "agent" {
+			fields = append(fields, "tools")
+		}
+		if dec.name == "context" || dec.name == "rule" {
+			fields = append(fields, "activation", "activation.type", "activation.include", "activation.exclude", "activation.trigger", "activation.invocationName")
+		}
+		for _, field := range fields {
+			for _, value := range []struct{ name, yaml, found string }{
+				{"array", `["read"]`, "array"}, {"object", "{}", "object"}, {"number", "42", "number"},
+				{"boolean", "false", "boolean"}, {"null", "null", "null"}, {"string", `"false"`, "string"},
+				{"mixed-null", `["read", null]`, "array"},
+			} {
+				isList := field == "allowedTools" || field == "tools" || field == "activation.include" || field == "activation.exclude"
+				isMap := field == "extensions" || field == "extensions.provider" || field == "activation"
+				isBool := field == "enabled"
+				if isList && (value.name == "array" || value.name == "string") || isMap && value.name == "object" || isBool && value.name == "boolean" || !isList && !isMap && !isBool && value.name == "string" {
+					continue
+				}
+				t.Run(dec.name+"/"+field+"/"+value.name, func(t *testing.T) {
+					front := "activation: {type: always}\n"
+					key := strings.Split(field, ".")
+					entry := field + ": " + value.yaml + "\n"
+					if len(key) == 2 {
+						entry = key[0] + ":\n"
+						if key[0] == "activation" && key[1] != "type" {
+							entry += "  type: always\n"
+						}
+						entry += "  " + key[1] + ": " + value.yaml + "\n"
+					}
+					if key[0] == "activation" {
+						front = ""
+					}
+					path := ".stemma/" + dec.name + "/broken.md"
+					_, diags := dec.decode(dec.name+".broken", path, []byte("---\n"+front+entry+"---\nBody.\n"))
+					assertBlockingField(t, diags, path, field)
+					found := false
+					for _, d := range diags {
+						if d.Blocking && strings.Contains(d.Summary, field) && strings.Contains(d.Summary, "found "+value.found) {
+							found = true
+						}
+					}
+					if !found {
+						t.Fatalf("missing found type: %+v", diags)
+					}
+				})
+			}
+		}
+	}
+}
