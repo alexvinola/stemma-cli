@@ -4,7 +4,7 @@
     "entityType": "agent",
     "outcome": "lossy",
     "files": [
-      ".github/agents/reviewer.md"
+      ".github/agents/agent-reviewer.md"
     ],
     "activation": "on demand (reviewer)",
     "explanation": "github-copilot supports specialist agents, but the declared tool names come from kiro and are not verified against this provider."
@@ -14,7 +14,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".github/instructions/api-conventions.instructions.md"
+      ".github/instructions/context-api-conventions.instructions.md"
     ],
     "activation": "paths src/api/**, src/handlers/**",
     "explanation": "Copilot applyTo represents the canonical include patterns directly."
@@ -24,7 +24,7 @@
     "entityType": "context",
     "outcome": "adapted",
     "files": [
-      ".github/prompts/incident-response.prompt.md"
+      ".github/prompts/context-incident-response.prompt.md"
     ],
     "activation": "on demand (incident-response)",
     "explanation": "On-demand context has no dedicated Copilot format; it is delivered as a prompt file that a developer invokes explicitly."
@@ -42,11 +42,11 @@
   {
     "entityId": "skill.audit",
     "entityType": "skill",
-    "outcome": "exact",
+    "outcome": "adapted",
     "files": [
-      ".github/skills/audit/SKILL.md"
+      ".github/skills/skill-audit/SKILL.md"
     ],
     "activation": "on demand (audit)",
-    "explanation": "Copilot supports agent skills natively."
+    "explanation": "Copilot supports agent skills natively. The skill invocation name is \"skill-audit\" to match its destination directory."
   }
 ]

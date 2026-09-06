@@ -14,7 +14,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".claude/rules/strict-typing.md"
+      ".claude/rules/context-strict-typing.md"
     ],
     "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go, app/**/*.css, packages/**/*.css",
     "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
@@ -24,7 +24,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".claude/rules/ui-conventions.md"
+      ".claude/rules/context-ui-conventions.md"
     ],
     "activation": "paths ui/**/*.js, ui/**/*.css, ui/**/*.html",
     "explanation": "Claude rules accept the canonical include patterns in their paths front matter."

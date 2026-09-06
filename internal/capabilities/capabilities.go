@@ -97,12 +97,15 @@ var table = map[canonical.TargetFormat]Capabilities{
 			".github/skills/*/SKILL.md",
 		},
 		SupportedMetadata: []string{"applyTo", "description", "mode", "model", "name", "tools"},
-		Notes: "applyTo accepts a comma-separated list of glob patterns. The documented front matter " +
+		Notes: "Fallback paths use the complete canonical ID; conflicting hints or profile destinations block export. " +
+			"Regenerated skill names match the directory and name changes are reported as adapted. " +
+			"applyTo accepts a comma-separated list of glob patterns. The documented front matter " +
 			"has no negative pattern syntax, so canonical exclude patterns cannot be represented. " +
 			"Copilot also reads AGENTS.md and CLAUDE.md; Stemma never writes those files for this " +
 			"target, to avoid two targets owning one file. Unknown keys such as excludeAgent are " +
 			"preserved as provider extensions rather than interpreted.",
 		Sources: []Source{
+			{Title: "Agent Skills specification (directory and name constraints)", URL: "https://agentskills.io/specification", LastVerified: "2026-09-06"},
 			{
 				Title:        "Adding repository custom instructions for GitHub Copilot",
 				URL:          "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions",
@@ -144,7 +147,9 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"CLAUDE.md",
 		},
 		SupportedMetadata: []string{"allowed-tools", "description", "model", "name", "paths", "tools"},
-		Notes: "Rules in .claude/rules/ are discovered recursively; a rule without paths front matter " +
+		Notes: "Fallback paths use the complete canonical ID; conflicting hints or profile destinations block export. " +
+			"Regenerated skill names match the directory and name changes are reported as adapted. " +
+			"Rules in .claude/rules/ are discovered recursively; a rule without paths front matter " +
 			"loads unconditionally, and one with paths loads when Claude reads a matching file. " +
 			"Procedures have no dedicated format and are exported as skills. Imported files " +
 			"(@path syntax) still enter the context window at launch, so Stemma never presents " +
@@ -152,7 +157,7 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"Stemma expands groups on import and projection, including handwritten canonical patterns. " +
 			"Stemma rejects patterns exceeding 1000 alternatives or 32 nested groups, and preserves " +
 			"literal braces in character classes.",
-		Sources: []Source{{
+		Sources: []Source{{Title: "Agent Skills specification (directory and name constraints)", URL: "https://agentskills.io/specification", LastVerified: "2026-09-06"}, {
 			Title:        "How Claude remembers your project (CLAUDE.md and .claude/rules/)",
 			URL:          "https://code.claude.com/docs/en/memory",
 			LastVerified: "2026-09-06",
@@ -182,11 +187,13 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"AGENTS.override.md",
 		},
 		SupportedMetadata: []string{"description", "name"},
-		Notes: "Scoping is expressed only by file location: a nested AGENTS.md applies to its " +
+		Notes: "Fallback paths use the complete canonical ID; conflicting hints or profile destinations block export. " +
+			"Regenerated skill names match the directory and name changes are reported as adapted. " +
+			"Scoping is expressed only by file location: a nested AGENTS.md applies to its " +
 			"directory subtree. Glob patterns have no representation, so a path-scoped rule is " +
 			"only projected natively when its patterns resolve to a single concrete directory. " +
 			"There is no native specialist-agent format.",
-		Sources: []Source{{
+		Sources: []Source{{Title: "Agent Skills specification (directory and name constraints)", URL: "https://agentskills.io/specification", LastVerified: "2026-09-06"}, {
 			Title:        "AGENTS.md open format (nested files, nearest file wins)",
 			URL:          "https://agents.md/",
 			LastVerified: "2026-09-02",
@@ -214,13 +221,15 @@ var table = map[canonical.TargetFormat]Capabilities{
 			".kiro/steering/*.md",
 		},
 		SupportedMetadata: []string{"description", "fileMatchPattern", "inclusion", "name"},
-		Notes: "Steering documents declare inclusion: always | fileMatch | manual | auto. " +
+		Notes: "Fallback paths use the complete canonical ID; conflicting hints or profile destinations block export. " +
+			"Regenerated skill names match the directory and name changes are reported as adapted. " +
+			"Steering documents declare inclusion: always | fileMatch | manual | auto. " +
 			"fileMatchPattern accepts a single pattern or an array of patterns. inclusion: auto " +
 			"additionally carries name and description; Stemma preserves that mode as an " +
 			"on-demand activation with a trigger description. product.md, tech.md and " +
 			"structure.md are the documented foundation files, which is why Stemma assigns " +
 			"context kinds to them by filename.",
-		Sources: []Source{{
+		Sources: []Source{{Title: "Agent Skills specification (directory and name constraints)", URL: "https://agentskills.io/specification", LastVerified: "2026-09-06"}, {
 			Title:        "Kiro steering documents",
 			URL:          "https://kiro.dev/docs/steering/",
 			LastVerified: "2026-09-02",

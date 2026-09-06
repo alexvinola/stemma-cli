@@ -1,0 +1,22 @@
+[
+  {
+    "entityId": "rule.testing",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".github/instructions/rule-testing.instructions.md"
+    ],
+    "activation": "paths api/**",
+    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+  },
+  {
+    "entityId": "rule.testing-2",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".github/instructions/rule-testing-2.instructions.md"
+    ],
+    "activation": "paths web/**",
+    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+  }
+]

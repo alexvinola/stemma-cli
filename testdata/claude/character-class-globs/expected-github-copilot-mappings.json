@@ -4,7 +4,7 @@
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".github/instructions/braces.instructions.md"
+      ".github/instructions/rule-braces.instructions.md"
     ],
     "activation": "paths src/[{]name.ts, src/[{]name.tsx",
     "explanation": "Copilot applyTo represents the canonical include patterns directly."

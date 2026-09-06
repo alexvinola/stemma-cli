@@ -115,7 +115,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		}
 		name := skillDirName(proc.Extensions, proc.Name, proc.ID)
 		dest := b.Path(res, path.Join(skillsDir, name), "SKILL.md")
-		entries := []adapters.KV{{Key: "name", Value: proc.Name}}
+		entries := []adapters.KV{{Key: "name", Value: b.SkillName(proc.ID, proc.Name, dest)}}
 		desc := proc.Description
 		if desc == "" && proc.Trigger != "" {
 			desc = proc.Trigger
@@ -143,7 +143,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		}
 		name := skillDirName(skill.Extensions, skill.Name, skill.ID)
 		dest := b.Path(res, path.Join(skillsDir, name), "SKILL.md")
-		entries := []adapters.KV{{Key: "name", Value: skill.Name}}
+		entries := []adapters.KV{{Key: "name", Value: b.SkillName(skill.ID, skill.Name, dest)}}
 		if skill.Description != "" {
 			entries = append(entries, adapters.KV{Key: "description", Value: skill.Description})
 		}
@@ -167,7 +167,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(agent.ID, canonical.EntityAgent, res, agent.Provenance)
 			continue
 		}
-		fileName := adapters.FileSlug(agent.Name, agent.ID) + ".md"
+		fileName := adapters.FileSlug(agent.ID) + ".md"
 		if v, ok := agent.Extensions.GetString(string(canonical.TargetClaude), "stemma.sourceFile"); ok && safeName(v) {
 			fileName = v
 		}
@@ -275,9 +275,9 @@ func exportAsSkill(
 	if res.Activation.InvocationName != "" {
 		skillName = res.Activation.InvocationName
 	}
-	name := adapters.FileSlug(skillName, id)
+	name := adapters.SkillSlug(id)
 	dest := b.Path(res, path.Join(skillsDir, name), "SKILL.md")
-	entries := []adapters.KV{{Key: "name", Value: skillName}}
+	entries := []adapters.KV{{Key: "name", Value: b.SkillName(id, skillName, dest)}}
 	desc := description
 	if desc == "" {
 		desc = res.Activation.Trigger
@@ -329,7 +329,7 @@ func ruleFileName(ext canonical.Extensions, title, id string) string {
 	if v := ruleFileHint(ext); v != "" {
 		return v
 	}
-	return adapters.FileSlug(title, id) + ".md"
+	return adapters.FileSlug(id) + ".md"
 }
 
 func ruleFileHint(ext canonical.Extensions) string {
@@ -349,7 +349,7 @@ func skillDirName(ext canonical.Extensions, name, id string) string {
 	if v, ok := ext.GetString(string(canonical.TargetClaude), "stemma.sourceDir"); ok && safeName(v) {
 		return v
 	}
-	return adapters.FileSlug(name, id)
+	return adapters.SkillSlug(id)
 }
 
 func descriptionOf(ext canonical.Extensions) string {

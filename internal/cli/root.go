@@ -252,9 +252,12 @@ func exitCodeForError(err error) int {
 // fail reports an error in the requested output mode.
 func fail(env Env, command string, jsonOut bool, code int, err error, data any) int {
 	var loadErr *store.ProjectLoadError
+	var invariantErr *compiler.InvariantError
 	var diags []diagnostics.Diagnostic
 	if errors.As(err, &loadErr) {
 		diags = loadErr.Diagnostics
+	} else if errors.As(err, &invariantErr) {
+		diags = invariantErr.Diagnostics
 	}
 	if jsonOut {
 		doc := NewEnvelope(command, code, diags, data)

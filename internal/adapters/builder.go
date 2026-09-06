@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 
@@ -18,23 +19,27 @@ import (
 // token costs the same way, which is what makes "exactly one outcome per
 // entity" checkable.
 type Builder struct {
-	target   canonical.TargetFormat
-	in       ExportInput
-	files    map[string]GeneratedFile
-	mappings []ProjectionMapping
-	bag      diagnostics.Bag
-	opaque   map[string][]canonical.OpaqueBlock
-	emitted  map[string]bool
+	target     canonical.TargetFormat
+	in         ExportInput
+	files      map[string]GeneratedFile
+	duplicates map[string]bool
+	skillNames map[string]string
+	mappings   []ProjectionMapping
+	bag        diagnostics.Bag
+	opaque     map[string][]canonical.OpaqueBlock
+	emitted    map[string]bool
 }
 
 // NewBuilder starts an export run.
 func NewBuilder(target canonical.TargetFormat, in ExportInput) *Builder {
 	b := &Builder{
-		target:  target,
-		in:      in,
-		files:   map[string]GeneratedFile{},
-		opaque:  map[string][]canonical.OpaqueBlock{},
-		emitted: map[string]bool{},
+		target:     target,
+		in:         in,
+		files:      map[string]GeneratedFile{},
+		duplicates: map[string]bool{},
+		skillNames: map[string]string{},
+		opaque:     map[string][]canonical.OpaqueBlock{},
+		emitted:    map[string]bool{},
 	}
 	for _, blk := range in.Project.OpaqueBlocks {
 		b.opaque[blk.SourcePath] = append(b.opaque[blk.SourcePath], blk)
@@ -92,55 +97,89 @@ func (b *Builder) Path(res Resolution, defaultDir, defaultFile string) string {
 // nothing that file produced has changed, the original bytes are re-emitted
 // verbatim. That is what makes a same-format round trip with no semantic
 // change byte-identical, including line endings and any byte order mark.
-func (b *Builder) Emit(path, content string, entities []string) {
-	if path == "" {
+func (b *Builder) Emit(dest, content string, entities []string) {
+	dest, ids, ok := b.prepareEmission(dest, entities)
+	if !ok {
 		return
 	}
-	ids := append([]string{}, entities...)
-	sort.Strings(ids)
-	if _, already := b.files[path]; !already {
-		if original, ok := ReuseOriginal(b.in, path, ids); ok {
-			b.EmitReused(path, original, ids)
-			return
-		}
-		if _, wasSource := b.in.Originals[path]; wasSource {
-			// Regeneration is never silent. This is informational rather than a
-			// warning because regenerating after a real change is the normal
-			// path, and `check --warnings-as-errors` should not fail on it.
-			b.Diag(diagnostics.New(diagnostics.RegeneratedFile, diagnostics.SeverityInfo,
-				"the file was regenerated rather than re-emitted unchanged").
-				WithPath(path).
-				WithDetail("Stemma could not prove that a minimal patch was safe, so it rewrote the " +
-					"file. Preserved provider content is written back, but hand-made formatting in " +
-					"the parts Stemma models is not.").
-				WithSuggestion("Review the diff before applying."))
-		}
-	}
-	if existing, ok := b.files[path]; ok {
-		merged := append(existing.Entities, ids...)
-		sort.Strings(merged)
-		b.files[path] = GeneratedFile{
-			Path: path, Content: []byte(existing.Text + content), Text: existing.Text + content,
-			Mode: 0o644, Entities: dedupeStrings(merged),
+	if original, ok := ReuseOriginal(b.in, dest, ids); ok {
+		b.files[dest] = GeneratedFile{
+			Path: dest, Content: original, Text: string(original), Mode: 0o644,
+			ReusedSource: true, Entities: ids,
 		}
 		return
 	}
-	b.files[path] = GeneratedFile{
-		Path: path, Content: []byte(content), Text: content, Mode: 0o644, Entities: dedupeStrings(ids),
+	if _, wasSource := b.in.Originals[dest]; wasSource {
+		// Regeneration after an edit is informational, never silent.
+		b.Diag(diagnostics.New(diagnostics.RegeneratedFile, diagnostics.SeverityInfo,
+			"the file was regenerated rather than re-emitted unchanged").
+			WithPath(dest).
+			WithDetail("Stemma could not prove that a minimal patch was safe, so it rewrote the " +
+				"file. Preserved provider content is written back, but hand-made formatting in " +
+				"the parts Stemma models is not.").
+			WithSuggestion("Review the diff before applying."))
+	}
+	b.files[dest] = GeneratedFile{
+		Path: dest, Content: []byte(content), Text: content, Mode: 0o644, Entities: ids,
 	}
 }
 
 // EmitReused records a file re-emitted verbatim from its original bytes.
-func (b *Builder) EmitReused(path string, content []byte, entities []string) {
-	if path == "" {
+// It enforces the same single-emission contract as Emit.
+func (b *Builder) EmitReused(dest string, content []byte, entities []string) {
+	dest, ids, ok := b.prepareEmission(dest, entities)
+	if !ok {
 		return
+	}
+	b.files[dest] = GeneratedFile{
+		Path: dest, Content: content, Text: string(content), Mode: 0o644,
+		ReusedSource: true, Entities: ids,
+	}
+}
+
+// prepareEmission never combines file contents or lets the last writer win.
+// Aggregates must be assembled by the adapter and emitted exactly once.
+// Keep all contributing IDs so Result can block every affected mapping,
+// regardless of whether it was recorded before or after the collision.
+func (b *Builder) prepareEmission(dest string, entities []string) (string, []string, bool) {
+	if dest == "" {
+		return "", nil, false
+	}
+	clean, err := workspace.NormalizeRel(dest)
+	if err != nil {
+		b.Diag(diagnostics.New(diagnostics.PathEscape, diagnostics.SeverityError,
+			"refusing to emit an unsafe destination path").WithPath(dest).WithDetail("%v", err))
+		return "", nil, false
 	}
 	ids := append([]string{}, entities...)
 	sort.Strings(ids)
-	b.files[path] = GeneratedFile{
-		Path: path, Content: content, Text: string(content), Mode: 0o644,
-		ReusedSource: true, Entities: dedupeStrings(ids),
+	ids = dedupeStrings(ids)
+	if existing, ok := b.files[clean]; ok {
+		b.duplicates[clean] = true
+		existing.Entities = append(existing.Entities, ids...)
+		sort.Strings(existing.Entities)
+		existing.Entities = dedupeStrings(existing.Entities)
+		b.files[clean] = existing
+		return clean, ids, false
 	}
+	return clean, ids, true
+}
+
+// SkillName keeps regenerated skill metadata aligned with its directory.
+// Imported original bytes remain eligible for verbatim reuse. A changed
+// invocation name is explained as adapted, never an exact projection.
+func (b *Builder) SkillName(id, name, dest string) string {
+	if dest == "" {
+		return name
+	}
+	if _, ok := ReuseOriginal(b.in, dest, []string{id}); ok {
+		return name
+	}
+	projected := path.Base(path.Dir(dest))
+	if projected != name {
+		b.skillNames[id] = projected
+	}
+	return projected
 }
 
 // Record adds a projection mapping.
@@ -156,6 +195,12 @@ func (b *Builder) RecordWithDiagnostics(
 	id string, kind canonical.EntityType, outcome Outcome,
 	res Resolution, prov provenance.Provenance, files []string, explanation string, diagIDs []string,
 ) {
+	if name, changed := b.skillNames[id]; changed {
+		explanation += fmt.Sprintf(" The skill invocation name is %q to match its destination directory.", name)
+		if outcome == OutcomeExact {
+			outcome = OutcomeAdapted
+		}
+	}
 	if res.ContentOverridden {
 		diagIDs = append(diagIDs, b.Diag(diagnostics.New(diagnostics.TargetOverridesContent,
 			diagnostics.SeverityWarning,
@@ -356,8 +401,12 @@ func (b *Builder) ReportUnemittedOpaque() {
 
 // Result finalises the export deterministically.
 func (b *Builder) Result() ExportResult {
+	blocked := b.destinationConflicts()
 	files := make([]GeneratedFile, 0, len(b.files))
 	for _, f := range b.files {
+		if _, conflict := blocked[f.Path]; conflict {
+			continue
+		}
 		if f.Entities == nil {
 			f.Entities = []string{}
 		}
@@ -367,6 +416,20 @@ func (b *Builder) Result() ExportResult {
 	mappings := append([]ProjectionMapping{}, b.mappings...)
 	SortMappings(mappings)
 	for i := range mappings {
+		m := &mappings[i]
+		for _, dest := range m.Files {
+			clean, err := workspace.NormalizeRel(dest)
+			if err != nil {
+				continue
+			}
+			if fp, conflict := blocked[clean]; conflict {
+				m.Outcome = OutcomeBlocked
+				m.Diagnostics = append(append([]string{}, m.Diagnostics...), fp)
+				m.Explanation = "The destination conflicts with another generated file; no content was written to the conflicting paths."
+			}
+		}
+		sort.Strings(m.Diagnostics)
+		m.Diagnostics = dedupeStrings(m.Diagnostics)
 		if mappings[i].Files == nil {
 			mappings[i].Files = []string{}
 		}
@@ -375,6 +438,43 @@ func (b *Builder) Result() ExportResult {
 		}
 	}
 	return ExportResult{Files: files, Mappings: mappings, Diagnostics: b.bag.Items()}
+}
+
+// destinationConflicts checks both repeated destinations and files occupying
+// another file's parent directory. Sorting makes diagnostics independent of
+// emission order; walking ancestors avoids a quadratic all-pairs path scan.
+func (b *Builder) destinationConflicts() map[string]string {
+	paths := make([]string, 0, len(b.files))
+	for dest := range b.files {
+		paths = append(paths, dest)
+	}
+	sort.Strings(paths)
+	conflicts := map[string][]string{}
+	for _, dest := range paths {
+		if b.duplicates[dest] {
+			conflicts[dest] = append(conflicts[dest], dest)
+		}
+		for dir := path.Dir(dest); dir != "."; dir = path.Dir(dir) {
+			if _, exists := b.files[dir]; exists {
+				conflicts[dest] = append(conflicts[dest], dir)
+				conflicts[dir] = append(conflicts[dir], dest)
+			}
+		}
+	}
+	blocked := map[string]string{}
+	for _, dest := range paths {
+		others := conflicts[dest]
+		if len(others) == 0 {
+			continue
+		}
+		sort.Strings(others)
+		blocked[dest] = b.Diag(diagnostics.New(diagnostics.InternalInvariant, diagnostics.SeverityError,
+			"generated destination paths collide").WithPath(dest).
+			WithDetail("Destination %q for entities %s conflicts with: %s. Independent files cannot share a destination or occupy a parent directory.",
+				dest, strings.Join(b.files[dest].Entities, ", "), strings.Join(others, ", ")).
+			WithSuggestion("Assign distinct file and directory hints or profile destinations. If none are set, please report this Stemma bug."))
+	}
+	return blocked
 }
 
 func dedupeStrings(in []string) []string {

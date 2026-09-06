@@ -4,7 +4,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".claude/rules/braces.md"
+      ".claude/rules/context-braces.md"
     ],
     "activation": "paths src/[{]name.ts, src/[{]name.tsx",
     "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
