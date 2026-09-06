@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "id": "prj_fixture",
+  "name": "Handwritten brace patterns",
+  "description": "Brace groups written directly in canonical input expand before projection.",
+  "targets": [
+    "claude",
+    "codex",
+    "github-copilot",
+    "kiro"
+  ],
+  "contextDocuments": [],
+  "rules": [
+    {
+      "id": "rule.strict-typing",
+      "title": "Strict typing",
+      "instruction": "Use explicit types.",
+      "priority": "must",
+      "enabled": true,
+      "activation": {
+        "type": "path-scoped",
+        "include": [
+          "src/**/*.{ts,tsx}",
+          "lib/**/*.go"
+        ]
+      },
+      "provenance": {
+        "sourceFormat": "",
+        "sourcePath": "",
+        "sourceHash": "",
+        "importerVersion": "1",
+        "disposition": "parsed"
+      }
+    }
+  ],
+  "procedures": [],
+  "skills": [],
+  "agents": [],
+  "decisions": [],
+  "opaqueBlocks": []
+}

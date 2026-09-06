@@ -1,0 +1,12 @@
+[
+  {
+    "entityId": "context.acme-frontend",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  }
+]

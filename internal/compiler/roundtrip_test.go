@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alexvinola/stemma-cli/internal/adapters"
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/compiler"
 	"github.com/alexvinola/stemma-cli/internal/manifest"
@@ -20,6 +21,11 @@ var fixtureFormats = map[string]canonical.TargetFormat{
 	"claude/basic":  canonical.TargetClaude,
 	"codex/nested":  canonical.TargetCodex,
 	"kiro/steering": canonical.TargetKiro,
+	// Brace groups are expanded into the canonical model, so these two cases
+	// also assert the other half of that contract: a hand-written pattern is
+	// still written back exactly as the author wrote it.
+	"copilot/brace-globs": canonical.TargetCopilot,
+	"claude/brace-globs":  canonical.TargetClaude,
 }
 
 func fixtureNames() []string {
@@ -263,5 +269,120 @@ func TestCanonicalEditIsNeverDiscarded(t *testing.T) {
 				t.Fatal("an edited project produced no changes")
 			}
 		})
+	}
+}
+
+// TestBracePatternsSurviveCopilotRoundTrip is the regression test for the
+// silently corrupted applyTo: a brace group holds a comma, Copilot's applyTo
+// separates patterns with a comma, and the two used to be indistinguishable.
+//
+// Expansion at import is what resolves that, so the assertion is not that the
+// braces come back — they are gone by design — but that the *scope* does:
+// Claude -> Copilot -> Claude must name exactly the same set of files, and
+// must claim "exact" only when that is true.
+func TestBracePatternsSurviveCopilotRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	ws := materialize(t, filepath.Join(testdataDir, "claude", "brace-globs", "input"))
+
+	first, err := compiler.Import(ctx, ws, compiler.ImportOptions{
+		Format: canonical.TargetClaude, ProjectID: "prj_fixture", ProjectName: "Fixture",
+	})
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	want := map[string][]string{
+		"rule.strict-typing":     {"src/**/*.ts", "src/**/*.tsx", "lib/**/*.go"},
+		"rule.asset-conventions": {"app/**/*.css", "app/**/*.scss", "packages/**/*.css", "packages/**/*.scss"},
+	}
+	assertScopes(t, "after importing Claude", first.Project, want)
+
+	// Claude -> Copilot. The mapping may only be "exact" if applyTo really
+	// does carry the scope, so an unexpanded brace group would fail here.
+	out, err := compiler.Compile(ctx, first.Project, compiler.CompileOptions{
+		Target: canonical.TargetCopilot, Profile: profiles.Default(canonical.TargetCopilot),
+	})
+	if err != nil {
+		t.Fatalf("compile to copilot: %v", err)
+	}
+	for _, m := range out.Mappings {
+		if _, scoped := want[m.EntityID]; !scoped {
+			continue
+		}
+		if m.Outcome != adapters.OutcomeExact {
+			t.Errorf("%s: outcome = %s, want exact", m.EntityID, m.Outcome)
+		}
+	}
+	for _, f := range out.Files {
+		if strings.Contains(string(f.Content), "{") {
+			t.Errorf("%s still contains a brace group:\n%s", f.Path, f.Content)
+		}
+	}
+
+	// Copilot -> Claude, through the filesystem, exactly as a user would.
+	viaCopilot := reimport(t, ctx, out, canonical.TargetCopilot)
+	assertScopes(t, "after re-importing Copilot", viaCopilot, map[string][]string{
+		"context.strict-typing":     want["rule.strict-typing"],
+		"context.asset-conventions": want["rule.asset-conventions"],
+	})
+
+	back, err := compiler.Compile(ctx, viaCopilot, compiler.CompileOptions{
+		Target: canonical.TargetClaude, Profile: profiles.Default(canonical.TargetClaude),
+	})
+	if err != nil {
+		t.Fatalf("compile back to claude: %v", err)
+	}
+	// Back in .claude/rules/, so these are rules again, with the scopes they
+	// started with.
+	final := reimport(t, ctx, back, canonical.TargetClaude)
+	assertScopes(t, "after the full Claude -> Copilot -> Claude trip", final, want)
+}
+
+// reimport writes a compilation into a clean workspace and imports it back.
+func reimport(
+	t *testing.T, ctx context.Context, out compiler.CompileResult, format canonical.TargetFormat,
+) canonical.Project {
+	t.Helper()
+	dest, err := workspace.Open(t.TempDir(), workspace.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := dest.Begin()
+	for _, f := range out.Files {
+		if err := tx.Add(workspace.WriteOp{Path: f.Path, Content: f.Content, Mode: 0o644}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	res, err := compiler.Import(ctx, dest, compiler.ImportOptions{
+		Format: format, ProjectID: "prj_fixture", ProjectName: "Fixture",
+	})
+	if err != nil {
+		t.Fatalf("re-import %s: %v", format, err)
+	}
+	return res.Project
+}
+
+// assertScopes checks the include patterns of the named entities, whether they
+// were imported as rules or as context documents.
+func assertScopes(t *testing.T, stage string, p canonical.Project, want map[string][]string) {
+	t.Helper()
+	got := map[string][]string{}
+	for _, r := range p.Rules {
+		got[r.ID] = r.Activation.Include
+	}
+	for _, d := range p.ContextDocuments {
+		got[d.ID] = d.Activation.Include
+	}
+	for id, wantInc := range want {
+		gotInc, ok := got[id]
+		if !ok {
+			t.Errorf("%s: entity %s is missing", stage, id)
+			continue
+		}
+		if strings.Join(gotInc, "\x00") != strings.Join(wantInc, "\x00") {
+			t.Errorf("%s: %s include = %v, want %v", stage, id, gotInc, wantInc)
+		}
 	}
 }

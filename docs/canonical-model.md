@@ -89,6 +89,16 @@ error, not an accidental "always-on". Fields that do not belong to the tag must
 be empty, and a `path-scoped` activation must carry at least one include
 pattern.
 
+Include and exclude patterns are brace-expanded when imported and before
+projection, including patterns written directly in `.stemma/` or a profile.
+For example, `src/**/*.{ts,tsx}` becomes `src/**/*.ts` and `src/**/*.tsx`.
+Literal braces inside character classes such as `[{]` are preserved. Literal
+commas remain valid canonical input but require a lossy diagnostic for Copilot.
+Expansion is bounded at 1000 alternatives per pattern and 32 nested groups.
+Validation rejects patterns beyond either bound because it cannot check every
+alternative. Importers report a blocking `STEMMA2102`; no partial expansion or
+unvalidated pattern is imported. Split a rejected pattern into smaller groups.
+
 `documentation-only` entities are never projected into agent-facing output. A
 target profile can override the activation, which makes the decision explicit
 and visible.

@@ -1,0 +1,12 @@
+[
+  {
+    "entityId": "rule.braces",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/braces.md"
+    ],
+    "activation": "paths src/[{]name.ts, src/[{]name.tsx",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  }
+]

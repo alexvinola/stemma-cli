@@ -1,12 +1,14 @@
 package adapters
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/globs"
 	"github.com/alexvinola/stemma-cli/internal/parser"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 	"github.com/alexvinola/stemma-cli/internal/version"
@@ -34,6 +36,14 @@ func (c *ImportCtx) Provenance(file SourceFile, span provenance.Span, disp prove
 		ImporterVersion: version.ImporterVersion,
 		Disposition:     disp,
 	}
+}
+
+// GlobErrorCode distinguishes an expansion bound from malformed glob syntax.
+func GlobErrorCode(err error) diagnostics.Code {
+	if errors.Is(err, globs.ErrTooManyExpansions) {
+		return diagnostics.GlobExpansionLimit
+	}
+	return diagnostics.InvalidGlob
 }
 
 // AddOpaque preserves content Stemma refuses to interpret.

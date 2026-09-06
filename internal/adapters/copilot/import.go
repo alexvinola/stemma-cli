@@ -18,6 +18,7 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/discovery"
+	"github.com/alexvinola/stemma-cli/internal/globs"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 )
 
@@ -133,6 +134,19 @@ func importScopedInstructions(c *adapters.ImportCtx, project *canonical.Project,
 				WithPath(file.Path).WithEntity(id).
 				WithPosition(doc.FrontMatter.StartLine, 1))
 		} else {
+			for _, p := range patterns {
+				if err := globs.Validate(p); err != nil {
+					c.Bag.Add(diagnostics.New(adapters.GlobErrorCode(err), diagnostics.SeverityError,
+						"invalid pattern in applyTo").
+						WithPath(file.Path).WithEntity(id).
+						WithPosition(doc.FrontMatter.StartLine, 1).
+						WithDetail("%v", err).
+						WithSuggestion("applyTo separates patterns with commas, so a brace group " +
+							"split across two of them leaves a pattern that matches nothing. " +
+							"Close the group, or write its alternatives as separate patterns."))
+					return
+				}
+			}
 			activation = canonical.PathScoped(patterns, nil)
 		}
 	} else {
@@ -195,10 +209,22 @@ func importPrompt(c *adapters.ImportCtx, project *canonical.Project, file adapte
 	project.Procedures = append(project.Procedures, proc)
 }
 
-// splitApplyTo splits Copilot's comma-separated glob list.
+// splitApplyTo splits Copilot's comma-separated applyTo into patterns.
+//
+// The split honours brace nesting: a comma inside a brace group belongs to the
+// group, not to the list. Splitting blindly is what silently turned
+// "src/**/*.{ts,tsx}" into the two patterns "src/**/*.{ts" and "tsx}", neither
+// of which matches a file. A group left unclosed at the end of the string is
+// exactly that corruption, so its commas are treated as separators again and
+// the resulting patterns are rejected by validation rather than accepted as a
+// scope that matches nothing.
 func splitApplyTo(v string) []string {
-	var out []string
-	for _, part := range strings.Split(v, ",") {
+	parts := splitTopLevel(v)
+	if !allBalanced(parts) {
+		parts = strings.Split(v, ",")
+	}
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		part = strings.Trim(part, "\"'")
 		part = strings.TrimSpace(part)
@@ -207,6 +233,57 @@ func splitApplyTo(v string) []string {
 		}
 	}
 	return out
+}
+
+// splitTopLevel splits on the commas that are not inside a brace group.
+func splitTopLevel(v string) []string {
+	var out []string
+	depth, start := 0, 0
+	for i := 0; i < len(v); i++ {
+		if end, ok := globs.ClassEnd(v, i); ok {
+			i = end
+			continue
+		}
+		switch v[i] {
+		case '{':
+			depth++
+		case '}':
+			if depth > 0 {
+				depth--
+			}
+		case ',':
+			if depth == 0 {
+				out = append(out, v[start:i])
+				start = i + 1
+			}
+		}
+	}
+	return append(out, v[start:])
+}
+
+// allBalanced reports whether every part closes the brace groups it opens.
+func allBalanced(parts []string) bool {
+	for _, p := range parts {
+		depth := 0
+		for i := 0; i < len(p); i++ {
+			if end, ok := globs.ClassEnd(p, i); ok {
+				i = end
+				continue
+			}
+			switch p[i] {
+			case '{':
+				depth++
+			case '}':
+				if depth > 0 {
+					depth--
+				}
+			}
+		}
+		if depth != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func firstNonEmpty(values ...string) string {

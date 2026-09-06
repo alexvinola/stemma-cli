@@ -111,7 +111,7 @@ func importSteering(c *adapters.ImportCtx, project *canonical.Project, file adap
 		}
 		for _, p := range patterns {
 			if err := globs.Validate(p); err != nil {
-				c.Bag.Add(diagnostics.New(diagnostics.InvalidGlob, diagnostics.SeverityError,
+				c.Bag.Add(diagnostics.New(adapters.GlobErrorCode(err), diagnostics.SeverityError,
 					"invalid fileMatchPattern").
 					WithPath(file.Path).WithEntity(id).WithDetail("%v", err))
 				return

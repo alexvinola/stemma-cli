@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "entities": {
+    "context.acme-frontend": {
+      "sourceFormat": "github-copilot",
+      "sourcePath": ".github/copilot-instructions.md",
+      "sourceHash": "sha256:19a28ee3de2cc13a6c09b858cdb9afc0e2a6ec74824d66a691874fdd0bbd3677",
+      "span": {
+        "byteEnd": 70,
+        "lineStart": 1,
+        "lineEnd": 3
+      },
+      "importerVersion": "1",
+      "disposition": "parsed",
+      "contentHash": "sha256:dc883cf7a7ce00ea5dd46db57b71064e4c92f1f7094d55f8a9471c0874da5c6d"
+    }
+  },
+  "opaqueBlocks": []
+}

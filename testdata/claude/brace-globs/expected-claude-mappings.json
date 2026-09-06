@@ -1,0 +1,42 @@
+[
+  {
+    "entityId": "context.acme-frontend",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "context.conventions",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "rule.asset-conventions",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/assets.md"
+    ],
+    "activation": "paths app/**/*.css, app/**/*.scss, packages/**/*.css, packages/**/*.scss",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  },
+  {
+    "entityId": "rule.strict-typing",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/api.md"
+    ],
+    "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "entityId": "rule.strict-typing",
+    "entityType": "rule",
+    "outcome": "lossy",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go",
+    "explanation": "No single directory could be derived from src/**/*.ts, src/**/*.tsx, lib/**/*.go, so the content stays in the root AGENTS.md and is no longer scoped."
+  }
+]

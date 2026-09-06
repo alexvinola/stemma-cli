@@ -1,0 +1,12 @@
+[
+  {
+    "entityId": "context.braces",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/braces.md"
+    ],
+    "activation": "paths src/[{]name.ts, src/[{]name.tsx",
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
+  }
+]

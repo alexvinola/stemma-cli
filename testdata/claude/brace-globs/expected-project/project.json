@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "id": "prj_fixture",
+  "name": "Fixture",
+  "targets": [
+    "claude"
+  ],
+  "extensions": {
+    "claude": {
+      "stemma.rootFile": "CLAUDE.md"
+    }
+  }
+}

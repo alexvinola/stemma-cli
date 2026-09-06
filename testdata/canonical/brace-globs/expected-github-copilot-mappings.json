@@ -1,0 +1,12 @@
+[
+  {
+    "entityId": "rule.strict-typing",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      ".github/instructions/strict-typing.instructions.md"
+    ],
+    "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go",
+    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+  }
+]

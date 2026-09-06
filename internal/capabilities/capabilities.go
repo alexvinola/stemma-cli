@@ -105,8 +105,8 @@ var table = map[canonical.TargetFormat]Capabilities{
 		Sources: []Source{
 			{
 				Title:        "Adding repository custom instructions for GitHub Copilot",
-				URL:          "https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions",
-				LastVerified: "2026-09-02",
+				URL:          "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions",
+				LastVerified: "2026-09-06",
 			},
 			{
 				Title:        "About agent skills",
@@ -148,12 +148,14 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"loads unconditionally, and one with paths loads when Claude reads a matching file. " +
 			"Procedures have no dedicated format and are exported as skills. Imported files " +
 			"(@path syntax) still enter the context window at launch, so Stemma never presents " +
-			"imports as a context reduction. Claude's glob dialect supports brace expansion; " +
-			"Stemma passes braces through verbatim and treats them literally in its own matching.",
+			"imports as a context reduction. Claude's glob dialect supports brace expansion, and " +
+			"Stemma expands groups on import and projection, including handwritten canonical patterns. " +
+			"Stemma rejects patterns exceeding 1000 alternatives or 32 nested groups, and preserves " +
+			"literal braces in character classes.",
 		Sources: []Source{{
 			Title:        "How Claude remembers your project (CLAUDE.md and .claude/rules/)",
 			URL:          "https://code.claude.com/docs/en/memory",
-			LastVerified: "2026-09-02",
+			LastVerified: "2026-09-06",
 		}},
 	},
 	canonical.TargetCodex: {

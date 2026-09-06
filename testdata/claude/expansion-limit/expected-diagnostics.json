@@ -1,0 +1,16 @@
+[
+  {
+    "code": "STEMMA2102_GLOB_EXPANSION_LIMIT",
+    "severity": "error",
+    "summary": "invalid path pattern in rule front matter",
+    "detail": "invalid glob pattern: brace expansion exceeds the supported bound; split the pattern into smaller groups",
+    "path": ".claude/rules/braces.md",
+    "position": {
+      "line": 1,
+      "column": 1
+    },
+    "entityId": "rule.braces",
+    "blocking": true,
+    "fingerprint": "dg_623daffa6a58e114"
+  }
+]
