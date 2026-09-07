@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -131,21 +132,25 @@ func applyOne(
 	if len(writable) == 0 && !needsOwnership {
 		if jsonOut {
 			if werr := WriteJSON(env, NewEnvelope("apply", ExitOK, plan.Diagnostics,
-				compiler.ApplyResult{Written: []string{}, Unchanged: []string{}, Skipped: []string{}})); werr != nil {
+				compiler.ApplyResult{Written: []string{}, Unchanged: []string{}, Skipped: []string{}, Diagnostics: plan.Diagnostics})); werr != nil {
 				return ExitInternal
 			}
 			return ExitOK
 		}
 		fmt.Fprintf(env.Stdout, "Nothing to apply: %s is already up to date.\n", plan.Target)
+		PrintDiagnostics(env.Stdout, plan.Diagnostics, true)
 		return ExitOK
 	}
 
+	diagnosticsShown := false
 	if !yes && len(writable) > 0 {
 		if jsonOut || !env.StdinIsTTY {
 			return fail(env, "apply", jsonOut, ExitUsage,
 				fmt.Errorf("apply needs confirmation: re-run with --yes to authorize %s",
 					Plural(len(writable), "file write", "file writes")), nil)
 		}
+		PrintDiagnostics(env.Stdout, plan.Diagnostics, true)
+		diagnosticsShown = true
 		fmt.Fprintf(env.Stdout, "The following files will be written:\n")
 		for _, c := range writable {
 			fmt.Fprintf(env.Stdout, "  %-10s %s\n", c.Kind, c.Path)
@@ -170,7 +175,9 @@ func applyOne(
 	})
 	if err != nil {
 		code := exitCodeForError(err)
-		if code == ExitDiagnostics && len(result.Diagnostics) == 0 {
+		// Retained plan warnings do not turn a filesystem failure into a
+		// validation failure. Classify the error, not the diagnostic count.
+		if code == ExitDiagnostics && !errors.Is(err, compiler.ErrBlocked) {
 			code = ExitWriteFailed
 		}
 		if isWriteFailure(err) {
@@ -206,7 +213,9 @@ func applyOne(
 	for _, p := range result.Skipped {
 		fmt.Fprintf(env.Stdout, "  skipped    %s\n", p)
 	}
-	PrintDiagnostics(env.Stdout, result.Diagnostics, false)
+	if !diagnosticsShown {
+		PrintDiagnostics(env.Stdout, result.Diagnostics, true)
+	}
 	return ExitOK
 }
 

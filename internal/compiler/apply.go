@@ -33,7 +33,7 @@ type ApplyOptions struct {
 	ManifestPath string
 }
 
-// ApplyResult reports what an apply did.
+// ApplyResult reports what an apply did, including plan and transaction diagnostics.
 type ApplyResult struct {
 	Written     []string                 `json:"written"`
 	Unchanged   []string                 `json:"unchanged"`
@@ -50,10 +50,15 @@ type ApplyResult struct {
 // replaced are restored.
 func Apply(ctx context.Context, ws *workspace.Workspace, plan Plan, opts ApplyOptions) (ApplyResult, error) {
 	var bag diagnostics.Bag
-	res := ApplyResult{Written: []string{}, Unchanged: []string{}, Skipped: []string{}}
+	bag.Extend(plan.Diagnostics)
+	// Retain compilation diagnostics even on early failures before a
+	// transaction starts. Transaction diagnostics are added to the same bag.
+	res := ApplyResult{
+		Written: []string{}, Unchanged: []string{}, Skipped: []string{},
+		Diagnostics: bag.Items(),
+	}
 
 	if blocking := plan.Blocking(); len(blocking) > 0 {
-		res.Diagnostics = blocking
 		return res, fmt.Errorf("%w: %d blocking diagnostic(s)", ErrBlocked, len(blocking))
 	}
 
