@@ -43,6 +43,9 @@ type ImportResult struct {
 	Sources     []manifest.SourceRecord
 	Diagnostics []diagnostics.Diagnostic
 	Scan        discovery.Result
+	// VerifiedTarget records only source files reproduced byte-identically by
+	// the default same-provider compilation at import time.
+	VerifiedTarget manifest.TargetRecord
 }
 
 // Import reads a provider's configuration and builds a canonical project.
@@ -134,13 +137,23 @@ func Import(ctx context.Context, ws *workspace.Workspace, opts ImportOptions) (I
 	canonical.StampContentHashes(&project)
 
 	bag.Extend(canonical.Validate(project))
+	var verified manifest.TargetRecord
+	if !diagnostics.HasBlocking(bag.Items()) {
+		var diags []diagnostics.Diagnostic
+		verified, diags, err = verifyImportRoundTrip(ctx, project, format, files)
+		if err != nil {
+			return ImportResult{}, err
+		}
+		bag.Extend(diags)
+	}
 
 	return ImportResult{
-		Project:     project,
-		Format:      format,
-		Sources:     sources,
-		Diagnostics: bag.Items(),
-		Scan:        scan,
+		Project:        project,
+		Format:         format,
+		Sources:        sources,
+		Diagnostics:    bag.Items(),
+		Scan:           scan,
+		VerifiedTarget: verified,
 	}, nil
 }
 

@@ -87,14 +87,15 @@ const (
 	RegeneratedFile        Code = "STEMMA3701_FILE_REGENERATED"
 
 	// 4xxx: filesystem and transactions.
-	PathEscape          Code = "STEMMA4001_PATH_ESCAPE"
-	SymlinkRejected     Code = "STEMMA4002_SYMLINK_REJECTED"
-	StalePlan           Code = "STEMMA4101_STALE_PLAN"
-	WriteRolledBack     Code = "STEMMA4201_WRITE_ROLLED_BACK"
-	RecoveryDataWritten Code = "STEMMA4202_RECOVERY_DATA_WRITTEN"
-	UntrackedDestConfl  Code = "STEMMA4301_UNTRACKED_DESTINATION"
-	DeleteProposed      Code = "STEMMA4401_DELETE_PROPOSED"
-	OutputStale         Code = "STEMMA4501_OUTPUT_STALE"
+	PathEscape                Code = "STEMMA4001_PATH_ESCAPE"
+	SymlinkRejected           Code = "STEMMA4002_SYMLINK_REJECTED"
+	StalePlan                 Code = "STEMMA4101_STALE_PLAN"
+	WriteRolledBack           Code = "STEMMA4201_WRITE_ROLLED_BACK"
+	RecoveryDataWritten       Code = "STEMMA4202_RECOVERY_DATA_WRITTEN"
+	UntrackedDestConfl        Code = "STEMMA4301_UNTRACKED_DESTINATION"
+	ImportRoundTripUnverified Code = "STEMMA4302_IMPORT_ROUND_TRIP_UNVERIFIED"
+	DeleteProposed            Code = "STEMMA4401_DELETE_PROPOSED"
+	OutputStale               Code = "STEMMA4501_OUTPUT_STALE"
 
 	// 5xxx: budgets.
 	TokenBudgetExceeded  Code = "STEMMA5001_TOKEN_BUDGET_EXCEEDED"

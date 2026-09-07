@@ -186,7 +186,7 @@ entity, structured metadata in front matter:
 ├── rules/           # api-validation.md, …
 ├── skills/  agents/  procedures/  decisions/
 ├── provenance.json  # where each entity came from
-└── manifest.json    # what Stemma generated
+└── manifest.json    # files generated or verified at import
 ```
 
 ```markdown

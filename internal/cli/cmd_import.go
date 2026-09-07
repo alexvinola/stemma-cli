@@ -153,11 +153,12 @@ func runImport(ctx context.Context, env Env, args []string) int {
 	if merr != nil {
 		return fail(env, "import", *jsonOut, ExitDiagnostics, merr, nil)
 	}
-	m.ImportedSources = result.Sources
-	m.ImportedFormat = string(result.Format)
-	if hash, herr := canonical.Hash(result.Project); herr == nil {
-		m.ProjectHash = hash
+	hash, herr := canonical.Hash(result.Project)
+	if herr != nil {
+		return fail(env, "import", *jsonOut, ExitInternal, herr, nil)
 	}
+	result.VerifiedTarget.ProjectHash = hash
+	m.RecordImport(string(result.Format), result.Sources, result.VerifiedTarget)
 	mdata, merr := manifest.Marshal(m)
 	if merr != nil {
 		return fail(env, "import", *jsonOut, ExitInternal, merr, nil)
