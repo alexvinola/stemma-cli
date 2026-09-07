@@ -5,12 +5,14 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/manifest"
 	"github.com/alexvinola/stemma-cli/internal/profiles"
 	"github.com/alexvinola/stemma-cli/internal/workspace"
@@ -249,5 +251,81 @@ func TestUnmarshalPlanRejectsBadDocuments(t *testing.T) {
 		if _, err := compiler.UnmarshalPlan([]byte(in)); err == nil {
 			t.Errorf("UnmarshalPlan(%q) should fail", in)
 		}
+	}
+}
+
+func TestApplyRetainsPlanDiagnosticsOnEveryOutcome(t *testing.T) {
+	warning := diagnostics.New(diagnostics.AgentNotNative, diagnostics.SeverityWarning, "agent is adapted").
+		WithEntity("agent.reviewer").WithTarget("codex").WithSuggestion("Review the projection.")
+	note := diagnostics.New(diagnostics.RegeneratedFile, diagnostics.SeverityInfo, "file regenerated").WithPath("a.md")
+	for _, outcome := range []string{"success", "blocked", "stale", "cancelled", "read-error", "rollback"} {
+		t.Run(outcome, func(t *testing.T) {
+			ws, err := workspace.Open(t.TempDir(), workspace.DefaultLimits())
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			plan := compiler.Plan{
+				Target:      canonical.TargetCodex,
+				Diagnostics: []diagnostics.Diagnostic{note, warning, warning},
+				Changes:     []compiler.Change{{Path: "a.md", Kind: compiler.ChangeCreate, Content: "generated\n"}},
+			}
+			opts := compiler.ApplyOptions{Manifest: manifest.New()}
+			var wantExtra diagnostics.Code
+			switch outcome {
+			case "blocked":
+				plan.Diagnostics = append(plan.Diagnostics, diagnostics.New(diagnostics.MissingRequired, diagnostics.SeverityError, "required field missing"))
+			case "stale":
+				native, _ := ws.Native("a.md")
+				if err := os.WriteFile(native, []byte("user content"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				wantExtra = diagnostics.StalePlan
+			case "cancelled":
+				cancel()
+			case "read-error":
+				native, _ := ws.Native("a.md")
+				if err := os.Mkdir(native, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			case "rollback":
+				// Both writes can be queued, but a file cannot also be the
+				// parent directory of the manifest during commit.
+				opts.ManifestPath = "a.md/manifest.json"
+				wantExtra = diagnostics.WriteRolledBack
+			}
+			res, err := compiler.Apply(ctx, ws, plan, opts)
+			if (err == nil) != (outcome == "success") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			var expected diagnostics.Bag
+			expected.Extend(plan.Diagnostics)
+			for _, d := range expected.Items() {
+				count := 0
+				for _, got := range res.Diagnostics {
+					if reflect.DeepEqual(got, d) {
+						count++
+					}
+				}
+				if count != 1 {
+					t.Errorf("diagnostic %s occurs %d times: %+v", d.Code, count, res.Diagnostics)
+				}
+			}
+			if wantExtra != "" {
+				found := false
+				for _, d := range res.Diagnostics {
+					found = found || d.Code == wantExtra
+				}
+				if !found {
+					t.Errorf("missing transaction diagnostic %s: %+v", wantExtra, res.Diagnostics)
+				}
+			}
+			sorted := append([]diagnostics.Diagnostic{}, res.Diagnostics...)
+			diagnostics.Sort(sorted)
+			if !reflect.DeepEqual(sorted, res.Diagnostics) {
+				t.Fatal("diagnostics are not sorted")
+			}
+		})
 	}
 }
