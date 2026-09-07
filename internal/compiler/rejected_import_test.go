@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/alexvinola/stemma-cli/internal/adapters"
 	"github.com/alexvinola/stemma-cli/internal/canonical"
@@ -217,9 +217,7 @@ func importRejectedFiles(t *testing.T, format canonical.TargetFormat, files ...w
 	}
 	before := rejectedImportTree(t, ws.Root())
 	res, err := compiler.Import(context.Background(), ws, compiler.ImportOptions{Format: format, ProjectID: "prj_rejected", ProjectName: "Rejected input"})
-	if after := rejectedImportTree(t, ws.Root()); !reflect.DeepEqual(before, after) {
-		t.Fatal("compiler.Import changed workspace paths, bytes, permissions, or modification times")
-	}
+	assertRejectedImportTreeUnchanged(t, before, rejectedImportTree(t, ws.Root()))
 	if err != nil {
 		t.Fatalf("import should return diagnostics: %v", err)
 	}
@@ -240,10 +238,59 @@ func importRejectedFiles(t *testing.T, format canonical.TargetFormat, files ...w
 	return res
 }
 
+// assertRejectedImportTreeUnchanged reports which entry changed and how,
+// rather than only that something did. Import touching the workspace is a
+// serious enough failure to be worth naming precisely.
+func assertRejectedImportTreeUnchanged(t *testing.T, before, after map[string]rejectedImportEntry) {
+	t.Helper()
+	for _, path := range sortedTreePaths(before) {
+		want := before[path]
+		got, ok := after[path]
+		if !ok {
+			t.Errorf("compiler.Import removed %s", path)
+			continue
+		}
+		switch {
+		case got.content != want.content:
+			t.Errorf("compiler.Import rewrote %s:\n--- before ---\n%s\n--- after ---\n%s",
+				path, want.content, got.content)
+		case got.mode != want.mode:
+			t.Errorf("compiler.Import changed the mode of %s: %v -> %v", path, want.mode, got.mode)
+		case got.mtime != want.mtime:
+			t.Errorf("compiler.Import changed the modification time of %s: %d -> %d",
+				path, want.mtime, got.mtime)
+		}
+	}
+	for _, path := range sortedTreePaths(after) {
+		if _, ok := before[path]; !ok {
+			t.Errorf("compiler.Import created %s", path)
+		}
+	}
+	// The original assertion was fatal, and the callers rely on that: what
+	// follows would report confusing secondary failures.
+	if t.Failed() {
+		t.FailNow()
+	}
+}
+
+// sortedTreePaths keeps the failure output in a stable order, the same rule
+// the compiler itself follows for anything it prints.
+func sortedTreePaths(tree map[string]rejectedImportEntry) []string {
+	paths := make([]string, 0, len(tree))
+	for path := range tree {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	return paths
+}
+
 type rejectedImportEntry struct {
 	content string
 	mode    fs.FileMode
-	mtime   time.Time
+	// mtime is nanoseconds since the epoch rather than a time.Time, because
+	// two time.Time values for the same instant can still compare unequal:
+	// the comparison sees the internal representation, not the moment.
+	mtime int64
 }
 
 func rejectedImportTree(t *testing.T, root string) map[string]rejectedImportEntry {
@@ -253,11 +300,15 @@ func rejectedImportTree(t *testing.T, root string) map[string]rejectedImportEntr
 		if err != nil {
 			return err
 		}
-		info, err := d.Info()
+		// os.Lstat, not d.Info(). On Windows a directory entry carries a copy
+		// of the metadata that NTFS refreshes lazily, so reading it can return
+		// a timestamp that is merely stale rather than one that changed. Lstat
+		// asks the file itself and cannot report a change that never happened.
+		info, err := os.Lstat(path)
 		if err != nil {
 			return err
 		}
-		entry := rejectedImportEntry{mode: info.Mode(), mtime: info.ModTime()}
+		entry := rejectedImportEntry{mode: info.Mode(), mtime: info.ModTime().UnixNano()}
 		if !d.IsDir() {
 			data, err := os.ReadFile(path)
 			if err != nil {
@@ -265,7 +316,13 @@ func rejectedImportTree(t *testing.T, root string) map[string]rejectedImportEntr
 			}
 			entry.content = string(data)
 		}
-		tree[path] = entry
+		// Keyed relative to the root so a failure names the file, not the
+		// temporary directory it happened to live in.
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		tree[filepath.ToSlash(rel)] = entry
 		return nil
 	})
 	if err != nil {
