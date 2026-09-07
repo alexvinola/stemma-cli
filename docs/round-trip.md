@@ -25,6 +25,38 @@ in `adapters.ReuseOriginal`, and applies to every provider.
 compiles straight back to the same provider: every file must be classified
 `unchanged`, and the plan must propose nothing at all.
 
+## Ownership at import
+
+Import verifies the default same-provider compilation against the exact source
+bytes it read. Each source reproduced byte-for-byte at the same path is recorded
+in the manifest's existing `targets.<provider>.generatedFiles` collection, with
+its hash and contributing entity IDs. The canonical files and this evidence are
+saved in one transaction. Import does not write any provider file or record an
+apply timestamp.
+
+This uses the normal source-byte reuse contract above; it is not a promise that
+future edits preserve the original formatting or that every mapping is exact.
+Projection outcomes and diagnostics still describe any adaptation or loss.
+
+The normal workflow is therefore `import` → edit `.stemma/` → `plan` → `apply`.
+No preliminary no-op apply or `--adopt-untracked` is needed. If the original file
+changes after import, its hash no longer matches the ownership record and an
+update is refused as a conflict.
+
+If a source is not reproduced, import reports `STEMMA4302` immediately and leaves
+that source unowned. An attempted overwrite remains a `STEMMA4301` conflict,
+including with `--adopt-untracked`. Review the source, canonical content and
+projection diagnostics; preserve missing content or use a separate output path.
+`--adopt-untracked` is for genuinely foreign destination files, not unverified
+imported sources. Re-import verifies the sources again and replaces their
+ownership evidence, retaining records for other previously tracked files.
+
+Older manifests remain readable. If they contain no ownership evidence, an
+unchanged no-op apply can still establish it. Stemma cannot retroactively prove
+a round trip after canonical edits; reconcile those edits with the original
+source before re-importing, or generate to a separate path. Re-import replaces
+the canonical project, so preserve those edits first.
+
 ## Same format, with changes
 
 Stemma regenerates the affected file and preserves every opaque block that
@@ -74,10 +106,10 @@ Being explicit about this matters more than pretending it is lossless:
 | Kind | Meaning |
 | --- | --- |
 | `create` | The destination does not exist |
-| `update` | Stemma generated the file and it needs new content |
+| `update` | Stemma owns the file (generated or verified at import) and it needs new content |
 | `unchanged` | The file already has exactly the generated content |
-| `delete-proposed` | Stemma generated it before and no longer produces it — reported only, never executed |
-| `conflict` | The file exists with content Stemma did not write, or was edited after Stemma wrote it |
+| `delete-proposed` | Stemma tracked it before and no longer produces it — reported only, never executed |
+| `conflict` | The file has no verified ownership, or was edited after ownership was recorded |
 
 ## Stale plan protection
 

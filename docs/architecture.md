@@ -115,14 +115,17 @@ Existing file permissions are preserved; new files get 0644.
 ## Manifest semantics
 
 `.stemma/manifest.json` records the imported sources and, per target, the
-generated files with their hashes and contributing entities. This is what lets
+owned files with their hashes and contributing entities. Ownership comes from
+a successful apply or a byte-identical same-provider verification at import;
+both use the existing `generatedFiles` records. This is what lets
 Stemma distinguish:
 
-- a file it generated and that is unchanged → `unchanged`
-- a file it generated that needs new content → `update`
-- a file it generated that someone edited → `conflict`
-- a file it never generated → `conflict` unless `--adopt-untracked`
-- a file it used to generate and no longer produces → `delete-proposed`
+- a destination identical to the compilation → `unchanged`
+- an owned file that needs new content → `update`
+- an owned file that someone edited → `conflict` when an update is needed
+- an imported but unverified destination → `conflict` when an overwrite is needed
+- a foreign destination → `conflict` unless `--adopt-untracked`
+- a previously tracked file no longer produced → `delete-proposed`
 
 A timestamp may be recorded after a successful apply. It never participates in
 hashing, planning or generated output.

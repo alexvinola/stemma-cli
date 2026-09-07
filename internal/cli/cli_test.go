@@ -680,14 +680,22 @@ func TestAllWithoutTargetsInProject(t *testing.T) {
 	}
 }
 
-// TestNoOpApplyClaimsOwnership covers the case that used to leave the format
-// you imported from untracked: applying it changes no file, but Stemma must
-// still record that it owns those files, or the next real change is reported
-// as a conflict.
-func TestNoOpApplyClaimsOwnership(t *testing.T) {
+// Old manifests have no import-time ownership evidence. A byte-identical
+// no-op apply must still be able to establish it without rewriting files.
+func TestLegacyNoOpApplyClaimsOwnership(t *testing.T) {
 	h := newHarness(t)
 	h.fromFixture("copilot/basic")
 	h.run("import", "--from", "github-copilot")
+	var legacy map[string]any
+	if err := json.Unmarshal([]byte(h.read(".stemma/manifest.json")), &legacy); err != nil {
+		t.Fatal(err)
+	}
+	legacy["targets"] = map[string]any{}
+	data, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.write(".stemma/manifest.json", string(data))
 
 	original := h.read(".github/copilot-instructions.md")
 	if res := h.run("apply", "--target", "github-copilot", "--yes"); res.code != cli.ExitOK {

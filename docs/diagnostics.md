@@ -101,9 +101,17 @@ human and JSON output use this order.
 | `STEMMA4101_STALE_PLAN` | error | The repository changed after the plan was built (exit code 4) |
 | `STEMMA4201_WRITE_ROLLED_BACK` | error | A write failed; changes were rolled back (exit code 5) |
 | `STEMMA4202_RECOVERY_DATA_WRITTEN` | error | Rollback was incomplete; see `.stemma/recovery/` |
-| `STEMMA4301_UNTRACKED_DESTINATION` | error | The destination exists and Stemma did not write it |
+| `STEMMA4301_UNTRACKED_DESTINATION` | error | The destination is unowned or changed since ownership was recorded |
+| `STEMMA4302_IMPORT_ROUND_TRIP_UNVERIFIED` | warning | Import could not reproduce a source byte-identically at the same path; no ownership was recorded |
 | `STEMMA4401_DELETE_PROPOSED` | info | A previously generated file is no longer produced |
 | `STEMMA4501_OUTPUT_STALE` | error | `check` found generated output that is out of date |
+
+`STEMMA4302` does not prevent saving the canonical import, but warns at import
+time that overwriting this source cannot be authorized automatically. Compare
+the source and canonical content, preserve anything missing and review the
+same-provider plan. A separate output path allows review without overwriting
+the source. `--adopt-untracked` does not bypass this conflict; it is intended for
+foreign files. See [ownership at import](round-trip.md#ownership-at-import).
 
 ### 5xxx — budgets
 

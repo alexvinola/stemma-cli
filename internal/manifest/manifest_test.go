@@ -1,9 +1,71 @@
 package manifest
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestRecordImportReplacesOnlyTheImportedSourcesEvidence(t *testing.T) {
+	m := New()
+	m.LastTarget = "codex"
+	m.Targets["codex"] = TargetRecord{GeneratedFiles: []GeneratedRecord{{Path: "AGENTS.md", Hash: "other"}}}
+	m.Targets["claude"] = TargetRecord{GeneratedFiles: []GeneratedRecord{
+		{Path: "CLAUDE.md", Hash: "old"},
+		{Path: ".claude/rules/unverified.md", Hash: "old"},
+		{Path: ".claude/rules/previous.md", Hash: "keep"},
+	}}
+	sources := []SourceRecord{
+		{Path: "CLAUDE.md", Hash: "new", Format: "claude"},
+		{Path: ".claude/rules/unverified.md", Hash: "changed", Format: "claude"},
+	}
+	verified := TargetRecord{ProjectHash: "project", ProfileHash: "profile",
+		GeneratedFiles: []GeneratedRecord{{Path: "CLAUDE.md", Hash: "new"}}}
+	m.RecordImport("claude", sources, verified)
+	for _, tc := range []struct {
+		target, path, hash string
+		tracked            bool
+	}{
+		{"claude", "CLAUDE.md", "new", true},
+		{"claude", ".claude/rules/unverified.md", "", false},
+		{"claude", ".claude/rules/previous.md", "keep", true},
+		{"codex", "AGENTS.md", "other", true},
+	} {
+		if hash, ok := m.Tracked(tc.target, tc.path); ok != tc.tracked || hash != tc.hash {
+			t.Errorf("Tracked(%s, %s) = %q, %v", tc.target, tc.path, hash, ok)
+		}
+	}
+	if !m.Imported("claude", sources[1].Path) || m.Imported("codex", "CLAUDE.md") {
+		t.Fatal("imported source identity must be independent of ownership and per target")
+	}
+	if m.LastTarget != "codex" || m.Targets["claude"].AppliedAt != "" || m.ProjectHash != "project" {
+		t.Fatalf("import must record the new project without fabricating an apply: %+v", m)
+	}
+	if !reflect.DeepEqual(m.ImportedSources, sources) {
+		t.Fatal("sources were not recorded")
+	}
+	first, err := Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.RecordImport("claude", sources, verified)
+	second, err := Marshal(m)
+	if err != nil || string(first) != string(second) {
+		t.Fatal("repeating import changed ownership or manifest bytes")
+	}
+}
+
+func TestRecordImportRevokesTheLastUnverifiedFile(t *testing.T) {
+	m := New()
+	m.Targets["claude"] = TargetRecord{GeneratedFiles: []GeneratedRecord{{Path: "CLAUDE.md", Hash: "old"}}}
+	m.RecordImport("claude", []SourceRecord{{Path: "CLAUDE.md", Hash: "new", Format: "claude"}}, TargetRecord{})
+	if _, ok := m.Targets["claude"]; ok {
+		t.Fatal("failed verification retained ownership")
+	}
+	if !m.Imported("claude", "CLAUDE.md") {
+		t.Fatal("unverified source identity was lost")
+	}
+}
 
 func TestMarshalIsDeterministic(t *testing.T) {
 	m := New()
