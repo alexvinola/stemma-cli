@@ -1,8 +1,0 @@
-{
-  "schemaVersion": 2,
-  "id": "prj_fixture",
-  "name": "Fixture",
-  "targets": [
-    "github-copilot"
-  ]
-}
