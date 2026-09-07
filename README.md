@@ -340,7 +340,8 @@ make golden   # regenerate fixtures — never a side effect of running tests
 ```
 
 Contributor guidance lives in [AGENTS.md](AGENTS.md) — written for coding agents,
-useful for people.
+useful for people. See [Testing and fixtures](docs/testing.md) for choosing small
+regressions, golden targets and fuzz seeds, and for the fixture reduction audit.
 
 ---
 

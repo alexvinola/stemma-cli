@@ -32,6 +32,18 @@ Golden fixtures are regenerated only with `make golden`
 (`go test ./internal/compiler -run TestGolden -update-golden`). Never make a
 normal test run rewrite a fixture, and always read the resulting diff.
 
+Keep fixtures small and purposeful; see [docs/testing.md](docs/testing.md).
+Use inline table tests for validation/rejection and property tests for invariants.
+Use byte-for-byte goldens for serialized formats, scopes and aggregation. Declare
+each case and its necessary targets in `goldenCases` in
+`internal/compiler/golden_test.go`; regeneration uses that same registry, never
+the full target matrix implicitly. A missing mappings/output file must fail.
+An absent diagnostic snapshot asserts **zero** diagnostics. Snapshot canonical
+storage only when it adds coverage beyond the four representative provider cases.
+Before removing a fixture, identify its replacement assertions or specific
+redundancy. Keep useful `testdata/fuzz/` regression seeds versioned; Go's dynamic
+fuzz cache is separate and must not be copied into the repository.
+
 ## Package boundaries
 
 Keep packages cohesive and acyclic. The dependency direction is:
@@ -117,8 +129,10 @@ reference at least one diagnostic. A test enforces this.
 2. Update `internal/capabilities` — including the source URL and the
    `lastVerified` date — and `docs/provider-compatibility.md`.
 3. Update the adapter.
-4. Add or update fixtures under `testdata/<provider>/<case>/` and regenerate
-   goldens with `make golden`. Every provider behaviour change needs a fixture.
+4. Add or update regression coverage. Use small table tests for rejected input;
+   for serialized output changes, add or update fixtures under
+   `testdata/<provider>/<case>/`, explicitly select their targets, and regenerate
+   goldens with `make golden`. Review every changed expectation.
 5. If the mapping quality changes, update the projection outcome and its
    explanation text, not just the code that writes the file.
 

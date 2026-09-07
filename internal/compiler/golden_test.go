@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -163,7 +164,10 @@ func compareProjectTree(t *testing.T, caseDir string, project canonical.Project)
 	}
 	var extra []string
 	err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
 			return nil
 		}
 		rel, rerr := filepath.Rel(root, path)
@@ -184,74 +188,165 @@ func compareProjectTree(t *testing.T, caseDir string, project canonical.Project)
 	}
 }
 
-// fixtureCases lists the case directories of a provider fixture directory.
-func fixtureCases(t *testing.T, provider string) []string {
-	t.Helper()
-	dir := filepath.Join(testdataDir, provider)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("read fixtures for %s: %v", provider, err)
+// goldenCases is the coverage registry, shared by tests and make golden.
+// Missing expected files must fail a test, never select fewer targets.
+// See docs/testing.md for the reason each case/destination is retained.
+type goldenCase struct {
+	name            string
+	targets         []canonical.TargetFormat
+	snapshotProject bool
+}
+
+func goldenCases() []goldenCase {
+	copilot, claude, codex, kiro := canonical.TargetCopilot, canonical.TargetClaude, canonical.TargetCodex, canonical.TargetKiro
+	all := []canonical.TargetFormat{copilot, claude, codex, kiro}
+	return []goldenCase{
+		{"canonical/brace-globs", all, false},
+		{"canonical/comma-in-pattern", all, false},
+		{"canonical/exclude-and-disabled", all, false},
+		{"claude/basic", all, true},
+		{"claude/brace-globs", []canonical.TargetFormat{copilot}, false},
+		{"claude/character-class-globs", []canonical.TargetFormat{copilot}, false},
+		{"claude/duplicate-titles", []canonical.TargetFormat{copilot, codex}, false},
+		{"codex/nested", all, true},
+		{"copilot/basic", all, true},
+		{"copilot/brace-globs", []canonical.TargetFormat{claude, codex}, false},
+		{"copilot/character-class-globs", []canonical.TargetFormat{claude}, false},
+		{"kiro/steering", all, true},
 	}
-	var out []string
-	for _, e := range entries {
-		if e.IsDir() {
-			out = append(out, e.Name())
+}
+
+// Validate both directions: no registered case may disappear, and no fixture
+// directory or obsolete target snapshot may silently fall outside the suite.
+func validateGoldenInventory(root string, cases []goldenCase) error {
+	providers := []string{"canonical", "claude", "codex", "copilot", "kiro"}
+	registered := map[string]bool{}
+	for _, c := range cases {
+		provider, name, ok := strings.Cut(c.name, "/")
+		validProvider := false
+		for _, p := range providers {
+			validProvider = validProvider || provider == p
+		}
+		if !ok || !validProvider || name == "" || name == "." || name == ".." || strings.ContainsAny(name, "/\\") || registered[c.name] {
+			return fmt.Errorf("invalid or duplicate golden case %q", c.name)
+		}
+		registered[c.name] = true
+		if len(c.targets) == 0 {
+			return fmt.Errorf("golden case %s has no targets", c.name)
+		}
+		allowed := map[string]bool{"expected-diagnostics.json": provider != "canonical", "expected-project": c.snapshotProject}
+		for _, target := range c.targets {
+			switch target {
+			case canonical.TargetCopilot, canonical.TargetClaude, canonical.TargetCodex, canonical.TargetKiro:
+			default:
+				return fmt.Errorf("golden case %s has unsupported target %q", c.name, target)
+			}
+			prefix := "expected-" + string(target)
+			if allowed[prefix] {
+				return fmt.Errorf("golden case %s repeats target %s", c.name, target)
+			}
+			allowed[prefix] = true
+			allowed[prefix+"-mappings.json"] = true
+			allowed[prefix+"-diagnostics.json"] = true
+			allowed["profile-"+string(target)+".json"] = true
+		}
+		entries, err := os.ReadDir(filepath.Join(root, c.name))
+		if err != nil {
+			return fmt.Errorf("golden case %s: %w", c.name, err)
+		}
+		for _, e := range entries {
+			if (strings.HasPrefix(e.Name(), "expected-") || strings.HasPrefix(e.Name(), "profile-")) && !allowed[e.Name()] {
+				return fmt.Errorf("golden case %s: undeclared snapshot/profile %s", c.name, e.Name())
+			}
 		}
 	}
-	sort.Strings(out)
-	return out
+	for _, provider := range providers {
+		entries, err := os.ReadDir(filepath.Join(root, provider))
+		if err != nil {
+			return err
+		}
+		for _, e := range entries {
+			if e.IsDir() && !registered[provider+"/"+e.Name()] {
+				return fmt.Errorf("unregistered golden case %s/%s", provider, e.Name())
+			}
+		}
+	}
+	return nil
+}
+
+// No diagnostic file means exactly zero diagnostics, not unchecked diagnostics.
+// Only make golden can create a nonempty snapshot or remove an empty one.
+func compareDiagnostics(t *testing.T, path string, diags []diagnostics.Diagnostic) {
+	t.Helper()
+	if len(diags) == 0 {
+		if *updateGolden {
+			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+			return
+		}
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			return
+		} else if err != nil {
+			t.Fatal(err)
+		}
+	}
+	compareOrUpdate(t, path, diagnosticsJSON(t, diags))
 }
 
 // TestGoldenImportAndExport is the provider fixture suite: it imports each
 // fixture, compares the canonical project and diagnostics, then compiles every
 // requested target and compares the generated files.
 func TestGoldenImportAndExport(t *testing.T) {
-	providers := map[string]canonical.TargetFormat{
-		"copilot": canonical.TargetCopilot,
-		"claude":  canonical.TargetClaude,
-		"codex":   canonical.TargetCodex,
-		"kiro":    canonical.TargetKiro,
+	cases := goldenCases()
+	if err := validateGoldenInventory(testdataDir, cases); err != nil {
+		t.Fatal(err)
 	}
-	names := make([]string, 0, len(providers))
-	for name := range providers {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		format := providers[name]
-		for _, caseName := range fixtureCases(t, name) {
-			t.Run(name+"/"+caseName, func(t *testing.T) {
-				caseDir := filepath.Join(testdataDir, name, caseName)
-				ws := materialize(t, filepath.Join(caseDir, "input"))
-				ctx := context.Background()
-
-				res, err := compiler.Import(ctx, ws, compiler.ImportOptions{
-					Format:      format,
-					ProjectID:   "prj_fixture",
-					ProjectName: "Fixture",
-				})
-				if err != nil {
-					t.Fatalf("import: %v", err)
-				}
-				// The golden form of an imported project is the layout a person
-				// actually edits, so a change to that format shows up here.
-				compareProjectTree(t, caseDir, res.Project)
-				compareOrUpdate(t, filepath.Join(caseDir, "expected-diagnostics.json"),
-					diagnosticsJSON(t, res.Diagnostics))
-
-				compileTargets(t, ctx, caseDir, res.Project, ws)
-			})
+	for _, c := range cases {
+		provider, _, _ := strings.Cut(c.name, "/")
+		if provider == "canonical" {
+			continue
 		}
+		format := canonical.TargetFormat(provider)
+		if provider == "copilot" {
+			format = canonical.TargetCopilot
+		}
+		t.Run(c.name, func(t *testing.T) {
+			caseDir := filepath.Join(testdataDir, c.name)
+			ws := materialize(t, filepath.Join(caseDir, "input"))
+			ctx := context.Background()
+			res, err := compiler.Import(ctx, ws, compiler.ImportOptions{
+				Format: format, ProjectID: "prj_fixture", ProjectName: "Fixture",
+			})
+			if err != nil {
+				t.Fatalf("import: %v", err)
+			}
+			if diagnostics.HasBlocking(res.Diagnostics) {
+				t.Fatalf("golden imports must succeed; cover rejection with focused assertions: %+v", res.Diagnostics)
+			}
+			if c.snapshotProject {
+				compareProjectTree(t, caseDir, res.Project)
+			}
+			compareDiagnostics(t, filepath.Join(caseDir, "expected-diagnostics.json"), res.Diagnostics)
+			compileTargets(t, ctx, caseDir, res.Project, c.targets)
+		})
 	}
 }
 
 // TestGoldenCanonical compiles hand-authored canonical projects. These cover
 // shapes no importer can produce, such as exclude patterns and disabled rules.
 func TestGoldenCanonical(t *testing.T) {
-	for _, caseName := range fixtureCases(t, "canonical") {
+	cases := goldenCases()
+	if err := validateGoldenInventory(testdataDir, cases); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range cases {
+		caseName, ok := strings.CutPrefix(c.name, "canonical/")
+		if !ok {
+			continue
+		}
 		t.Run(caseName, func(t *testing.T) {
-			caseDir := filepath.Join(testdataDir, "canonical", caseName)
+			caseDir := filepath.Join(testdataDir, c.name)
 			data, err := os.ReadFile(filepath.Join(caseDir, "canonical.json"))
 			if err != nil {
 				t.Fatal(err)
@@ -263,46 +358,26 @@ func TestGoldenCanonical(t *testing.T) {
 			if diags := canonical.Validate(project); diagnostics.HasBlocking(diags) {
 				t.Fatalf("fixture project is invalid: %+v", diags)
 			}
-			ws, err := workspace.Open(t.TempDir(), workspace.DefaultLimits())
-			if err != nil {
-				t.Fatal(err)
-			}
-			compileTargets(t, context.Background(), caseDir, project, ws)
+			compileTargets(t, context.Background(), caseDir, project, c.targets)
 		})
 	}
 }
 
-// compileTargets compiles every target with an expected mappings report,
-// including targets that produce no output directory (for example, a blocked
-// or opaque-only import).
+// compileTargets uses only the declared targets, including during regeneration.
 func compileTargets(
-	t *testing.T, ctx context.Context, caseDir string, project canonical.Project, ws *workspace.Workspace,
+	t *testing.T, ctx context.Context, caseDir string, project canonical.Project, targets []canonical.TargetFormat,
 ) {
 	t.Helper()
-	entries, err := os.ReadDir(caseDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var targets []string
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasPrefix(e.Name(), "expected-") && strings.HasSuffix(e.Name(), "-mappings.json") {
-			targets = append(targets, strings.TrimSuffix(strings.TrimPrefix(e.Name(), "expected-"), "-mappings.json"))
-		}
-	}
-	// When updating, compile every implemented target so new fixtures appear.
-	if *updateGolden {
-		targets = []string{"github-copilot", "claude", "codex", "kiro"}
-	}
-	sort.Strings(targets)
-
-	for _, target := range targets {
-		format := canonical.TargetFormat(target)
+	for _, format := range targets {
+		target := string(format)
 		profile := profiles.Default(format)
 		if data, err := os.ReadFile(filepath.Join(caseDir, "profile-"+target+".json")); err == nil {
 			profile, err = profiles.Unmarshal(data)
 			if err != nil {
 				t.Fatalf("decode profile for %s: %v", target, err)
 			}
+		} else if !os.IsNotExist(err) {
+			t.Fatal(err)
 		}
 		result, err := compiler.Compile(ctx, project, compiler.CompileOptions{
 			Target:  format,
@@ -313,22 +388,22 @@ func compileTargets(
 		}
 		outDir := filepath.Join(caseDir, "expected-"+target)
 		if *updateGolden {
-			_ = os.RemoveAll(outDir)
+			if err := os.RemoveAll(outDir); err != nil {
+				t.Fatal(err)
+			}
 		}
 		for _, f := range result.Files {
 			compareOrUpdate(t, filepath.Join(outDir, filepath.FromSlash(f.Path)), f.Content)
 		}
 		compareOrUpdate(t, filepath.Join(caseDir, "expected-"+target+"-mappings.json"),
 			mappingsJSON(t, result.Mappings))
-		compareOrUpdate(t, filepath.Join(caseDir, "expected-"+target+"-diagnostics.json"),
-			diagnosticsJSON(t, result.Diagnostics))
+		compareDiagnostics(t, filepath.Join(caseDir, "expected-"+target+"-diagnostics.json"), result.Diagnostics)
 
 		// Every generated file must be present in the fixture, and the fixture
 		// must contain nothing extra.
 		if !*updateGolden {
 			assertSameFileSet(t, outDir, result.Files, target)
 		}
-		_ = ws
 	}
 }
 
@@ -336,7 +411,10 @@ func assertSameFileSet(t *testing.T, dir string, files []adapters.GeneratedFile,
 	t.Helper()
 	want := map[string]struct{}{}
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
 			return nil
 		}
 		rel, rerr := filepath.Rel(dir, path)
@@ -346,13 +424,18 @@ func assertSameFileSet(t *testing.T, dir string, files []adapters.GeneratedFile,
 		want[filepath.ToSlash(rel)] = struct{}{}
 		return nil
 	})
-	if err != nil {
+	if err != nil && !(os.IsNotExist(err) && len(files) == 0) {
 		t.Fatal(err)
 	}
 	for _, f := range files {
 		delete(want, f.Path)
 	}
-	for extra := range want {
-		t.Errorf("target %s: fixture contains %s but the compiler did not generate it", target, extra)
+	extra := make([]string, 0, len(want))
+	for path := range want {
+		extra = append(extra, path)
+	}
+	sort.Strings(extra)
+	for _, path := range extra {
+		t.Errorf("target %s: fixture contains %s but the compiler did not generate it", target, path)
 	}
 }
