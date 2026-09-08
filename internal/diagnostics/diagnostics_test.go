@@ -93,7 +93,7 @@ func TestCodesAreUnique(t *testing.T) {
 		DirectoryScopeAmbig, DirectoryScopeBroader, AgentToolsNeedReview, AgentNotNative,
 		OnDemandAdapted, OpaqueNotReemitted, TargetOverridesContent,
 		RegeneratedFile, PathEscape, SymlinkRejected, StalePlan, WriteRolledBack,
-		RecoveryDataWritten, UntrackedDestConfl, DeleteProposed, OutputStale,
+		RecoveryDataWritten, UntrackedDestConfl, ImportRoundTripUnverified, ImportOwnershipRevoked, DeleteProposed, OutputStale,
 		TokenBudgetExceeded, AlwaysOnContextLarge, InternalInvariant,
 	}
 	seen := map[Code]struct{}{}

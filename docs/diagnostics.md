@@ -103,6 +103,7 @@ human and JSON output use this order.
 | `STEMMA4202_RECOVERY_DATA_WRITTEN` | error | Rollback was incomplete; see `.stemma/recovery/` |
 | `STEMMA4301_UNTRACKED_DESTINATION` | error | The destination is unowned or changed since ownership was recorded |
 | `STEMMA4302_IMPORT_ROUND_TRIP_UNVERIFIED` | warning | Import could not reproduce a source byte-identically at the same path; no ownership was recorded |
+| `STEMMA4303_IMPORT_OWNERSHIP_REVOKED` | warning | Import replaced the canonical project; a previous destination lost ownership and was left untouched |
 | `STEMMA4401_DELETE_PROPOSED` | info | A previously generated file is no longer produced |
 | `STEMMA4501_OUTPUT_STALE` | error | `check` found generated output that is out of date |
 

@@ -206,7 +206,9 @@ func (m Manifest) TrackedPaths(target string) []string {
 // RecordImport records a verified source snapshot without writing provider
 // files or pretending an apply occurred. Re-import replaces ownership evidence
 // for the files read this time, including revoking it when verification failed.
-// Other tracked files remain recorded so imports do not forget their ownership.
+// Other tracked files remain recorded when the canonical project is unchanged.
+// A caller replacing the canonical project must clear Targets and LastTarget
+// before recording the new import, so old ownership cannot cross that boundary.
 func (m *Manifest) RecordImport(format string, sources []SourceRecord, verified TargetRecord) {
 	if m.Targets == nil {
 		m.Targets = map[string]TargetRecord{}
