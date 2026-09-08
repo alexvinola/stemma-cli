@@ -77,6 +77,14 @@ opens, so the repository is left byte-identical.
 The manifest is written inside the same transaction as the generated files, so
 Stemma's record of the world cannot drift from the world.
 
+Import also writes the manifest transactionally with the canonical project,
+recording ownership only for source files verified byte-identically. Replacing
+the canonical project revokes previous target ownership before recording the
+new proof and reports each destination left unowned. Subsequent applies refuse
+to overwrite those files without explicit adoption. Normal canonical edits and
+identical re-imports preserve ownership; external destination edits still cause
+conflicts.
+
 ## Dependencies
 
 The module has no external dependencies. The front matter parser, glob engine

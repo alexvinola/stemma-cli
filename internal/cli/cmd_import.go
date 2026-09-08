@@ -59,6 +59,7 @@ func runImport(ctx context.Context, env Env, args []string) int {
 
 	// Preserve identity when replacing an existing project.
 	var existingID string
+	var existingHash string
 	exists, err := ws.Exists(outPath)
 	if err != nil {
 		return fail(env, "import", *jsonOut, ExitDiagnostics, err, nil)
@@ -67,6 +68,10 @@ func runImport(ctx context.Context, env Env, args []string) int {
 	if exists {
 		if prev, perr := store.LoadProject(ctx, ws); perr == nil {
 			existingID = prev.ID
+			existingHash, err = canonical.Hash(prev)
+			if err != nil {
+				return fail(env, "import", *jsonOut, ExitInternal, err, nil)
+			}
 			hasContent = len(prev.Entities()) > 0 || len(prev.OpaqueBlocks) > 0
 		} else {
 			hasContent = true // an unreadable project is never silently replaced
@@ -158,7 +163,31 @@ func runImport(ctx context.Context, env Env, args []string) int {
 		return fail(env, "import", *jsonOut, ExitInternal, herr, nil)
 	}
 	result.VerifiedTarget.ProjectHash = hash
+	// Ownership survives canonical edits, but not replacement by a different
+	// import. Compare the actual project being replaced, not the manifest's
+	// last import/apply hash: normal edits legitimately change that hash.
+	previousTargets := m.Targets
+	if existingHash != hash {
+		m.Targets = map[string]manifest.TargetRecord{}
+		m.LastTarget = ""
+	}
 	m.RecordImport(string(result.Format), result.Sources, result.VerifiedTarget)
+	if existingHash != hash {
+		for _, target := range SortedKeys(previousTargets) {
+			for _, file := range previousTargets[target].GeneratedFiles {
+				if _, verified := m.Tracked(target, file.Path); verified {
+					continue
+				}
+				result.Diagnostics = append(result.Diagnostics,
+					diagnostics.New(diagnostics.ImportOwnershipRevoked, diagnostics.SeverityWarning,
+						"project replacement revoked destination ownership").
+						WithPath(file.Path).WithTarget(target).
+						WithDetail("This file belonged to the previous canonical project. Its ownership was not re-established by this import; the file was left untouched.").
+						WithSuggestion("Review the new target plan and preserve any needed content before authorizing writes to destinations from the previous project."))
+			}
+		}
+		diagnostics.Sort(result.Diagnostics)
+	}
 	mdata, merr := manifest.Marshal(m)
 	if merr != nil {
 		return fail(env, "import", *jsonOut, ExitInternal, merr, nil)

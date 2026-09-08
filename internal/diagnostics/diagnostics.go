@@ -94,6 +94,7 @@ const (
 	RecoveryDataWritten       Code = "STEMMA4202_RECOVERY_DATA_WRITTEN"
 	UntrackedDestConfl        Code = "STEMMA4301_UNTRACKED_DESTINATION"
 	ImportRoundTripUnverified Code = "STEMMA4302_IMPORT_ROUND_TRIP_UNVERIFIED"
+	ImportOwnershipRevoked    Code = "STEMMA4303_IMPORT_OWNERSHIP_REVOKED"
 	DeleteProposed            Code = "STEMMA4401_DELETE_PROPOSED"
 	OutputStale               Code = "STEMMA4501_OUTPUT_STALE"
 

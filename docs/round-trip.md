@@ -49,7 +49,21 @@ including with `--adopt-untracked`. Review the source, canonical content and
 projection diagnostics; preserve missing content or use a separate output path.
 `--adopt-untracked` is for genuinely foreign destination files, not unverified
 imported sources. Re-import verifies the sources again and replaces their
-ownership evidence, retaining records for other previously tracked files.
+ownership evidence.
+
+When an import replaces the canonical project with different content, all prior
+target ownership is revoked before recording the newly verified sources. Import
+reports `STEMMA4303` for each previously owned destination whose ownership was
+not re-established. Provider files remain untouched. An apply that would change
+one of those now-foreign files fails with `STEMMA4301`; review and preserve its
+content before explicitly adopting it with `--adopt-untracked`.
+
+An identical re-import preserves other targets' ownership. The comparison uses
+the canonical project on disk immediately before import, not the hash at the
+last apply or import. Editing `.stemma/` and applying normally never revokes
+ownership. Missing or unreadable canonical state cannot establish continuity,
+so importing in that state also revokes previous ownership. Target records and
+the new canonical project are saved in the same transaction.
 
 Older manifests remain readable. If they contain no ownership evidence, an
 unchanged no-op apply can still establish it. Stemma cannot retroactively prove
