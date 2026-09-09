@@ -14,6 +14,8 @@ func TestBuilderRejectsDestinationCollisions(t *testing.T) {
 	for _, paths := range [][3]string{
 		{"same.md", "same.md", "./same.md"},
 		{"rules/a.md", "rules/a.md/child.md", "rules/a.md/other.md"},
+		{"Scope.md", "scope.md", "SCOPE.MD"},
+		{"rules/Scope", "rules/scope/child.md", "RULES/SCOPE/other.md"},
 	} {
 		for mask := 0; mask < 8; mask++ {
 			var first ExportResult
@@ -64,11 +66,11 @@ func TestBuilderRejectsDestinationCollisions(t *testing.T) {
 
 func TestBuilderAllowsSiblingPathsAndSingleAggregates(t *testing.T) {
 	b := NewBuilder(canonical.TargetCodex, ExportInput{})
-	for _, p := range []string{"AGENTS.md", "src/AGENTS.md", "src/a.md", "src/a.md-extra/AGENTS.md"} {
+	for _, p := range []string{"AGENTS.md", "src/AGENTS.md", "src/a.md", "src/a.md-extra/AGENTS.md", "RULES/a.md", "rules/b.md"} {
 		b.Emit(p, "body", []string{"context.a", "rule.b"})
 	}
 	out := b.Result()
-	if len(out.Files) != 4 || len(out.Diagnostics) != 0 {
+	if len(out.Files) != 6 || len(out.Diagnostics) != 0 {
 		t.Fatalf("legitimate output blocked: %+v", out)
 	}
 }

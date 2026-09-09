@@ -78,7 +78,11 @@ Titles may be identical without merging entities, including entities of differen
 types. Imported filename/directory hints and explicit profile destinations still
 have precedence. Conflicting destinations (including file/parent-directory
 conflicts) produce blocking `STEMMA6001_INTERNAL_INVARIANT`, blocked mappings and
-CLI exit 6. Independently emitted files are never concatenated or overwritten.
+CLI exit 6. Destination identity uses Unicode simple case folding on every
+platform, so case-only aliases such as `Scope.md` and `scope.md`, or a file
+`Scope` and a child of `scope/`, are rejected even on a case-sensitive host. It
+does not fold Unicode normalization variants or multi-rune expansions.
+Independently emitted files are never concatenated or overwritten.
 Intentional `CLAUDE.md`, `AGENTS.md` and Copilot root aggregates remain supported.
 
 Regenerated skills use their directory as the front matter `name`, as required

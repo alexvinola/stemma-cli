@@ -159,7 +159,7 @@ func TestDuplicateTitlesKeepIndependentScope(t *testing.T) {
 
 func TestConflictingHintsAndPinsBlockAllOwners(t *testing.T) {
 	for _, target := range capabilities.AvailableTargets() {
-		for _, shape := range []string{"skill-hint", "profile-filename", "profile-directory", "root", "opaque", "file-directory", "file-hint", "agent-hint", "procedure-hint", "hint-fallback"} {
+		for _, shape := range []string{"skill-hint", "profile-filename", "case-filename", "profile-directory", "root", "opaque", "file-directory", "case-file-directory", "file-hint", "agent-hint", "procedure-hint", "hint-fallback"} {
 			t.Run(string(target)+"/"+shape, func(t *testing.T) {
 				p := canonical.NewProject("prj", "Conflicts")
 				p.Skills = []canonical.Skill{{ID: "skill.a", Name: "First", Description: "First", Content: "First body"}, {ID: "skill.b", Name: "Second", Description: "Second", Content: "Second body"}}
@@ -174,12 +174,18 @@ func TestConflictingHintsAndPinsBlockAllOwners(t *testing.T) {
 					for _, id := range ids {
 						profile.Overrides[id] = profiles.Override{Directory: "custom", Filename: "shared.md"}
 					}
+				case "case-filename":
+					profile.Overrides[ids[0]] = profiles.Override{Directory: "custom", Filename: "Scope.md"}
+					profile.Overrides[ids[1]] = profiles.Override{Directory: "custom", Filename: "scope.md"}
 				case "profile-directory":
 					profile.Overrides[ids[0]] = profiles.Override{Directory: "custom"}
 					profile.Overrides[ids[1]] = profiles.Override{Directory: "./custom/"}
 				case "file-directory":
 					profile.Overrides[ids[0]] = profiles.Override{Directory: "custom", Filename: "shared.md"}
 					profile.Overrides[ids[1]] = profiles.Override{Directory: "custom/shared.md"}
+				case "case-file-directory":
+					profile.Overrides[ids[0]] = profiles.Override{Directory: "custom", Filename: "Scope"}
+					profile.Overrides[ids[1]] = profiles.Override{Directory: "CUSTOM/scope", Filename: "child.md"}
 				case "root":
 					if target == canonical.TargetKiro {
 						t.Skip("Kiro has no aggregate root")
