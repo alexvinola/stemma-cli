@@ -284,10 +284,12 @@ func readOriginals(
 	return out, nil
 }
 
-// HasChanges reports whether applying the plan would modify the repository.
+// HasChanges reports whether the plan found repository drift that needs attention.
+// Proposed deletions count even though apply deliberately leaves them for the user.
 func (p Plan) HasChanges() bool {
 	for _, c := range p.Changes {
-		if c.Kind == ChangeCreate || c.Kind == ChangeUpdate || c.Kind == ChangeConflict {
+		if c.Kind == ChangeCreate || c.Kind == ChangeUpdate ||
+			c.Kind == ChangeDeleteProposed || c.Kind == ChangeConflict {
 			return true
 		}
 	}

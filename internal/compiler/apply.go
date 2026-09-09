@@ -182,7 +182,17 @@ func updateManifest(m manifest.Manifest, plan Plan, now time.Time) manifest.Mani
 		}
 	}
 	for _, c := range plan.Changes {
-		if c.Kind == ChangeDeleteProposed || c.Kind == ChangeConflict {
+		if c.Kind == ChangeConflict {
+			continue
+		}
+		if c.Kind == ChangeDeleteProposed {
+			// A proposed deletion is intentionally not executed, so retain the
+			// previous ownership evidence until the file disappears. In
+			// particular, do not record ExistingHash here: the stale file may
+			// have user edits that Stemma must not adopt implicitly.
+			if previous, ok := generatedRecord(m, string(plan.Target), c.Path); ok {
+				rec.GeneratedFiles = append(rec.GeneratedFiles, previous)
+			}
 			continue
 		}
 		hash := c.NewHash
@@ -206,6 +216,19 @@ func updateManifest(m manifest.Manifest, plan Plan, now time.Time) manifest.Mani
 	m.ProjectHash = plan.ProjectHash
 	m.StemmaVersion = version.Version
 	return m
+}
+
+func generatedRecord(m manifest.Manifest, target, path string) (manifest.GeneratedRecord, bool) {
+	rec, ok := m.Targets[target]
+	if !ok {
+		return manifest.GeneratedRecord{}, false
+	}
+	for _, generated := range rec.GeneratedFiles {
+		if generated.Path == path {
+			return generated, true
+		}
+	}
+	return manifest.GeneratedRecord{}, false
 }
 
 func dedupe(in []string) []string {
