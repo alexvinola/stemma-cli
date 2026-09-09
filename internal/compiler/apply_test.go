@@ -148,6 +148,12 @@ func TestApplyNeverDeletes(t *testing.T) {
 		t.Fatal(err)
 	}
 	m = res.Manifest
+	// A retired generated file may have been edited before the user decides
+	// whether to remove it. Retaining the tombstone must not adopt those bytes.
+	editedPath, _ := ws.Native(".claude/rules/context-api-layer-conventions.md")
+	if err := os.WriteFile(editedPath, []byte("user edit to retired output\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	// Drop every context document: the generated files are no longer produced.
 	stripped := project
@@ -168,7 +174,8 @@ func TestApplyNeverDeletes(t *testing.T) {
 	if proposals == 0 {
 		t.Fatal("expected delete proposals")
 	}
-	if _, err := compiler.Apply(ctx, ws, plan, compiler.ApplyOptions{Manifest: m}); err != nil {
+	res, err = compiler.Apply(ctx, ws, plan, compiler.ApplyOptions{Manifest: m})
+	if err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range plan.Changes {
@@ -179,6 +186,25 @@ func TestApplyNeverDeletes(t *testing.T) {
 		if _, err := os.Stat(native); err != nil {
 			t.Errorf("apply deleted %s; deletions must never be executed", c.Path)
 		}
+		beforeHash, beforeTracked := m.Tracked(string(canonical.TargetClaude), c.Path)
+		afterHash, afterTracked := res.Manifest.Tracked(string(canonical.TargetClaude), c.Path)
+		if !beforeTracked || !afterTracked || afterHash != beforeHash {
+			t.Errorf("apply forgot ownership of %s: before=(%q, %t), after=(%q, %t)",
+				c.Path, beforeHash, beforeTracked, afterHash, afterTracked)
+		}
+	}
+
+	again, err := compiler.BuildPlan(ctx, ws, stripped, compiler.PlanOptions{
+		Target: canonical.TargetClaude, Profile: profiles.Default(canonical.TargetClaude), Manifest: res.Manifest,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !again.HasChanges() {
+		t.Fatal("a retained delete proposal must keep the plan out of date")
+	}
+	if got := again.CountByKind()[compiler.ChangeDeleteProposed]; got != proposals {
+		t.Fatalf("delete proposals after apply = %d, want %d", got, proposals)
 	}
 }
 

@@ -547,6 +547,81 @@ func TestCheckPassesAfterApply(t *testing.T) {
 	}
 }
 
+func TestCheckKeepsProposedDeletionVisibleUntilManualDelete(t *testing.T) {
+	h := newHarness(t)
+	h.fromFixture("copilot/basic")
+	if res := h.run("import", "--from", "github-copilot", "--targets", "claude"); res.code != cli.ExitOK {
+		t.Fatalf("import exit = %d\n%s\n%s", res.code, res.stdout, res.stderr)
+	}
+	if res := h.run("apply", "--target", "claude", "--yes"); res.code != cli.ExitOK {
+		t.Fatalf("initial apply exit = %d\n%s\n%s", res.code, res.stdout, res.stderr)
+	}
+
+	canonicalPath := filepath.Join(h.root, ".stemma/context/api-layer-conventions.md")
+	if err := os.Remove(canonicalPath); err != nil {
+		t.Fatal(err)
+	}
+	const stalePath = ".claude/rules/context-api-layer-conventions.md"
+
+	assertOutOfDate := func(stage string) {
+		t.Helper()
+		res := h.run("check", "--target", "claude", "--json")
+		if res.code != cli.ExitDiagnostics {
+			t.Fatalf("%s: check exit = %d, want %d\n%s\n%s",
+				stage, res.code, cli.ExitDiagnostics, res.stdout, res.stderr)
+		}
+		var report struct {
+			ExitCode    int `json:"exitCode"`
+			Diagnostics []struct {
+				Code string `json:"code"`
+			} `json:"diagnostics"`
+			Data struct {
+				UpToDate bool `json:"upToDate"`
+				Targets  []struct {
+					UpToDate       bool     `json:"upToDate"`
+					DeleteProposed []string `json:"deleteProposedFiles"`
+				} `json:"targets"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal([]byte(res.stdout), &report); err != nil {
+			t.Fatalf("%s: decode check JSON: %v\n%s", stage, err, res.stdout)
+		}
+		if report.ExitCode != cli.ExitDiagnostics || report.Data.UpToDate ||
+			len(report.Data.Targets) != 1 || report.Data.Targets[0].UpToDate {
+			t.Fatalf("%s: inconsistent check status: %+v", stage, report)
+		}
+		if got := report.Data.Targets[0].DeleteProposed; len(got) != 1 || got[0] != stalePath {
+			t.Fatalf("%s: proposed deletions = %v, want [%s]", stage, got, stalePath)
+		}
+		found := false
+		for _, d := range report.Diagnostics {
+			if d.Code == "STEMMA4401_DELETE_PROPOSED" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("%s: check omitted STEMMA4401_DELETE_PROPOSED: %s", stage, res.stdout)
+		}
+	}
+
+	assertOutOfDate("before re-apply")
+	if res := h.run("apply", "--target", "claude", "--yes"); res.code != cli.ExitOK {
+		t.Fatalf("re-apply exit = %d\n%s\n%s", res.code, res.stdout, res.stderr)
+	}
+	if !h.exists(stalePath) {
+		t.Fatal("apply executed a proposed deletion")
+	}
+	assertOutOfDate("after re-apply")
+
+	if err := os.Remove(filepath.Join(h.root, filepath.FromSlash(stalePath))); err != nil {
+		t.Fatal(err)
+	}
+	if res := h.run("check", "--target", "claude"); res.code != cli.ExitOK {
+		t.Fatalf("check after manual delete exit = %d\n%s\n%s", res.code, res.stdout, res.stderr)
+	}
+}
+
 func TestVersionReportsCursorAsUnimplemented(t *testing.T) {
 	h := newHarness(t)
 	res := h.run("version")
