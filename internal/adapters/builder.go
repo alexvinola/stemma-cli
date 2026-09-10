@@ -440,24 +440,36 @@ func (b *Builder) Result() ExportResult {
 	return ExportResult{Files: files, Mappings: mappings, Diagnostics: b.bag.Items()}
 }
 
-// destinationConflicts checks both repeated destinations and files occupying
-// another file's parent directory. Sorting makes diagnostics independent of
-// emission order; walking ancestors avoids a quadratic all-pairs path scan.
+// destinationConflicts checks repeated or case-fold-equivalent destinations,
+// plus files occupying another file's equivalent parent directory. Sorting
+// makes diagnostics independent of emission order; the portable keys keep the
+// result independent of the host filesystem.
 func (b *Builder) destinationConflicts() map[string]string {
 	paths := make([]string, 0, len(b.files))
+	pathsByKey := map[string][]string{}
 	for dest := range b.files {
 		paths = append(paths, dest)
+		key := workspace.PortablePathKey(dest)
+		pathsByKey[key] = append(pathsByKey[key], dest)
 	}
 	sort.Strings(paths)
+	for key := range pathsByKey {
+		sort.Strings(pathsByKey[key])
+	}
 	conflicts := map[string][]string{}
 	for _, dest := range paths {
 		if b.duplicates[dest] {
 			conflicts[dest] = append(conflicts[dest], dest)
 		}
+		for _, equivalent := range pathsByKey[workspace.PortablePathKey(dest)] {
+			if equivalent != dest {
+				conflicts[dest] = append(conflicts[dest], equivalent)
+			}
+		}
 		for dir := path.Dir(dest); dir != "."; dir = path.Dir(dir) {
-			if _, exists := b.files[dir]; exists {
-				conflicts[dest] = append(conflicts[dest], dir)
-				conflicts[dir] = append(conflicts[dir], dest)
+			for _, parentFile := range pathsByKey[workspace.PortablePathKey(dir)] {
+				conflicts[dest] = append(conflicts[dest], parentFile)
+				conflicts[parentFile] = append(conflicts[parentFile], dest)
 			}
 		}
 	}
@@ -468,6 +480,7 @@ func (b *Builder) destinationConflicts() map[string]string {
 			continue
 		}
 		sort.Strings(others)
+		others = dedupeStrings(others)
 		blocked[dest] = b.Diag(diagnostics.New(diagnostics.InternalInvariant, diagnostics.SeverityError,
 			"generated destination paths collide").WithPath(dest).
 			WithDetail("Destination %q for entities %s conflicts with: %s. Independent files cannot share a destination or occupy a parent directory.",
