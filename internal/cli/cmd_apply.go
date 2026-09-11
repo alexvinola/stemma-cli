@@ -118,29 +118,9 @@ func applyOne(
 		fmt.Fprintf(env.Stderr, "stemma: apply refused; resolve the errors above and re-plan.\n")
 		return ExitDiagnostics
 	}
-	// A plan with nothing to write still has to run: the manifest is how Stemma
-	// records which files it owns, and a target whose output is already correct
-	// (the format you imported from, typically) would otherwise stay untracked
-	// and be reported as a conflict on the next real change.
-	needsOwnership := false
-	for _, c := range plan.Changes {
-		if c.Kind == compiler.ChangeUnchanged {
-			needsOwnership = true
-			break
-		}
-	}
-	if len(writable) == 0 && !needsOwnership {
-		if jsonOut {
-			if werr := WriteJSON(env, NewEnvelope("apply", ExitOK, plan.Diagnostics,
-				compiler.ApplyResult{Written: []string{}, Unchanged: []string{}, Skipped: []string{}, Diagnostics: plan.Diagnostics})); werr != nil {
-				return ExitInternal
-			}
-			return ExitOK
-		}
-		fmt.Fprintf(env.Stdout, "Nothing to apply: %s is already up to date.\n", plan.Target)
-		PrintDiagnostics(env.Stdout, plan.Diagnostics, true)
-		return ExitOK
-	}
+	// Even an empty plan must reconcile ownership: retain proposed deletions
+	// and forget retired files whose absence was confirmed during planning.
+	// This also records ownership when all generated output is unchanged.
 
 	diagnosticsShown := false
 	if !yes && len(writable) > 0 {

@@ -155,7 +155,14 @@ func BuildPlan(
 			continue
 		}
 		existing, exists, err := ws.HashFile(tracked)
-		if err != nil || !exists {
+		if err != nil {
+			plan.Changes = append(plan.Changes, Change{
+				Path: tracked, Kind: ChangeConflict, Entities: []string{}, Reason: err.Error(),
+			})
+			bag.Add(inspectionDiagnostic(tracked, opts.Target, err))
+			continue
+		}
+		if !exists {
 			continue
 		}
 		plan.Changes = append(plan.Changes, Change{
@@ -196,21 +203,7 @@ func classify(ws *workspace.Workspace, f GeneratedFile, opts PlanOptions) (Chang
 	if err != nil {
 		change.Kind = ChangeConflict
 		change.Reason = err.Error()
-		code := diagnostics.FileUnreadable
-		summary := "destination could not be inspected"
-		suggestion := ""
-		if errors.Is(err, workspace.ErrSymlink) {
-			code = diagnostics.SymlinkRejected
-			summary = "destination is a symbolic link"
-			suggestion = "Stemma never writes through a symlink. Replace it with a regular file, " +
-				"or point the target profile somewhere else."
-		}
-		d := diagnostics.New(code, diagnostics.SeverityError, summary).
-			WithPath(f.Path).WithTarget(string(opts.Target)).WithDetail("%v", err)
-		if suggestion != "" {
-			d = d.WithSuggestion("%s", suggestion)
-		}
-		diags = append(diags, d)
+		diags = append(diags, inspectionDiagnostic(f.Path, opts.Target, err))
 		return change, diags
 	}
 	trackedHash, tracked := opts.Manifest.Tracked(string(opts.Target), f.Path)
@@ -253,6 +246,26 @@ func classify(ws *workspace.Workspace, f GeneratedFile, opts PlanOptions) (Chang
 			WithSuggestion("Review the file, then re-run with --adopt-untracked to let Stemma own it."))
 	}
 	return change, diags
+}
+
+// Inspection failures are conflicts for both active and retired destinations.
+// Only a successful inspection can establish that a tracked file is absent.
+func inspectionDiagnostic(path string, target canonical.TargetFormat, err error) diagnostics.Diagnostic {
+	code := diagnostics.FileUnreadable
+	summary := "destination could not be inspected"
+	suggestion := ""
+	if errors.Is(err, workspace.ErrSymlink) {
+		code = diagnostics.SymlinkRejected
+		summary = "destination is a symbolic link"
+		suggestion = "Stemma never writes through a symlink. Replace it with a regular file, " +
+			"or point the target profile somewhere else."
+	}
+	d := diagnostics.New(code, diagnostics.SeverityError, summary).
+		WithPath(path).WithTarget(string(target)).WithDetail("%v", err)
+	if suggestion != "" {
+		d = d.WithSuggestion("%s", suggestion)
+	}
+	return d
 }
 
 // readOriginals loads the current content of files the project was imported
