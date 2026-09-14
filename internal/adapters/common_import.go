@@ -1,12 +1,14 @@
 package adapters
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/globs"
 	"github.com/alexvinola/stemma-cli/internal/parser"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 	"github.com/alexvinola/stemma-cli/internal/version"
@@ -36,6 +38,14 @@ func (c *ImportCtx) Provenance(file SourceFile, span provenance.Span, disp prove
 	}
 }
 
+// GlobErrorCode distinguishes an expansion bound from malformed glob syntax.
+func GlobErrorCode(err error) diagnostics.Code {
+	if errors.Is(err, globs.ErrTooManyExpansions) {
+		return diagnostics.GlobExpansionLimit
+	}
+	return diagnostics.InvalidGlob
+}
+
 // AddOpaque preserves content Stemma refuses to interpret.
 func (c *ImportCtx) AddOpaque(file SourceFile, content, reason string, span provenance.Span, reemit bool) {
 	id := c.IDs.Allocate(canonical.EntityOpaque, canonical.Slug(file.Path), file.Path)
@@ -56,9 +66,10 @@ func (c *ImportCtx) AddOpaque(file SourceFile, content, reason string, span prov
 
 // ParseDocument parses a Markdown source file.
 //
-// When parsing produces a blocking error the whole file is preserved as an
-// opaque block and ok is false, so no importer can silently drop it.
-func (c *ImportCtx) ParseDocument(file SourceFile) (parser.Document, bool) {
+// Recognized fields must be declared by the caller. A syntax or field-type
+// error preserves the whole file as an opaque block and returns ok=false,
+// before any entity can be created from invalid metadata.
+func (c *ImportCtx) ParseDocument(file SourceFile, fields ...parser.FieldSpec) (parser.Document, bool) {
 	doc := parser.Parse(file.Path, file.Data)
 	c.Bag.Extend(doc.Diagnostics)
 	if diagnostics.HasSeverity(doc.Diagnostics, diagnostics.SeverityError) {
@@ -68,6 +79,13 @@ func (c *ImportCtx) ParseDocument(file SourceFile) (parser.Document, bool) {
 		}
 		c.AddOpaque(file, content,
 			"the file could not be parsed safely; it is preserved verbatim", provenance.Span{}, true)
+		return doc, false
+	}
+	typeDiags := doc.FrontMatter.ValidateFields(file.Path, fields...)
+	c.Bag.Extend(typeDiags)
+	if diagnostics.HasBlocking(typeDiags) {
+		c.AddOpaque(file, string(file.Data),
+			"recognized front matter fields have invalid types; the file is preserved verbatim", FullSpan(file, doc), true)
 		return doc, false
 	}
 	return doc, true
@@ -222,4 +240,18 @@ func (c *ImportCtx) AgentFromDocument(file SourceFile, doc parser.Document) cano
 		agent.Instructions = strings.TrimSpace(doc.Body)
 	}
 	return agent
+}
+
+// SkillFields and AgentFields describe the metadata consumed by the shared
+// Markdown entity constructors. Each call returns an independent schema.
+func SkillFields() []parser.FieldSpec {
+	return []parser.FieldSpec{
+		{Key: "name", Type: parser.StringField}, {Key: "description", Type: parser.StringField},
+		{Key: "allowed-tools", Type: parser.StringListField}, {Key: "allowedTools", Type: parser.StringListField},
+		{Key: "tools", Type: parser.StringListField},
+	}
+}
+
+func AgentFields() []parser.FieldSpec {
+	return append(SkillFields(), parser.FieldSpec{Key: "model", Type: parser.StringField})
 }

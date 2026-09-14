@@ -1,0 +1,36 @@
+[
+  {
+    "code": "STEMMA3002_TARGET_NOT_ENABLED",
+    "severity": "warning",
+    "summary": "target \"codex\" is not listed in the canonical project",
+    "detail": "Compilation proceeds, but `stemma check --all` will not verify this target.",
+    "target": "codex",
+    "suggestion": "Add \"codex\" to \"targets\" in .stemma/project.json.",
+    "blocking": false,
+    "fingerprint": "dg_89f9dcf5a642964c"
+  },
+  {
+    "code": "STEMMA3201_DIRECTORY_SCOPE_AMBIGUOUS",
+    "severity": "warning",
+    "summary": "the include patterns do not resolve to a single directory",
+    "detail": "Scoping here is expressed only by file location. The patterns src/**/*.ts, src/**/*.tsx, lib/**/*.go, app/**/*.css, packages/**/*.css do not share one concrete directory, and Stemma will not invent one, so the content stays in the root AGENTS.md and applies everywhere.",
+    "path": "AGENTS.md",
+    "entityId": "context.strict-typing",
+    "target": "codex",
+    "suggestion": "Set a directory for this entity in .stemma/profiles/codex.json, or set include:false to skip it for this target.",
+    "blocking": false,
+    "fingerprint": "dg_cd1b4b5a1d934677"
+  },
+  {
+    "code": "STEMMA3202_DIRECTORY_SCOPE_BROADENED",
+    "severity": "warning",
+    "summary": "directory scoping is broader than the canonical patterns",
+    "detail": "The patterns ui/**/*.js, ui/**/*.css, ui/**/*.html were mapped to the directory ui. Everything under that directory now matches, including files the canonical patterns did not select.",
+    "path": "ui/AGENTS.md",
+    "entityId": "context.ui-conventions",
+    "target": "codex",
+    "suggestion": "Accept this diagnostic in the profile if the wider scope is acceptable.",
+    "blocking": false,
+    "fingerprint": "dg_966337c565e829d2"
+  }
+]

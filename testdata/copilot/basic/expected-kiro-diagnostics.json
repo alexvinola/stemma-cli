@@ -24,10 +24,10 @@
     "code": "STEMMA3402_ON_DEMAND_ADAPTED",
     "severity": "info",
     "summary": "procedure delivered as a Kiro skill",
-    "path": ".kiro/skills/release/SKILL.md",
+    "path": ".kiro/skills/procedure-release/SKILL.md",
     "entityId": "procedure.release",
     "target": "kiro",
     "blocking": false,
-    "fingerprint": "dg_70257ab9988f2314"
+    "fingerprint": "dg_7d5a87d527a5f05f"
   }
 ]

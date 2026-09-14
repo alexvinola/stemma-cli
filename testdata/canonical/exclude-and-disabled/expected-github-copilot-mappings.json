@@ -22,7 +22,7 @@
     "entityType": "context",
     "outcome": "adapted",
     "files": [
-      ".github/prompts/incident-runbook.prompt.md"
+      ".github/prompts/context-runbook.prompt.md"
     ],
     "activation": "on demand (incident-runbook)",
     "explanation": "On-demand context has no dedicated Copilot format; it is delivered as a prompt file that a developer invokes explicitly."
@@ -42,7 +42,7 @@
     "entityType": "rule",
     "outcome": "lossy",
     "files": [
-      ".github/instructions/controllers-never-touch-the-database.instructions.md"
+      ".github/instructions/rule-controller-repository.instructions.md"
     ],
     "activation": "paths src/api/** (excluding src/api/**/*_test.go)",
     "explanation": "Copilot applyTo has no negative pattern syntax, so the exclude patterns are only reproduced as a note in the file body."

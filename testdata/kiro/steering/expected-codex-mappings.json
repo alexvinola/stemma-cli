@@ -24,10 +24,10 @@
     "entityType": "context",
     "outcome": "adapted",
     "files": [
-      ".agents/skills/incident-response/SKILL.md"
+      ".agents/skills/context-incident-response/SKILL.md"
     ],
     "activation": "on demand (incident-response)",
-    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill."
+    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill. The skill invocation name is \"context-incident-response\" to match its destination directory."
   },
   {
     "entityId": "context.product",
@@ -42,11 +42,11 @@
   {
     "entityId": "skill.audit",
     "entityType": "skill",
-    "outcome": "exact",
+    "outcome": "adapted",
     "files": [
-      ".agents/skills/audit/SKILL.md"
+      ".agents/skills/skill-audit/SKILL.md"
     ],
     "activation": "on demand (audit)",
-    "explanation": "Skills are supported natively."
+    "explanation": "Skills are supported natively. The skill invocation name is \"skill-audit\" to match its destination directory."
   }
 ]

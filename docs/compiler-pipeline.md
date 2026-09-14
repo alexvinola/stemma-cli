@@ -148,6 +148,11 @@ destination hash recorded in the plan (a mismatch is `STEMMA4101` and exit code
 4), then writes everything — including the updated manifest — in a single
 transaction.
 
+The apply result retains all plan diagnostics and adds transaction diagnostics,
+including on failure. Human and JSON output expose non-blocking warnings even
+when no files need writing. Interactive apply shows the plan diagnostics before
+asking for confirmation; successful confirmation does not print them twice.
+
 Deletions are never executed.
 
 ## Invariants the compiler asserts

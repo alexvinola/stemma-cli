@@ -370,12 +370,12 @@ func writeSkill(
 	content string,
 	ext canonical.Extensions,
 ) string {
-	dirName := adapters.FileSlug(name, id)
+	dirName := adapters.SkillSlug(id)
 	if v, ok := ext.GetString(string(canonical.TargetCodex), "stemma.sourceDir"); ok && safeName(v) {
 		dirName = v
 	}
 	dest := b.Path(res, path.Join(SkillsDir, dirName), "SKILL.md")
-	entries := []adapters.KV{{Key: "name", Value: name}}
+	entries := []adapters.KV{{Key: "name", Value: b.SkillName(id, name, dest)}}
 	if description != "" {
 		entries = append(entries, adapters.KV{Key: "description", Value: description})
 	}

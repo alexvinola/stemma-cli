@@ -37,10 +37,10 @@
     "code": "STEMMA3402_ON_DEMAND_ADAPTED",
     "severity": "info",
     "summary": "on-demand content is delivered as a skill",
-    "path": ".agents/skills/incident-response/SKILL.md",
+    "path": ".agents/skills/context-incident-response/SKILL.md",
     "entityId": "context.incident-response",
     "target": "codex",
     "blocking": false,
-    "fingerprint": "dg_8792b962cec16e3b"
+    "fingerprint": "dg_d3a81ad98cb548d7"
   }
 ]

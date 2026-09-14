@@ -34,6 +34,18 @@ Stemma parses everywhere else — no tags, anchors or aliases. Prose fields that
 are not the main body become recognised `## Heading` sections. Anything under an
 unrecognised heading stays part of the body, so nothing a person writes is lost.
 
+Every canonical entity file requires a front matter block delimited by `---`.
+Missing or unterminated front matter blocks loading with a diagnostic naming the
+file. Present fields must have their expected types: strings for textual metadata,
+booleans for `enabled`, and strings or lists containing only strings for tool lists
+and activation patterns. The single-string list shorthand remains supported.
+Optional fields may be omitted; a malformed value is not treated as omission.
+`extensions` and each provider entry beneath it must be mappings; the provider's
+extension values remain opaque and may have any supported YAML value type.
+
+These checks belong to the canonical file reader, not the general Markdown
+parser: a provider's ordinary Markdown file may legitimately have no front matter.
+
 There are two serializations of a project, and they have different jobs:
 
 | Form | Where | Job |
@@ -76,6 +88,16 @@ The zero value is invalid on purpose: a forgotten assignment is a validation
 error, not an accidental "always-on". Fields that do not belong to the tag must
 be empty, and a `path-scoped` activation must carry at least one include
 pattern.
+
+Include and exclude patterns are brace-expanded when imported and before
+projection, including patterns written directly in `.stemma/` or a profile.
+For example, `src/**/*.{ts,tsx}` becomes `src/**/*.ts` and `src/**/*.tsx`.
+Literal braces inside character classes such as `[{]` are preserved. Literal
+commas remain valid canonical input but require a lossy diagnostic for Copilot.
+Expansion is bounded at 1000 alternatives per pattern and 32 nested groups.
+Validation rejects patterns beyond either bound because it cannot check every
+alternative. Importers report a blocking `STEMMA2102`; no partial expansion or
+unvalidated pattern is imported. Split a rejected pattern into smaller groups.
 
 `documentation-only` entities are never projected into agent-facing output. A
 target profile can override the activation, which makes the decision explicit

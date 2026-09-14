@@ -14,7 +14,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".claude/rules/api-package.md"
+      ".claude/rules/context-src-api-api-package.md"
     ],
     "activation": "paths src/api/**",
     "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
@@ -40,11 +40,11 @@
   {
     "entityId": "skill.deploy",
     "entityType": "skill",
-    "outcome": "exact",
+    "outcome": "adapted",
     "files": [
-      ".claude/skills/deploy/SKILL.md"
+      ".claude/skills/skill-deploy/SKILL.md"
     ],
     "activation": "on demand (deploy)",
-    "explanation": "Claude Code supports skills natively."
+    "explanation": "Claude Code supports skills natively. The skill invocation name is \"skill-deploy\" to match its destination directory."
   }
 ]

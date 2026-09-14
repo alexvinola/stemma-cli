@@ -37,10 +37,10 @@
     "code": "STEMMA3402_ON_DEMAND_ADAPTED",
     "severity": "info",
     "summary": "procedure delivered as a skill",
-    "path": ".agents/skills/release/SKILL.md",
+    "path": ".agents/skills/procedure-release/SKILL.md",
     "entityId": "procedure.release",
     "target": "codex",
     "blocking": false,
-    "fingerprint": "dg_22728db929793db4"
+    "fingerprint": "dg_8525f65c9746c264"
   }
 ]

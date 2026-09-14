@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -70,14 +71,31 @@ func applyOne(
 		if rerr != nil {
 			return fail(env, "apply", jsonOut, ExitDiagnostics, rerr, nil)
 		}
-		plan, err = compiler.UnmarshalPlan(f.Data)
-		if err != nil {
-			return fail(env, "apply", jsonOut, ExitDiagnostics, err, nil)
+		saved, uerr := compiler.UnmarshalPlan(f.Data)
+		if uerr != nil {
+			return fail(env, "apply", jsonOut, ExitDiagnostics, uerr, nil)
 		}
-		if target != "" && string(plan.Target) != target {
+		if target != "" && string(saved.Target) != target {
 			return fail(env, "apply", jsonOut, ExitUsage,
-				fmt.Errorf("saved plan targets %q but --target says %q", plan.Target, target), nil)
+				fmt.Errorf("saved plan targets %q but --target says %q", saved.Target, target), nil)
 		}
+		// A saved plan states what compiling the project would produce. It is
+		// not authority to write: the file lives in the repository, and the
+		// workflow it exists for — commit a plan, review it, replay it in CI —
+		// is exactly the one where a pull request can rewrite it.
+		//
+		// So rebuild from the canonical project, refuse unless the saved plan
+		// agrees, and then apply the rebuild. The bytes written are always the
+		// ones this binary just produced, never the ones the file carried, so
+		// the ownership rules in classify() cannot be bypassed by editing it.
+		rebuilt, _, code, berr := buildPlan(ctx, env, dir, string(saved.Target), profilePath, adopt)
+		if berr != nil {
+			return fail(env, "apply", jsonOut, code, berr, nil)
+		}
+		if verr := compiler.VerifyPlanMatches(saved, rebuilt); verr != nil {
+			return fail(env, "apply", jsonOut, ExitStalePlan, verr, nil)
+		}
+		plan = rebuilt
 	} else {
 		var code int
 		plan, _, code, err = buildPlan(ctx, env, dir, target, profilePath, adopt)
@@ -100,35 +118,19 @@ func applyOne(
 		fmt.Fprintf(env.Stderr, "stemma: apply refused; resolve the errors above and re-plan.\n")
 		return ExitDiagnostics
 	}
-	// A plan with nothing to write still has to run: the manifest is how Stemma
-	// records which files it owns, and a target whose output is already correct
-	// (the format you imported from, typically) would otherwise stay untracked
-	// and be reported as a conflict on the next real change.
-	needsOwnership := false
-	for _, c := range plan.Changes {
-		if c.Kind == compiler.ChangeUnchanged {
-			needsOwnership = true
-			break
-		}
-	}
-	if len(writable) == 0 && !needsOwnership {
-		if jsonOut {
-			if werr := WriteJSON(env, NewEnvelope("apply", ExitOK, plan.Diagnostics,
-				compiler.ApplyResult{Written: []string{}, Unchanged: []string{}, Skipped: []string{}})); werr != nil {
-				return ExitInternal
-			}
-			return ExitOK
-		}
-		fmt.Fprintf(env.Stdout, "Nothing to apply: %s is already up to date.\n", plan.Target)
-		return ExitOK
-	}
+	// Even an empty plan must reconcile ownership: retain proposed deletions
+	// and forget retired files whose absence was confirmed during planning.
+	// This also records ownership when all generated output is unchanged.
 
+	diagnosticsShown := false
 	if !yes && len(writable) > 0 {
 		if jsonOut || !env.StdinIsTTY {
 			return fail(env, "apply", jsonOut, ExitUsage,
 				fmt.Errorf("apply needs confirmation: re-run with --yes to authorize %s",
 					Plural(len(writable), "file write", "file writes")), nil)
 		}
+		PrintDiagnostics(env.Stdout, plan.Diagnostics, true)
+		diagnosticsShown = true
 		fmt.Fprintf(env.Stdout, "The following files will be written:\n")
 		for _, c := range writable {
 			fmt.Fprintf(env.Stdout, "  %-10s %s\n", c.Kind, c.Path)
@@ -153,7 +155,9 @@ func applyOne(
 	})
 	if err != nil {
 		code := exitCodeForError(err)
-		if code == ExitDiagnostics && len(result.Diagnostics) == 0 {
+		// Retained plan warnings do not turn a filesystem failure into a
+		// validation failure. Classify the error, not the diagnostic count.
+		if code == ExitDiagnostics && !errors.Is(err, compiler.ErrBlocked) {
 			code = ExitWriteFailed
 		}
 		if isWriteFailure(err) {
@@ -189,7 +193,9 @@ func applyOne(
 	for _, p := range result.Skipped {
 		fmt.Fprintf(env.Stdout, "  skipped    %s\n", p)
 	}
-	PrintDiagnostics(env.Stdout, result.Diagnostics, false)
+	if !diagnosticsShown {
+		PrintDiagnostics(env.Stdout, result.Diagnostics, true)
+	}
 	return ExitOK
 }
 

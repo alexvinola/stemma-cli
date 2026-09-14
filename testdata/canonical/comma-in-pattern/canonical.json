@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 2,
+  "id": "prj_fixture",
+  "name": "Comma in pattern",
+  "description": "A path pattern carrying a literal comma, which a comma-separated pattern list cannot represent.",
+  "targets": [
+    "claude",
+    "codex",
+    "github-copilot",
+    "kiro"
+  ],
+  "contextDocuments": [],
+  "rules": [
+    {
+      "id": "rule.generated-reports",
+      "title": "Generated reports are read-only",
+      "instruction": "Never edit a generated report by hand; change the generator instead.",
+      "priority": "must",
+      "enabled": true,
+      "activation": {
+        "type": "path-scoped",
+        "include": [
+          "reports/summary,draft.md"
+        ]
+      },
+      "provenance": {
+        "sourceFormat": "",
+        "sourcePath": "",
+        "sourceHash": "",
+        "importerVersion": "1",
+        "disposition": "parsed"
+      }
+    }
+  ],
+  "procedures": [],
+  "skills": [],
+  "agents": [],
+  "decisions": [],
+  "opaqueBlocks": []
+}

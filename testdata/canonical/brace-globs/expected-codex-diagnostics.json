@@ -1,0 +1,14 @@
+[
+  {
+    "code": "STEMMA3201_DIRECTORY_SCOPE_AMBIGUOUS",
+    "severity": "warning",
+    "summary": "the include patterns do not resolve to a single directory",
+    "detail": "Scoping here is expressed only by file location. The patterns src/**/*.ts, src/**/*.tsx, lib/**/*.go do not share one concrete directory, and Stemma will not invent one, so the content stays in the root AGENTS.md and applies everywhere.",
+    "path": "AGENTS.md",
+    "entityId": "rule.strict-typing",
+    "target": "codex",
+    "suggestion": "Set a directory for this entity in .stemma/profiles/codex.json, or set include:false to skip it for this target.",
+    "blocking": false,
+    "fingerprint": "dg_c49da656dede1bcd"
+  }
+]

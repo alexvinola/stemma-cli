@@ -4,7 +4,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/architecture.md"
+      ".kiro/steering/context-architecture.md"
     ],
     "activation": "always-on",
     "explanation": "Always-on context maps to a steering document with inclusion: always."
@@ -14,7 +14,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/api-package.md"
+      ".kiro/steering/context-src-api-api-package.md"
     ],
     "activation": "paths src/api/**",
     "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
@@ -24,7 +24,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/testing.md"
+      ".kiro/steering/context-testing.md"
     ],
     "activation": "always-on",
     "explanation": "Always-on context maps to a steering document with inclusion: always."
@@ -40,11 +40,11 @@
   {
     "entityId": "skill.deploy",
     "entityType": "skill",
-    "outcome": "exact",
+    "outcome": "adapted",
     "files": [
-      ".kiro/skills/deploy/SKILL.md"
+      ".kiro/skills/skill-deploy/SKILL.md"
     ],
     "activation": "on demand (deploy)",
-    "explanation": "Kiro supports skills natively."
+    "explanation": "Kiro supports skills natively. The skill invocation name is \"skill-deploy\" to match its destination directory."
   }
 ]

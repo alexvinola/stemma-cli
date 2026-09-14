@@ -4,11 +4,11 @@
     "severity": "warning",
     "summary": "exclude patterns cannot be represented in a Kiro fileMatchPattern",
     "detail": "The canonical entity excludes src/api/**/*_test.go.",
-    "path": ".kiro/steering/controllers-never-touch-the-database.md",
+    "path": ".kiro/steering/rule-controller-repository.md",
     "entityId": "rule.controller-repository",
     "target": "kiro",
     "suggestion": "Narrow the include patterns, or accept this diagnostic in the profile.",
     "blocking": false,
-    "fingerprint": "dg_3be1336510b75727"
+    "fingerprint": "dg_26c67873886db568"
   }
 ]

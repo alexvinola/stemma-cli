@@ -62,19 +62,19 @@
     "entityType": "procedure",
     "outcome": "adapted",
     "files": [
-      ".agents/skills/release/SKILL.md"
+      ".agents/skills/procedure-release/SKILL.md"
     ],
     "activation": "on demand (release)",
-    "explanation": "There is no dedicated procedure format; the procedure is delivered as a skill."
+    "explanation": "There is no dedicated procedure format; the procedure is delivered as a skill. The skill invocation name is \"procedure-release\" to match its destination directory."
   },
   {
     "entityId": "skill.release-checklist",
     "entityType": "skill",
-    "outcome": "exact",
+    "outcome": "adapted",
     "files": [
-      ".agents/skills/release-checklist/SKILL.md"
+      ".agents/skills/skill-release-checklist/SKILL.md"
     ],
     "activation": "on demand (release-checklist)",
-    "explanation": "Skills are supported natively."
+    "explanation": "Skills are supported natively. The skill invocation name is \"skill-release-checklist\" to match its destination directory."
   }
 ]

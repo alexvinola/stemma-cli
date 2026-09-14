@@ -1,0 +1,12 @@
+[
+  {
+    "entityId": "rule.generated-reports",
+    "entityType": "rule",
+    "outcome": "lossy",
+    "files": [
+      "reports/AGENTS.md"
+    ],
+    "activation": "paths reports/summary,draft.md",
+    "explanation": "The patterns reports/summary,draft.md were mapped to the directory reports, which matches more files than the canonical patterns do."
+  }
+]

@@ -47,7 +47,7 @@ human and JSON output use this order.
 | `STEMMA1002_LIMIT_REACHED` | warning/error | A scan or document limit stopped the work early |
 | `STEMMA1003_FILE_UNREADABLE` | error | A configuration file could not be read |
 | `STEMMA1004_INVALID_ENCODING` | error | The file is not valid UTF-8; it is preserved, not interpreted |
-| `STEMMA1101_INVALID_FRONT_MATTER` | warning/error | Front matter could not be parsed in the supported subset |
+| `STEMMA1101_INVALID_FRONT_MATTER` | warning/error | Front matter could not be parsed in the supported subset, or a recognized provider/canonical field has the wrong type (error; names the key and found type) |
 | `STEMMA1102_FRONT_MATTER_TOO_LARGE` | error | Front matter exceeded a size, line or key limit |
 | `STEMMA1103_UNSAFE_YAML_CONSTRUCT` | error | A tag, anchor, alias or merge key was refused |
 | `STEMMA1201_UNKNOWN_SECTION_PRESERVED` | info/warning | A section was kept without being modelled |
@@ -65,10 +65,11 @@ human and JSON output use this order.
 | --- | --- | --- |
 | `STEMMA2001_DUPLICATE_ENTITY_ID` | error/info | Two entities share an id (info when reported by the deduplication pass) |
 | `STEMMA2002_INVALID_ENTITY_ID` | error | Malformed id or a type/slug mismatch |
-| `STEMMA2003_MISSING_REQUIRED_FIELD` | error | A required field is empty or has an unknown enum value |
+| `STEMMA2003_MISSING_REQUIRED_FIELD` | error | A required field is empty, has an unknown enum value, or a canonical entity is missing its front matter block |
 | `STEMMA2004_UNSUPPORTED_SCHEMA_VERSION` | error | The project was written by another schema version |
 | `STEMMA2005_INVALID_ACTIVATION` | error | The activation union invariants were violated |
 | `STEMMA2101_INVALID_GLOB` | error/warning | A pattern is invalid or escapes the repository |
+| `STEMMA2102_GLOB_EXPANSION_LIMIT` | error | Import rejected: brace expansion exceeds 1000 alternatives or 32 nested groups; split the pattern into smaller groups |
 | `STEMMA2201_DANGLING_PROVENANCE` | warning/error | Provenance is incomplete or inconsistent |
 | `STEMMA2301_INVALID_PROFILE` | error/warning | A profile is malformed or unsafe |
 | `STEMMA2302_PROFILE_OVERRIDES_UNKNOWN_ENTITY` | warning | A profile overrides an entity that does not exist |
@@ -81,6 +82,7 @@ human and JSON output use this order.
 | `STEMMA3001_TARGET_UNAVAILABLE` | error | The target is declared but not implemented (exit code 3) |
 | `STEMMA3002_TARGET_NOT_ENABLED` | warning | The target is not listed in the canonical project |
 | `STEMMA3101_EXCLUDE_NOT_REPRESENTABLE` | warning | The provider has no negative pattern syntax |
+| `STEMMA3102_PATTERN_NOT_REPRESENTABLE` | warning | A pattern contains a comma, which a comma-separated pattern list cannot represent |
 | `STEMMA3201_DIRECTORY_SCOPE_AMBIGUOUS` | warning | Patterns do not resolve to one directory; Stemma will not invent one |
 | `STEMMA3202_DIRECTORY_SCOPE_BROADENED` | warning | Directory scoping matches more files than the canonical patterns |
 | `STEMMA3301_AGENT_TOOLS_REQUIRE_REVIEW` | warning/error | Tool names crossed providers, or are unsafe |
@@ -99,9 +101,18 @@ human and JSON output use this order.
 | `STEMMA4101_STALE_PLAN` | error | The repository changed after the plan was built (exit code 4) |
 | `STEMMA4201_WRITE_ROLLED_BACK` | error | A write failed; changes were rolled back (exit code 5) |
 | `STEMMA4202_RECOVERY_DATA_WRITTEN` | error | Rollback was incomplete; see `.stemma/recovery/` |
-| `STEMMA4301_UNTRACKED_DESTINATION` | error | The destination exists and Stemma did not write it |
+| `STEMMA4301_UNTRACKED_DESTINATION` | error | The destination is unowned or changed since ownership was recorded |
+| `STEMMA4302_IMPORT_ROUND_TRIP_UNVERIFIED` | warning | Import could not reproduce a source byte-identically at the same path; no ownership was recorded |
+| `STEMMA4303_IMPORT_OWNERSHIP_REVOKED` | warning | Import replaced the canonical project; a previous destination lost ownership and was left untouched |
 | `STEMMA4401_DELETE_PROPOSED` | info | A previously generated file is no longer produced |
 | `STEMMA4501_OUTPUT_STALE` | error | `check` found generated output that is out of date |
+
+`STEMMA4302` does not prevent saving the canonical import, but warns at import
+time that overwriting this source cannot be authorized automatically. Compare
+the source and canonical content, preserve anything missing and review the
+same-provider plan. A separate output path allows review without overwriting
+the source. `--adopt-untracked` does not bypass this conflict; it is intended for
+foreign files. See [ownership at import](round-trip.md#ownership-at-import).
 
 ### 5xxx — budgets
 
@@ -134,3 +145,8 @@ to report adapting them.
 
 Detailed causes always remain available through diagnostics; the exit code set
 is deliberately small.
+
+`STEMMA6001_INTERNAL_INVARIANT` also blocks colliding generated destinations,
+including conflicting imported hints and profile pins. All affected mappings
+are blocked; the CLI returns 6 and writes no files. Aggregates must be assembled
+by the adapter and emitted exactly once.

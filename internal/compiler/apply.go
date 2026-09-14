@@ -33,7 +33,7 @@ type ApplyOptions struct {
 	ManifestPath string
 }
 
-// ApplyResult reports what an apply did.
+// ApplyResult reports what an apply did, including plan and transaction diagnostics.
 type ApplyResult struct {
 	Written     []string                 `json:"written"`
 	Unchanged   []string                 `json:"unchanged"`
@@ -50,10 +50,15 @@ type ApplyResult struct {
 // replaced are restored.
 func Apply(ctx context.Context, ws *workspace.Workspace, plan Plan, opts ApplyOptions) (ApplyResult, error) {
 	var bag diagnostics.Bag
-	res := ApplyResult{Written: []string{}, Unchanged: []string{}, Skipped: []string{}}
+	bag.Extend(plan.Diagnostics)
+	// Retain compilation diagnostics even on early failures before a
+	// transaction starts. Transaction diagnostics are added to the same bag.
+	res := ApplyResult{
+		Written: []string{}, Unchanged: []string{}, Skipped: []string{},
+		Diagnostics: bag.Items(),
+	}
 
 	if blocking := plan.Blocking(); len(blocking) > 0 {
-		res.Diagnostics = blocking
 		return res, fmt.Errorf("%w: %d blocking diagnostic(s)", ErrBlocked, len(blocking))
 	}
 
@@ -177,7 +182,17 @@ func updateManifest(m manifest.Manifest, plan Plan, now time.Time) manifest.Mani
 		}
 	}
 	for _, c := range plan.Changes {
-		if c.Kind == ChangeDeleteProposed || c.Kind == ChangeConflict {
+		if c.Kind == ChangeConflict {
+			continue
+		}
+		if c.Kind == ChangeDeleteProposed {
+			// A proposed deletion is intentionally not executed, so retain the
+			// previous ownership evidence until the file disappears. In
+			// particular, do not record ExistingHash here: the stale file may
+			// have user edits that Stemma must not adopt implicitly.
+			if previous, ok := generatedRecord(m, string(plan.Target), c.Path); ok {
+				rec.GeneratedFiles = append(rec.GeneratedFiles, previous)
+			}
 			continue
 		}
 		hash := c.NewHash
@@ -201,6 +216,19 @@ func updateManifest(m manifest.Manifest, plan Plan, now time.Time) manifest.Mani
 	m.ProjectHash = plan.ProjectHash
 	m.StemmaVersion = version.Version
 	return m
+}
+
+func generatedRecord(m manifest.Manifest, target, path string) (manifest.GeneratedRecord, bool) {
+	rec, ok := m.Targets[target]
+	if !ok {
+		return manifest.GeneratedRecord{}, false
+	}
+	for _, generated := range rec.GeneratedFiles {
+		if generated.Path == path {
+			return generated, true
+		}
+	}
+	return manifest.GeneratedRecord{}, false
 }
 
 func dedupe(in []string) []string {

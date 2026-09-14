@@ -355,7 +355,7 @@ func TestDeleteProposalsAreNeverExecuted(t *testing.T) {
 		t.Errorf("expected a delete proposal:\n%s", res.stdout)
 	}
 	h.run("apply", "--target", "claude", "--yes")
-	if !h.exists(".claude/rules/api-layer-conventions.md") {
+	if !h.exists(".claude/rules/context-api-layer-conventions.md") {
 		t.Fatal("apply deleted a file; deletions must never be executed")
 	}
 }
@@ -547,6 +547,81 @@ func TestCheckPassesAfterApply(t *testing.T) {
 	}
 }
 
+func TestCheckKeepsProposedDeletionVisibleUntilManualDelete(t *testing.T) {
+	h := newHarness(t)
+	h.fromFixture("copilot/basic")
+	if res := h.run("import", "--from", "github-copilot", "--targets", "claude"); res.code != cli.ExitOK {
+		t.Fatalf("import exit = %d\n%s\n%s", res.code, res.stdout, res.stderr)
+	}
+	if res := h.run("apply", "--target", "claude", "--yes"); res.code != cli.ExitOK {
+		t.Fatalf("initial apply exit = %d\n%s\n%s", res.code, res.stdout, res.stderr)
+	}
+
+	canonicalPath := filepath.Join(h.root, ".stemma/context/api-layer-conventions.md")
+	if err := os.Remove(canonicalPath); err != nil {
+		t.Fatal(err)
+	}
+	const stalePath = ".claude/rules/context-api-layer-conventions.md"
+
+	assertOutOfDate := func(stage string) {
+		t.Helper()
+		res := h.run("check", "--target", "claude", "--json")
+		if res.code != cli.ExitDiagnostics {
+			t.Fatalf("%s: check exit = %d, want %d\n%s\n%s",
+				stage, res.code, cli.ExitDiagnostics, res.stdout, res.stderr)
+		}
+		var report struct {
+			ExitCode    int `json:"exitCode"`
+			Diagnostics []struct {
+				Code string `json:"code"`
+			} `json:"diagnostics"`
+			Data struct {
+				UpToDate bool `json:"upToDate"`
+				Targets  []struct {
+					UpToDate       bool     `json:"upToDate"`
+					DeleteProposed []string `json:"deleteProposedFiles"`
+				} `json:"targets"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal([]byte(res.stdout), &report); err != nil {
+			t.Fatalf("%s: decode check JSON: %v\n%s", stage, err, res.stdout)
+		}
+		if report.ExitCode != cli.ExitDiagnostics || report.Data.UpToDate ||
+			len(report.Data.Targets) != 1 || report.Data.Targets[0].UpToDate {
+			t.Fatalf("%s: inconsistent check status: %+v", stage, report)
+		}
+		if got := report.Data.Targets[0].DeleteProposed; len(got) != 1 || got[0] != stalePath {
+			t.Fatalf("%s: proposed deletions = %v, want [%s]", stage, got, stalePath)
+		}
+		found := false
+		for _, d := range report.Diagnostics {
+			if d.Code == "STEMMA4401_DELETE_PROPOSED" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("%s: check omitted STEMMA4401_DELETE_PROPOSED: %s", stage, res.stdout)
+		}
+	}
+
+	assertOutOfDate("before re-apply")
+	if res := h.run("apply", "--target", "claude", "--yes"); res.code != cli.ExitOK {
+		t.Fatalf("re-apply exit = %d\n%s\n%s", res.code, res.stdout, res.stderr)
+	}
+	if !h.exists(stalePath) {
+		t.Fatal("apply executed a proposed deletion")
+	}
+	assertOutOfDate("after re-apply")
+
+	if err := os.Remove(filepath.Join(h.root, filepath.FromSlash(stalePath))); err != nil {
+		t.Fatal(err)
+	}
+	if res := h.run("check", "--target", "claude"); res.code != cli.ExitOK {
+		t.Fatalf("check after manual delete exit = %d\n%s\n%s", res.code, res.stdout, res.stderr)
+	}
+}
+
 func TestVersionReportsCursorAsUnimplemented(t *testing.T) {
 	h := newHarness(t)
 	res := h.run("version")
@@ -601,7 +676,7 @@ func TestApplyAllAppliesEveryTarget(t *testing.T) {
 	if res.code != cli.ExitOK {
 		t.Fatalf("exit = %d, stderr = %s", res.code, res.stderr)
 	}
-	for _, path := range []string{"CLAUDE.md", "AGENTS.md", ".claude/rules/api-layer-conventions.md"} {
+	for _, path := range []string{"CLAUDE.md", "AGENTS.md", ".claude/rules/context-api-layer-conventions.md"} {
 		if !h.exists(path) {
 			t.Errorf("%s was not written", path)
 		}
@@ -680,14 +755,22 @@ func TestAllWithoutTargetsInProject(t *testing.T) {
 	}
 }
 
-// TestNoOpApplyClaimsOwnership covers the case that used to leave the format
-// you imported from untracked: applying it changes no file, but Stemma must
-// still record that it owns those files, or the next real change is reported
-// as a conflict.
-func TestNoOpApplyClaimsOwnership(t *testing.T) {
+// Old manifests have no import-time ownership evidence. A byte-identical
+// no-op apply must still be able to establish it without rewriting files.
+func TestLegacyNoOpApplyClaimsOwnership(t *testing.T) {
 	h := newHarness(t)
 	h.fromFixture("copilot/basic")
 	h.run("import", "--from", "github-copilot")
+	var legacy map[string]any
+	if err := json.Unmarshal([]byte(h.read(".stemma/manifest.json")), &legacy); err != nil {
+		t.Fatal(err)
+	}
+	legacy["targets"] = map[string]any{}
+	data, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.write(".stemma/manifest.json", string(data))
 
 	original := h.read(".github/copilot-instructions.md")
 	if res := h.run("apply", "--target", "github-copilot", "--yes"); res.code != cli.ExitOK {

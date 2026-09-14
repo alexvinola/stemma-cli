@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"unicode"
 )
 
 // ErrPathEscape is returned when a repository path leaves the workspace.
@@ -75,6 +76,33 @@ func NormalizeRel(p string) (string, error) {
 		}
 	}
 	return cleaned, nil
+}
+
+// PortablePathKey returns the deterministic identity Stemma uses when
+// comparing generated destinations. It applies Unicode simple case folding to
+// each rune, so paths that can alias on a case-insensitive filesystem are
+// treated alike on every host. Callers must normalize repository paths before
+// constructing the key.
+//
+// The key deliberately does not perform Unicode normalization. Canonically
+// equivalent spellings are a separate filesystem concern from case folding.
+func PortablePathKey(p string) string {
+	var key strings.Builder
+	key.Grow(len(p))
+	for _, r := range p {
+		key.WriteRune(simpleFoldRune(r))
+	}
+	return key.String()
+}
+
+func simpleFoldRune(r rune) rune {
+	lowest := r
+	for next := unicode.SimpleFold(r); next != r; next = unicode.SimpleFold(next) {
+		if next < lowest {
+			lowest = next
+		}
+	}
+	return lowest
 }
 
 // JoinRel joins repository-relative segments and normalizes the result.

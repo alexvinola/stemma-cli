@@ -1,0 +1,32 @@
+[
+  {
+    "entityId": "context.acme-frontend",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  },
+  {
+    "entityId": "context.strict-typing",
+    "entityType": "context",
+    "outcome": "lossy",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go, app/**/*.css, packages/**/*.css",
+    "explanation": "No single directory could be derived from src/**/*.ts, src/**/*.tsx, lib/**/*.go, app/**/*.css, packages/**/*.css, so the content stays in the root AGENTS.md and is no longer scoped."
+  },
+  {
+    "entityId": "context.ui-conventions",
+    "entityType": "context",
+    "outcome": "lossy",
+    "files": [
+      "ui/AGENTS.md"
+    ],
+    "activation": "paths ui/**/*.js, ui/**/*.css, ui/**/*.html",
+    "explanation": "The patterns ui/**/*.js, ui/**/*.css, ui/**/*.html were mapped to the directory ui, which matches more files than the canonical patterns do."
+  }
+]

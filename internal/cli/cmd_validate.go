@@ -119,7 +119,7 @@ func validateManifest(ctx context.Context, ws *workspace.Workspace, project cano
 			switch {
 			case ferr != nil:
 				bag.Add(diagnostics.New(diagnostics.ManifestInvalid, diagnostics.SeverityWarning,
-					"a generated file could not be inspected").WithPath(f.Path).WithDetail("%v", ferr))
+					"a tracked file could not be inspected").WithPath(f.Path).WithDetail("%v", ferr))
 			case !exists:
 				bag.Add(diagnostics.New(diagnostics.ManifestInvalid, diagnostics.SeverityWarning,
 					"a file recorded in the manifest no longer exists").
@@ -127,10 +127,10 @@ func validateManifest(ctx context.Context, ws *workspace.Workspace, project cano
 					WithSuggestion("Run `stemma plan --target %s` to regenerate it.", target))
 			case current != f.Hash:
 				bag.Add(diagnostics.New(diagnostics.ManifestInvalid, diagnostics.SeverityWarning,
-					"a generated file was modified after Stemma wrote it").
+					"a tracked file was modified after Stemma recorded its ownership").
 					WithPath(f.Path).WithTarget(target).
 					WithDetail("Stemma will report this as a conflict instead of overwriting it.").
-					WithSuggestion("Move the change into .stemma/project.json, or delete the file."))
+					WithSuggestion("Preserve the edits in the canonical entity files under .stemma/ and review the differences before restoring the tracked version of this file."))
 			}
 		}
 		_ = rec

@@ -87,12 +87,13 @@ func TestCodesAreUnique(t *testing.T) {
 		InvalidFrontMatter, FrontMatterTooLarge, UnsafeYAMLConstruct, UnknownSectionKept,
 		UnknownKeysKept, OpaqueBlockKept, MultipleSources, NoSourcesDetected, MixedLineEndings,
 		InvalidAgentJSON, DuplicateJSONKey, DuplicateEntityID, InvalidEntityID, MissingRequired,
-		UnknownSchema, InvalidActivation, InvalidGlob, DanglingProvenance, ProfileInvalid,
+		UnknownSchema, InvalidActivation, InvalidGlob, GlobExpansionLimit, DanglingProvenance, ProfileInvalid,
 		ProfileUnknownID, ManifestInvalid, TargetUnavailable, TargetNotEnabled, ExcludeNotRepresent,
+		PatternNotRepresent,
 		DirectoryScopeAmbig, DirectoryScopeBroader, AgentToolsNeedReview, AgentNotNative,
 		OnDemandAdapted, OpaqueNotReemitted, TargetOverridesContent,
 		RegeneratedFile, PathEscape, SymlinkRejected, StalePlan, WriteRolledBack,
-		RecoveryDataWritten, UntrackedDestConfl, DeleteProposed, OutputStale,
+		RecoveryDataWritten, UntrackedDestConfl, ImportRoundTripUnverified, ImportOwnershipRevoked, DeleteProposed, OutputStale,
 		TokenBudgetExceeded, AlwaysOnContextLarge, InternalInvariant,
 	}
 	seen := map[Code]struct{}{}

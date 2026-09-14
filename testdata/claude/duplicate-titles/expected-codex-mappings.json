@@ -1,0 +1,22 @@
+[
+  {
+    "entityId": "rule.testing",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      "api/AGENTS.md"
+    ],
+    "activation": "paths api/**",
+    "explanation": "The pattern api/** is exactly the subtree of api, which a nested AGENTS.md expresses directly."
+  },
+  {
+    "entityId": "rule.testing-2",
+    "entityType": "rule",
+    "outcome": "exact",
+    "files": [
+      "web/AGENTS.md"
+    ],
+    "activation": "paths web/**",
+    "explanation": "The pattern web/** is exactly the subtree of web, which a nested AGENTS.md expresses directly."
+  }
+]

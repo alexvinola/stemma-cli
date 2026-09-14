@@ -4,7 +4,7 @@
     "entityType": "agent",
     "outcome": "lossy",
     "files": [
-      ".claude/agents/reviewer.md"
+      ".claude/agents/agent-reviewer.md"
     ],
     "activation": "on demand (reviewer)",
     "explanation": "claude supports specialist agents, but the declared tool names come from kiro and are not verified against this provider."
@@ -14,7 +14,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".claude/rules/api-conventions.md"
+      ".claude/rules/context-api-conventions.md"
     ],
     "activation": "paths src/api/**, src/handlers/**",
     "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
@@ -24,10 +24,10 @@
     "entityType": "context",
     "outcome": "adapted",
     "files": [
-      ".claude/skills/incident-response/SKILL.md"
+      ".claude/skills/context-incident-response/SKILL.md"
     ],
     "activation": "on demand (incident-response)",
-    "explanation": "Claude Code has no on-demand context format other than skills, so the document is delivered as a skill that loads when invoked."
+    "explanation": "Claude Code has no on-demand context format other than skills, so the document is delivered as a skill that loads when invoked. The skill invocation name is \"context-incident-response\" to match its destination directory."
   },
   {
     "entityId": "context.product",
@@ -42,11 +42,11 @@
   {
     "entityId": "skill.audit",
     "entityType": "skill",
-    "outcome": "exact",
+    "outcome": "adapted",
     "files": [
-      ".claude/skills/audit/SKILL.md"
+      ".claude/skills/skill-audit/SKILL.md"
     ],
     "activation": "on demand (audit)",
-    "explanation": "Claude Code supports skills natively."
+    "explanation": "Claude Code supports skills natively. The skill invocation name is \"skill-audit\" to match its destination directory."
   }
 ]

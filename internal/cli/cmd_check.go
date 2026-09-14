@@ -11,11 +11,12 @@ import (
 )
 
 type checkTarget struct {
-	Target    string   `json:"target"`
-	UpToDate  bool     `json:"upToDate"`
-	Stale     []string `json:"staleFiles"`
-	Missing   []string `json:"missingFiles"`
-	Conflicts []string `json:"conflicts"`
+	Target         string   `json:"target"`
+	UpToDate       bool     `json:"upToDate"`
+	Stale          []string `json:"staleFiles"`
+	Missing        []string `json:"missingFiles"`
+	DeleteProposed []string `json:"deleteProposedFiles"`
+	Conflicts      []string `json:"conflicts"`
 }
 
 type checkData struct {
@@ -96,7 +97,7 @@ func runCheck(ctx context.Context, env Env, args []string) int {
 		bag.Extend(plan.Diagnostics)
 
 		ct := checkTarget{Target: string(t), UpToDate: true,
-			Stale: []string{}, Missing: []string{}, Conflicts: []string{}}
+			Stale: []string{}, Missing: []string{}, DeleteProposed: []string{}, Conflicts: []string{}}
 		for _, c := range plan.Changes {
 			switch c.Kind {
 			case compiler.ChangeCreate:
@@ -104,6 +105,9 @@ func runCheck(ctx context.Context, env Env, args []string) int {
 				ct.UpToDate = false
 			case compiler.ChangeUpdate:
 				ct.Stale = append(ct.Stale, c.Path)
+				ct.UpToDate = false
+			case compiler.ChangeDeleteProposed:
+				ct.DeleteProposed = append(ct.DeleteProposed, c.Path)
 				ct.UpToDate = false
 			case compiler.ChangeConflict:
 				ct.Conflicts = append(ct.Conflicts, c.Path)
@@ -113,12 +117,19 @@ func runCheck(ctx context.Context, env Env, args []string) int {
 		if !ct.UpToDate {
 			data.UpToDate = false
 			exit = ExitDiagnostics
+			suggestion := fmt.Sprintf("Run `stemma apply --target %s --yes` and commit the result.", t)
+			if len(ct.DeleteProposed) > 0 {
+				suggestion = "Review the proposed deletions and remove stale files manually; Stemma never deletes files."
+				if len(ct.Missing)+len(ct.Stale) > 0 {
+					suggestion = fmt.Sprintf("Run `stemma apply --target %s --yes`, then review the proposed deletions and remove stale files manually.", t)
+				}
+			}
 			bag.Add(diagnostics.New(diagnostics.OutputStale, diagnostics.SeverityError,
 				fmt.Sprintf("generated output for %s is out of date", t)).
 				WithTarget(string(t)).
-				WithDetail("%d file(s) would be created, %d updated, %d in conflict.",
-					len(ct.Missing), len(ct.Stale), len(ct.Conflicts)).
-				WithSuggestion("Run `stemma apply --target %s --yes` and commit the result.", t))
+				WithDetail("%d file(s) would be created, %d updated, %d proposed for deletion, %d in conflict.",
+					len(ct.Missing), len(ct.Stale), len(ct.DeleteProposed), len(ct.Conflicts)).
+				WithSuggestion("%s", suggestion))
 		}
 		data.Targets = append(data.Targets, ct)
 	}
@@ -149,6 +160,9 @@ func runCheck(ctx context.Context, env Env, args []string) int {
 		}
 		for _, p := range ct.Stale {
 			fmt.Fprintf(env.Stdout, "  stale      %s\n", p)
+		}
+		for _, p := range ct.DeleteProposed {
+			fmt.Fprintf(env.Stdout, "  delete     %s  (proposed; remove manually)\n", p)
 		}
 		for _, p := range ct.Conflicts {
 			fmt.Fprintf(env.Stdout, "  conflict   %s\n", p)

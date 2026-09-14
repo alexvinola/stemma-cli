@@ -38,6 +38,18 @@ var ErrTargetUnavailable = errors.New("target unavailable")
 // ErrInvariant reports a violated compiler invariant. Reaching it is a bug.
 var ErrInvariant = errors.New("compiler invariant violated")
 
+// InvariantError retains diagnostics when an adapter detects an internal
+// invariant failure. Callers can present the conflict and still return exit 6.
+type InvariantError struct {
+	Diagnostics []diagnostics.Diagnostic
+}
+
+func (e *InvariantError) Error() string {
+	return fmt.Sprintf("%v: %s", ErrInvariant, diagnostics.InternalInvariant)
+}
+
+func (e *InvariantError) Unwrap() error { return ErrInvariant }
+
 // CompileOptions configures one compilation.
 type CompileOptions struct {
 	Target  canonical.TargetFormat
@@ -163,7 +175,15 @@ func Compile(ctx context.Context, project canonical.Project, opts CompileOptions
 	if err := checkExhaustive(project, mappings); err != nil {
 		return CompileResult{}, err
 	}
-	result.Diagnostics = diagnostics.Accept(bag.Items(), opts.Profile.AcceptedDiagnostics)
+	// Invariant failures cannot be accepted as a lossy mapping. Return the
+	// diagnostic-bearing result for inspection, but never allow planning/apply.
+	result.Diagnostics = bag.Items()
+	for _, d := range result.Diagnostics {
+		if d.Code == diagnostics.InternalInvariant {
+			return result, &InvariantError{Diagnostics: result.Diagnostics}
+		}
+	}
+	result.Diagnostics = diagnostics.Accept(result.Diagnostics, opts.Profile.AcceptedDiagnostics)
 	diagnostics.Sort(result.Diagnostics)
 	return result, nil
 }

@@ -66,6 +66,32 @@ func TestJoinRel(t *testing.T) {
 	}
 }
 
+func TestPortablePathKeyUsesUnicodeSimpleCaseFolding(t *testing.T) {
+	equivalent := [][]string{
+		{".claude/rules/Scope.md", ".CLAUDE/RULES/scope.MD"},
+		{"rules/\u03a3.md", "RULES/\u03c2.MD", "rules/\u03c3.md"},
+		{"skills/\u212aelvin/SKILL.md", "SKILLS/kelvin/skill.MD"},
+	}
+	for _, paths := range equivalent {
+		want := PortablePathKey(paths[0])
+		for _, p := range paths[1:] {
+			if got := PortablePathKey(p); got != want {
+				t.Errorf("PortablePathKey(%q) = %q, want %q", p, got, want)
+			}
+		}
+	}
+
+	for _, paths := range [][2]string{
+		{"rules/caf\u00e9.md", "rules/cafe\u0301.md"},
+		{"rules/stra\u00dfe.md", "rules/strasse.md"},
+		{"rules/a.md", "rules/b.md"},
+	} {
+		if PortablePathKey(paths[0]) == PortablePathKey(paths[1]) {
+			t.Errorf("distinct paths share a portable key: %q and %q", paths[0], paths[1])
+		}
+	}
+}
+
 func TestDir(t *testing.T) {
 	if got := Dir("a/b/c.md"); got != "a/b" {
 		t.Errorf("Dir = %q", got)

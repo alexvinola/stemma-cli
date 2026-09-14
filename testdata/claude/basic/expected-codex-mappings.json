@@ -52,11 +52,11 @@
   {
     "entityId": "skill.migration",
     "entityType": "skill",
-    "outcome": "exact",
+    "outcome": "adapted",
     "files": [
-      ".agents/skills/migration/SKILL.md"
+      ".agents/skills/skill-migration/SKILL.md"
     ],
     "activation": "on demand (migration)",
-    "explanation": "Skills are supported natively."
+    "explanation": "Skills are supported natively. The skill invocation name is \"skill-migration\" to match its destination directory."
   }
 ]

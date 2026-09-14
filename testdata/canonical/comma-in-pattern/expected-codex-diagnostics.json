@@ -1,0 +1,14 @@
+[
+  {
+    "code": "STEMMA3202_DIRECTORY_SCOPE_BROADENED",
+    "severity": "warning",
+    "summary": "directory scoping is broader than the canonical patterns",
+    "detail": "The patterns reports/summary,draft.md were mapped to the directory reports. Everything under that directory now matches, including files the canonical patterns did not select.",
+    "path": "reports/AGENTS.md",
+    "entityId": "rule.generated-reports",
+    "target": "codex",
+    "suggestion": "Accept this diagnostic in the profile if the wider scope is acceptable.",
+    "blocking": false,
+    "fingerprint": "dg_fab949984386fbea"
+  }
+]

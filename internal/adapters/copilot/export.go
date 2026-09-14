@@ -108,7 +108,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(proc.ID, canonical.EntityProcedure, res, proc.Provenance)
 			continue
 		}
-		name := adapters.FileSlug(proc.Name, proc.ID)
+		name := adapters.FileSlug(proc.ID)
 		file := name + ".prompt.md"
 		if v, ok := proc.Extensions.GetString(string(canonical.TargetCopilot), "stemma.promptFile"); ok && safeName(v) {
 			file = v
@@ -139,12 +139,12 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(skill.ID, canonical.EntitySkill, res, skill.Provenance)
 			continue
 		}
-		name := adapters.FileSlug(skill.Name, skill.ID)
+		name := adapters.SkillSlug(skill.ID)
 		if v, ok := skill.Extensions.GetString(string(canonical.TargetCopilot), "stemma.sourceDir"); ok && safeName(v) {
 			name = v
 		}
 		dest := b.Path(res, path.Join(skillsDir, name), "SKILL.md")
-		entries := []adapters.KV{{Key: "name", Value: skill.Name}}
+		entries := []adapters.KV{{Key: "name", Value: b.SkillName(skill.ID, skill.Name, dest)}}
 		if skill.Description != "" {
 			entries = append(entries, adapters.KV{Key: "description", Value: skill.Description})
 		}
@@ -168,7 +168,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(agent.ID, canonical.EntityAgent, res, agent.Provenance)
 			continue
 		}
-		fileName := adapters.FileSlug(agent.Name, agent.ID) + ".md"
+		fileName := adapters.FileSlug(agent.ID) + ".md"
 		if v, ok := agent.Extensions.GetString(string(canonical.TargetCopilot), "stemma.sourceFile"); ok && safeName(v) {
 			fileName = v
 		}
@@ -219,7 +219,7 @@ func exportScoped(
 	description string,
 	pinnedFile string,
 ) {
-	name := adapters.FileSlug(title, id)
+	name := adapters.FileSlug(id)
 	file := name + ".instructions.md"
 	if pinnedFile != "" && safeName(pinnedFile) {
 		file = pinnedFile
@@ -235,13 +235,33 @@ func exportScoped(
 	md.Heading(1, title)
 	md.Paragraph(res.Content)
 
-	outcome := adapters.OutcomeExact
-	explanation := "Copilot applyTo represents the canonical include patterns directly."
+	var reasons []string
 	var diagIDs []string
+
+	// applyTo is a comma-separated list, so a comma inside a pattern is
+	// indistinguishable from a separator. Normalization brace-expands patterns
+	// precisely so this cannot happen; anything still carrying a comma is a
+	// pattern Stemma could not expand, and the ambiguity has to be visible
+	// rather than written out as if it were exact.
+	if ambiguous := commaBearing(res.Activation.Include); len(ambiguous) > 0 {
+		reasons = append(reasons, "Copilot applyTo is a comma-separated list, so the include "+
+			"patterns that themselves contain a comma cannot be represented unambiguously.")
+		md.BlankLine()
+		md.Paragraph("> Scope note: the pattern " + strings.Join(ambiguous, ", ") +
+			" contains a comma, which Copilot reads as a separator between patterns.")
+		diagIDs = append(diagIDs, b.Diag(diagnostics.New(diagnostics.PatternNotRepresent,
+			diagnostics.SeverityWarning,
+			"an include pattern contains a comma, which Copilot applyTo cannot represent").
+			WithEntity(id).WithTarget(string(canonical.TargetCopilot)).WithPath(dest).
+			WithDetail("applyTo joins patterns with commas, so Copilot will read %s as several "+
+				"patterns and the scope will not match the files the canonical entity names.",
+				strings.Join(ambiguous, ", ")).
+			WithSuggestion("Split the pattern into several comma-free patterns.")))
+	}
+
 	if len(res.Activation.Exclude) > 0 {
-		outcome = adapters.OutcomeLossy
-		explanation = "Copilot applyTo has no negative pattern syntax, so the exclude patterns " +
-			"are only reproduced as a note in the file body."
+		reasons = append(reasons, "Copilot applyTo has no negative pattern syntax, so the exclude "+
+			"patterns are only reproduced as a note in the file body.")
 		md.BlankLine()
 		md.Paragraph("> Scope note: these instructions do not apply to " +
 			strings.Join(res.Activation.Exclude, ", ") + ".")
@@ -253,6 +273,13 @@ func exportScoped(
 				"so the exclusion is written as a note in the generated file and is advisory only.",
 				strings.Join(res.Activation.Exclude, ", ")).
 			WithSuggestion("Narrow the include patterns instead, or accept this diagnostic in the profile.")))
+	}
+
+	outcome := adapters.OutcomeExact
+	explanation := "Copilot applyTo represents the canonical include patterns directly."
+	if len(reasons) > 0 {
+		outcome = adapters.OutcomeLossy
+		explanation = strings.Join(reasons, " ")
 	}
 	b.Emit(dest, adapters.RenderFrontMatter(entries)+md.String(), []string{id})
 	b.RecordWithDiagnostics(id, kind, outcome, res, prov, []string{dest}, explanation, diagIDs)
@@ -268,7 +295,7 @@ func exportOnDemand(
 	res adapters.Resolution,
 	prov provenance.Provenance,
 ) {
-	name := adapters.FileSlug(title, id)
+	name := adapters.FileSlug(id)
 	dest := b.Path(res, promptsDir, name+".prompt.md")
 	entries := []adapters.KV{}
 	if res.Activation.Trigger != "" {
@@ -316,6 +343,18 @@ func extraFrontMatter(p canonical.Project) []adapters.KV {
 	out := make([]adapters.KV, 0, len(keys))
 	for _, k := range keys {
 		out = append(out, adapters.KV{Key: strings.TrimPrefix(k, "rootInstructions."), Value: ext[k]})
+	}
+	return out
+}
+
+// commaBearing returns the patterns that carry a comma, which no
+// comma-separated pattern list can represent.
+func commaBearing(patterns []string) []string {
+	var out []string
+	for _, p := range patterns {
+		if strings.ContainsRune(p, ',') {
+			out = append(out, p)
+		}
 	}
 	return out
 }

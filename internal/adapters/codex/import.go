@@ -59,7 +59,7 @@ func (Importer) Import(ctx context.Context, in adapters.ImportInput) (adapters.I
 					LineEnd: strings.Count(string(file.Data), "\n") + 1},
 				true)
 		case discovery.RoleSkill:
-			doc, ok := c.ParseDocument(file)
+			doc, ok := c.ParseDocument(file, adapters.SkillFields()...)
 			if !ok {
 				continue
 			}

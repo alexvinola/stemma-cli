@@ -4,7 +4,7 @@
     "entityType": "agent",
     "outcome": "lossy",
     "files": [
-      ".kiro/agents/reviewer.json"
+      ".kiro/agents/agent-reviewer.json"
     ],
     "activation": "on demand (reviewer)",
     "explanation": "kiro supports specialist agents, but the declared tool names come from claude and are not verified against this provider."
@@ -14,7 +14,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/architecture.md"
+      ".kiro/steering/context-architecture.md"
     ],
     "activation": "always-on",
     "explanation": "Always-on context maps to a steering document with inclusion: always."
@@ -24,7 +24,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/commands.md"
+      ".kiro/steering/context-commands.md"
     ],
     "activation": "always-on",
     "explanation": "Always-on context maps to a steering document with inclusion: always."
@@ -34,7 +34,7 @@
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/api-request-validation.md"
+      ".kiro/steering/rule-api-request-validation.md"
     ],
     "activation": "paths src/api/**/*.go, src/handlers/**/*.go",
     "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
@@ -44,7 +44,7 @@
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/formatting.md"
+      ".kiro/steering/rule-formatting.md"
     ],
     "activation": "always-on",
     "explanation": "Always-on context maps to a steering document with inclusion: always."
@@ -52,11 +52,11 @@
   {
     "entityId": "skill.migration",
     "entityType": "skill",
-    "outcome": "exact",
+    "outcome": "adapted",
     "files": [
-      ".kiro/skills/migration/SKILL.md"
+      ".kiro/skills/skill-migration/SKILL.md"
     ],
     "activation": "on demand (migration)",
-    "explanation": "Kiro supports skills natively."
+    "explanation": "Kiro supports skills natively. The skill invocation name is \"skill-migration\" to match its destination directory."
   }
 ]

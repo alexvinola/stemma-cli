@@ -49,41 +49,68 @@ func renderActivation(a canonical.Activation) adapters.Ordered {
 func parseActivation(v any, path string) (canonical.Activation, error) {
 	m, ok := v.(map[string]any)
 	if !ok {
-		return canonical.Activation{}, fmt.Errorf("%s: activation must be a mapping", path)
+		return canonical.Activation{}, fmt.Errorf("%s: %s", path, parser.TypeMismatch("activation", "a mapping", v))
 	}
-	typeVal, _ := m["type"].(string)
+	typeVal, validType := m["type"].(string)
+	if raw, exists := m["type"]; exists && !validType {
+		return canonical.Activation{}, fmt.Errorf("%s: %s", path, parser.TypeMismatch("activation.type", "a string", raw))
+	}
 	a := canonical.Activation{Type: canonical.ActivationType(typeVal)}
 	if !canonical.KnownActivationType(a.Type) {
 		return canonical.Activation{}, fmt.Errorf("%s: unknown activation type %q", path, typeVal)
 	}
-	a.Include = stringsOf(m["include"])
-	a.Exclude = stringsOf(m["exclude"])
-	a.Trigger, _ = m["trigger"].(string)
-	a.InvocationName, _ = m["invocationName"].(string)
+	for _, field := range []struct {
+		key  string
+		dest *[]string
+	}{
+		{"include", &a.Include}, {"exclude", &a.Exclude},
+	} {
+		if raw, exists := m[field.key]; exists {
+			list, ok := stringList(raw)
+			if !ok {
+				return canonical.Activation{}, fmt.Errorf("%s: %s", path, parser.TypeMismatch("activation."+field.key, "a string or a list of strings", raw))
+			}
+			*field.dest = list
+		}
+	}
+	for _, field := range []struct {
+		key  string
+		dest *string
+	}{
+		{"trigger", &a.Trigger}, {"invocationName", &a.InvocationName},
+	} {
+		if raw, exists := m[field.key]; exists {
+			value, ok := raw.(string)
+			if !ok {
+				return canonical.Activation{}, fmt.Errorf("%s: %s", path, parser.TypeMismatch("activation."+field.key, "a string", raw))
+			}
+			*field.dest = value
+		}
+	}
 	return a, nil
 }
 
-func stringsOf(v any) []string {
-	switch t := v.(type) {
-	case nil:
-		return nil
+// stringList preserves the supported single-string shorthand, but never
+// coerces booleans, numbers, nulls or nested structures into canonical text.
+func stringList(v any) ([]string, bool) {
+	switch value := v.(type) {
 	case string:
-		if t == "" {
-			return nil
+		if value == "" {
+			return []string{}, true
 		}
-		return []string{t}
+		return []string{value}, true
 	case []any:
-		out := make([]string, 0, len(t))
-		for _, item := range t {
-			if s, ok := item.(string); ok {
-				out = append(out, s)
-			} else {
-				out = append(out, fmt.Sprint(item))
+		out := make([]string, 0, len(value))
+		for _, item := range value {
+			s, ok := item.(string)
+			if !ok {
+				return nil, false
 			}
+			out = append(out, s)
 		}
-		return out
+		return out, true
 	default:
-		return nil
+		return nil, false
 	}
 }
 

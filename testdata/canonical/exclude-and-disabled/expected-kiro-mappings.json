@@ -4,7 +4,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/overview.md"
+      ".kiro/steering/context-overview.md"
     ],
     "activation": "always-on",
     "explanation": "Always-on context maps to a steering document with inclusion: always."
@@ -22,7 +22,7 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/incident-runbook.md"
+      ".kiro/steering/context-runbook.md"
     ],
     "activation": "on demand (incident-runbook)",
     "explanation": "On-demand context maps to a steering document with inclusion: manual."
@@ -32,7 +32,7 @@
     "entityType": "decision",
     "outcome": "adapted",
     "files": [
-      ".kiro/steering/use-an-append-only-ledger-table.md"
+      ".kiro/steering/decision-event-sourcing.md"
     ],
     "activation": "always-on",
     "explanation": "Only the decision's agent constraints are projected, as an always-included steering document."
@@ -42,7 +42,7 @@
     "entityType": "rule",
     "outcome": "lossy",
     "files": [
-      ".kiro/steering/controllers-never-touch-the-database.md"
+      ".kiro/steering/rule-controller-repository.md"
     ],
     "activation": "paths src/api/** (excluding src/api/**/*_test.go)",
     "explanation": "fileMatchPattern has no negative pattern syntax, so the exclude patterns are only reproduced as a note in the file body."

@@ -8,25 +8,75 @@
 //	**     matches zero or more path segments (only as a whole segment)
 //	[abc]  matches one character from a set, with ranges and a leading '!' or
 //	       '^' negation; '/' can never be matched by a class
+//	{a,b}  expands to the alternatives 'a' and 'b'; groups nest and combine
 //
 // Patterns are always repository-relative and always use forward slashes.
-// There is no brace expansion: braces are matched literally, because provider
-// support for them is inconsistent and guessing would be unsafe.
+//
+// Brace groups are expanded during [Normalize]. This removes the group commas
+// before projecting to a comma-separated list such as Copilot's applyTo.
+// Literal commas and braces in character classes are preserved. Expansion is
+// bounded by [MaxExpansions]; [Validate] rejects patterns beyond the bound
+// rather than accepting a partial expansion.
+//
+// A group needs a top-level comma to be a group: '{a}' is the literal text
+// "{a}", matching the shell and minimatch. Ranges such as '{1..3}' are not
+// supported and stay literal.
 package globs
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
 // ErrInvalid is returned for syntactically invalid patterns.
 var ErrInvalid = errors.New("invalid glob pattern")
 
-const maxPatternLength = 1024
+// ErrTooManyExpansions is returned by [Expand] when a pattern's brace groups
+// would produce more than [MaxExpansions] patterns, or nest deeper than the
+// parser accepts. Validate rejects these patterns because it cannot check
+// every alternative within the bound.
+var ErrTooManyExpansions = errors.New("brace expansion exceeds the supported bound")
+
+const (
+	maxPatternLength = 1024
+
+	// MaxExpansions bounds brace expansion. Nested groups grow
+	// combinatorially, so the bound is what keeps expansion cheap on hostile
+	// input. This is a Stemma resource limit.
+	MaxExpansions = 1000
+
+	// maxBraceDepth bounds brace nesting, which bounds parser recursion.
+	maxBraceDepth = 32
+)
 
 // Validate reports whether a pattern is usable. It returns a human-readable
 // reason when the pattern is rejected.
+//
+// Brace groups are validated through their expansions, so a group can never
+// smuggle in a construct — an absolute path, a '..' segment, a partial '**'
+// segment — that a plain pattern is not allowed to contain.
 func Validate(pattern string) error {
+	if err := validateText(pattern); err != nil {
+		return err
+	}
+	candidates, err := Expand(pattern)
+	if err != nil {
+		// Sampling one alternative cannot establish that the others are safe.
+		// Refuse the pattern rather than validate an incomplete expansion.
+		return fmt.Errorf("%w: %w; split the pattern into smaller groups", ErrInvalid, err)
+	}
+	for _, c := range candidates {
+		if err := validateShape(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateText checks the properties of the pattern as written, before any
+// brace expansion.
+func validateText(pattern string) error {
 	if pattern == "" {
 		return wrap("pattern is empty")
 	}
@@ -38,6 +88,36 @@ func Validate(pattern string) error {
 	}
 	if strings.ContainsRune(pattern, 0) {
 		return wrap("pattern contains a NUL byte")
+	}
+	depth := 0
+	for i := 0; i < len(pattern); i++ {
+		if pattern[i] == '[' {
+			end, ok := ClassEnd(pattern, i)
+			if !ok {
+				return wrap("unterminated character class '['")
+			}
+			i = end
+			continue
+		}
+		switch pattern[i] {
+		case '{':
+			depth++
+		case '}':
+			if depth > 0 {
+				depth--
+			}
+		}
+	}
+	if depth != 0 {
+		return wrap("unterminated brace group '{'")
+	}
+	return nil
+}
+
+// validateShape checks a single expanded pattern.
+func validateShape(pattern string) error {
+	if pattern == "" {
+		return wrap("pattern is empty")
 	}
 	if strings.HasPrefix(pattern, "/") {
 		return wrap("pattern is absolute; patterns are repository-relative")
@@ -77,14 +157,245 @@ func wrap(reason string) error {
 	return errors.New(ErrInvalid.Error() + ": " + reason)
 }
 
+// ClassEnd returns the closing bracket of a character class at start. A
+// leading ']' (after optional negation) is a member, not the closing bracket.
+// Callers scanning glob syntax use this to leave class members uninterpreted.
+func ClassEnd(pattern string, start int) (int, bool) {
+	if start < 0 || start >= len(pattern) || pattern[start] != '[' {
+		return 0, false
+	}
+	i := start + 1
+	if i < len(pattern) && (pattern[i] == '!' || pattern[i] == '^') {
+		i++
+	}
+	if i < len(pattern) && pattern[i] == ']' {
+		i++
+	}
+	for i < len(pattern) && pattern[i] != ']' {
+		i++
+	}
+	return i, i < len(pattern)
+}
+
+// Expand returns the brace expansion of a pattern, in a deterministic order:
+// the leftmost group varies slowest, exactly as the shell orders it.
+// Duplicate expansions are removed.
+//
+// A pattern without brace groups expands to itself. A pattern whose expansion
+// would exceed [MaxExpansions] returns [ErrTooManyExpansions] and no results:
+// Normalize keeps the input intact on failure; Validate rejects it before
+// import or compilation, so no partial expansion becomes an accepted scope.
+func Expand(pattern string) ([]string, error) {
+	if !strings.ContainsRune(pattern, '{') {
+		return []string{pattern}, nil
+	}
+	sc := scanBraces(pattern)
+	out, _, err := expandSeq(sc, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	return dedupe(out), nil
+}
+
+// ExpandAll expands every pattern in order. Patterns that exceed the expansion
+// bound are kept verbatim in expanded and are also listed in unexpanded, so a
+// caller holding a diagnostic bag can report them.
+func ExpandAll(patterns []string) (expanded, unexpanded []string) {
+	expanded = make([]string, 0, len(patterns))
+	for _, p := range patterns {
+		exp, err := Expand(p)
+		if err != nil {
+			expanded = append(expanded, p)
+			unexpanded = append(unexpanded, p)
+			continue
+		}
+		expanded = append(expanded, exp...)
+	}
+	return expanded, unexpanded
+}
+
+// braceScan is the result of one linear pass over a pattern: for every '{',
+// where its '}' is and whether the two enclose a top-level comma.
+//
+// The pass exists for speed, not convenience. Deciding those two facts by
+// parsing on demand means every unmatched or comma-less '{' is re-parsed once
+// per enclosing brace, which is exponential: "{{{{…{" with thirty braces and
+// no closer used to run for hours. With the table each decision is a lookup
+// and the parse is linear.
+type braceScan struct {
+	s        string
+	match    []int  // index of the '}' closing the '{' at this index, or -1
+	hasComma []bool // whether that group holds a comma at its own level
+}
+
+func scanBraces(s string) *braceScan {
+	sc := &braceScan{s: s, match: make([]int, len(s)), hasComma: make([]bool, len(s))}
+	for i := range sc.match {
+		sc.match[i] = -1
+	}
+	var open []int
+	for i := 0; i < len(s); i++ {
+		if end, ok := ClassEnd(s, i); ok {
+			i = end
+			continue
+		}
+		switch s[i] {
+		case '{':
+			open = append(open, i)
+		case '}':
+			if n := len(open); n > 0 {
+				sc.match[open[n-1]] = i
+				open = open[:n-1]
+			}
+		case ',':
+			if n := len(open); n > 0 {
+				sc.hasComma[open[n-1]] = true
+			}
+		}
+	}
+	return sc
+}
+
+// isGroup reports whether the '{' at i opens a real brace group: it must be
+// closed, and it must hold a comma of its own. "{a}" is literal text, as in
+// the shell.
+func (sc *braceScan) isGroup(i int) bool {
+	return sc.match[i] >= 0 && sc.hasComma[i]
+}
+
+// expandSeq expands the sequence of literals and groups starting at s[i].
+//
+// At depth 0 it consumes the rest of the string. Inside a group it stops at
+// the ',' or '}' that ends the current alternative and returns that index.
+func expandSeq(sc *braceScan, i, depth int) ([]string, int, error) {
+	if depth > maxBraceDepth {
+		return nil, 0, ErrTooManyExpansions
+	}
+	s := sc.s
+	results := []string{""}
+	// openLiteral counts the '{' characters this alternative has emitted as
+	// literal text. Their closing '}' is literal too, and must not be mistaken
+	// for the end of the enclosing group: in "{,{},}" the middle "{}" is
+	// literal, and reading its '}' as the outer group's would cut the group
+	// short and silently change the pattern.
+	openLiteral := 0
+	var lit strings.Builder
+	flush := func() {
+		if lit.Len() == 0 {
+			return
+		}
+		suffix := lit.String()
+		for k := range results {
+			results[k] += suffix
+		}
+		lit.Reset()
+	}
+	for i < len(s) {
+		if end, ok := ClassEnd(s, i); ok {
+			lit.WriteString(s[i : end+1])
+			i = end + 1
+			continue
+		}
+		c := s[i]
+		if depth > 0 && c == '}' && openLiteral > 0 {
+			openLiteral--
+			lit.WriteByte('}')
+			i++
+			continue
+		}
+		if depth > 0 && (c == ',' || c == '}') {
+			flush()
+			return results, i, nil
+		}
+		if c != '{' || !sc.isGroup(i) {
+			// Not a group: an unclosed brace, or one holding no comma. The
+			// character is literal, and any real group nested inside is still
+			// expanded as the scan walks past it.
+			if c == '{' {
+				openLiteral++
+			}
+			lit.WriteByte(c)
+			i++
+			continue
+		}
+		alts, end, err := expandGroup(sc, i, depth)
+		if err != nil {
+			return nil, 0, err
+		}
+		flush()
+		if len(results)*len(alts) > MaxExpansions {
+			return nil, 0, ErrTooManyExpansions
+		}
+		combined := make([]string, 0, len(results)*len(alts))
+		for _, r := range results {
+			for _, a := range alts {
+				combined = append(combined, r+a)
+			}
+		}
+		results = combined
+		i = end
+	}
+	flush()
+	return results, i, nil
+}
+
+// expandGroup expands the brace group at s[i], which sc.isGroup has already
+// confirmed. It returns the alternatives and the index just past the closing
+// '}'.
+func expandGroup(sc *braceScan, i, depth int) (alts []string, next int, err error) {
+	closing := sc.match[i]
+	j := i + 1
+	for {
+		part, end, err := expandSeq(sc, j, depth+1)
+		if err != nil {
+			return nil, 0, err
+		}
+		alts = append(alts, part...)
+		if len(alts) > MaxExpansions {
+			return nil, 0, ErrTooManyExpansions
+		}
+		if end < closing && sc.s[end] == ',' {
+			j = end + 1
+			continue
+		}
+		return alts, closing + 1, nil
+	}
+}
+
+func dedupe(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := make(map[string]struct{}, len(in))
+	for _, s := range in {
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
 // Match reports whether a repository-relative path matches the pattern.
+// A pattern with brace groups matches when any of its expansions matches.
 // Invalid patterns never match.
 func Match(pattern, path string) bool {
 	if Validate(pattern) != nil {
 		return false
 	}
 	path = strings.TrimPrefix(path, "./")
-	return matchSegments(strings.Split(pattern, "/"), strings.Split(path, "/"))
+	seg := strings.Split(path, "/")
+	candidates, err := Expand(pattern)
+	if err != nil {
+		// Too large to expand: fall back to the pattern as written rather
+		// than claiming a match Stemma cannot justify.
+		candidates = []string{pattern}
+	}
+	for _, c := range candidates {
+		if matchSegments(strings.Split(c, "/"), seg) {
+			return true
+		}
+	}
+	return false
 }
 
 // MatchAny reports whether any pattern matches the path.
@@ -208,11 +519,15 @@ func matchClass(pat []rune, r rune) ([]rune, bool) {
 //	"src/api/*.ts"      -> "src/api"
 //	"**/*.ts"           -> ""
 //	"src/api*/x.ts"     -> "src"
+//
+// A brace is treated as a wildcard even where it would expand to a single
+// literal: under-claiming a prefix only makes a caller more cautious, while
+// over-claiming one would silently widen a scope.
 func LiteralPrefix(pattern string) string {
 	segs := strings.Split(pattern, "/")
 	var out []string
 	for _, seg := range segs {
-		if strings.ContainsAny(seg, "*?[") {
+		if strings.ContainsAny(seg, "*?[{}") {
 			break
 		}
 		out = append(out, seg)
@@ -230,12 +545,15 @@ func LiteralPrefix(pattern string) string {
 // can be derived without inventing one.
 //
 // A directory is derivable only when every pattern shares the same non-empty
-// literal directory prefix and every pattern is fully contained by it.
+// literal directory prefix and every pattern is fully contained by it. Brace
+// groups are expanded first, so "src/api/*.{ts,tsx}" still resolves to
+// "src/api" instead of being refused for its braces.
 func DirectoryScope(includes []string) (dir string, ok bool) {
 	if len(includes) == 0 {
 		return "", false
 	}
-	for i, p := range includes {
+	expanded, _ := ExpandAll(includes)
+	for i, p := range expanded {
 		if Validate(p) != nil {
 			return "", false
 		}
@@ -254,22 +572,35 @@ func DirectoryScope(includes []string) (dir string, ok bool) {
 	return dir, dir != ""
 }
 
-// Normalize returns a canonical form of the pattern list: trimmed, with
-// duplicates removed, preserving first-seen order.
+// Normalize returns a canonical form of the pattern list: brace-expanded,
+// trimmed, with duplicates removed, preserving first-seen order.
+//
+// Unexpandable patterns are kept as written so validation can reject them
+// without silent truncation. Literal commas and character classes are retained.
 func Normalize(patterns []string) []string {
 	out := make([]string, 0, len(patterns))
 	seen := make(map[string]struct{}, len(patterns))
-	for _, p := range patterns {
-		p = strings.TrimSpace(p)
-		if p == "" {
+	for _, raw := range patterns {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
 			continue
 		}
-		p = strings.TrimPrefix(p, "./")
-		if _, ok := seen[p]; ok {
-			continue
+		expanded, err := Expand(raw)
+		if err != nil {
+			expanded = []string{raw}
 		}
-		seen[p] = struct{}{}
-		out = append(out, p)
+		for _, p := range expanded {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			p = strings.TrimPrefix(p, "./")
+			if _, ok := seen[p]; ok {
+				continue
+			}
+			seen[p] = struct{}{}
+			out = append(out, p)
+		}
 	}
 	return out
 }

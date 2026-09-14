@@ -59,10 +59,25 @@ func LoadProject(ctx context.Context, ws *workspace.Workspace) (canonical.Projec
 	}
 	for _, d := range diags {
 		if d.Severity == diagnostics.SeverityError {
-			return canonical.Project{}, fmt.Errorf("%s: %s", d.Path, d.Summary)
+			return canonical.Project{}, &ProjectLoadError{Diagnostics: diags}
 		}
 	}
 	return project, nil
+}
+
+// ProjectLoadError preserves per-file diagnostics for callers that need a
+// structured report. No partially decoded project is returned on this error.
+type ProjectLoadError struct {
+	Diagnostics []diagnostics.Diagnostic
+}
+
+func (e *ProjectLoadError) Error() string {
+	for _, d := range e.Diagnostics {
+		if d.Severity == diagnostics.SeverityError {
+			return fmt.Sprintf("%s: %s", d.Path, d.Summary)
+		}
+	}
+	return "canonical project could not be loaded"
 }
 
 // LoadProjectWithDiagnostics reads the project, reporting per-file problems as

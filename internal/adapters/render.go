@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strconv"
@@ -302,7 +304,26 @@ func (m *Markdown) String() string {
 	return s + "\n"
 }
 
-// FileSlug derives a safe file name component from a canonical name.
-func FileSlug(name, fallback string) string {
-	return canonical.SlugOrHash(name, fallback)
+// FileSlug derives a fallback file name from the complete canonical ID.
+// Titles are not unique. Keep the type prefix and do not truncate: distinct
+// valid IDs must remain distinct, including slugs that differ at byte 64.
+func FileSlug(id string) string {
+	kind, slug, err := canonical.ParseID(id)
+	if err == nil && canonical.ValidIDSlug(slug) {
+		return string(kind) + "-" + slug
+	}
+	// Invalid canonical input is diagnosed by validation; keep its projection
+	// path safe as well.
+	return canonical.SlugOrHash(id, id)
+}
+
+// SkillSlug keeps fallback skill directories within the provider format's
+// 64-character name limit without truncating away the ID's distinguishing tail.
+func SkillSlug(id string) string {
+	name := FileSlug(id)
+	if len(name) <= 64 {
+		return name
+	}
+	sum := sha256.Sum256([]byte(id))
+	return hex.EncodeToString(sum[:])
 }

@@ -43,7 +43,7 @@ func Resolve(
 	content string,
 	profile profiles.Profile,
 ) Resolution {
-	res := Resolution{Included: true, Activation: activation, Content: content}
+	res := Resolution{Included: true, Activation: normalizeActivation(activation), Content: content}
 
 	if !enabled {
 		res.Included = false
@@ -65,7 +65,8 @@ func Resolve(
 		AcceptLossy: override.AcceptLossy,
 	}
 	if override.Activation != nil {
-		res.Activation = *override.Activation
+		// Profile patterns receive the same expansion as stored entities.
+		res.Activation = normalizeActivation(*override.Activation)
 		applied.Activation = override.Activation
 	}
 	if override.Directory != "" {
@@ -172,6 +173,15 @@ func ReuseOriginal(in ExportInput, destPath string, entityIDs []string) ([]byte,
 		}
 	}
 	return original.Data, true
+}
+
+// normalizeActivation expands patterns in both stored entities and profile
+// overrides. Both may be hand-written without passing through an importer.
+func normalizeActivation(a canonical.Activation) canonical.Activation {
+	if a.Type != canonical.ActivationPathScoped {
+		return a
+	}
+	return canonical.PathScoped(a.Include, a.Exclude)
 }
 
 // ProvenanceOf looks up an entity's provenance by ID.
