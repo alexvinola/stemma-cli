@@ -42,7 +42,7 @@ func richProject() canonical.Project {
 	}
 	p.ContextDocuments = []canonical.ContextDocument{doc, scoped, onDemand}
 
-	p.Rules = []canonical.Rule{{
+	rule := canonical.Rule{
 		ID: "rule.validate", Title: "Validate at the boundary",
 		Instruction: "Validate every request body at the boundary.",
 		Priority:    canonical.PriorityMust, Enabled: true,
@@ -50,25 +50,35 @@ func richProject() canonical.Project {
 		Rationale:    "Keeps validation in one place.\n\nAnd makes it testable.",
 		GoodExamples: []string{"handler -> service", "service -> repository"},
 		BadExamples:  []string{"handler -> db.Query"},
-	}}
-	p.Procedures = []canonical.Procedure{{
+	}
+	rule.Extensions.Set("claude", "custom", "rule")
+	p.Rules = []canonical.Rule{rule}
+	procedure := canonical.Procedure{
 		ID: "procedure.release", Name: "release", Description: "Cut a release",
 		Trigger: "a version is ready", Content: "1. Tag\n2. Push",
-	}}
-	p.Skills = []canonical.Skill{{
+	}
+	procedure.Extensions.Set("claude", "custom", "procedure")
+	p.Procedures = []canonical.Procedure{procedure}
+	skill := canonical.Skill{
 		ID: "skill.audit", Name: "audit", Description: "Audit the ledger",
 		Content: "Run `make audit`.", AllowedTools: []string{"bash", "read"},
-	}}
-	p.Agents = []canonical.Agent{{
+	}
+	skill.Extensions.Set("claude", "custom", "skill")
+	p.Skills = []canonical.Skill{skill}
+	agent := canonical.Agent{
 		ID: "agent.reviewer", Name: "reviewer", Description: "Reviews PRs",
 		Instructions: "Review diffs.", Tools: []string{"read", "grep"}, ModelPreference: "opus",
-	}}
-	p.Decisions = []canonical.Decision{{
+	}
+	agent.Extensions.Set("claude", "custom", "agent")
+	p.Agents = []canonical.Agent{agent}
+	decision := canonical.Decision{
 		ID: "decision.ledger", Title: "Append-only ledger", Status: canonical.DecisionAccepted,
 		Context: "We need auditability.", Decision: "Entries are append-only.",
 		Consequences:     "Deletion is never allowed.",
 		AgentConstraints: []string{"Never UPDATE the entries table."},
-	}}
+	}
+	decision.Extensions.Set("claude", "custom", "decision")
+	p.Decisions = []canonical.Decision{decision}
 	p.OpaqueBlocks = []canonical.OpaqueBlock{{
 		ID: "opaque.override", Provider: "codex", SourcePath: "AGENTS.override.md",
 		Content: "# Overrides\n", Reason: "not modelled", Hash: provenance.HashString("# Overrides\n"),
@@ -109,6 +119,43 @@ func TestProjectSurvivesASaveLoadRoundTrip(t *testing.T) {
 	if string(want) != string(got) {
 		t.Fatalf("a save/load round trip changed the project\n--- saved ---\n%s\n--- loaded ---\n%s", want, got)
 	}
+}
+
+func TestEntityFingerprintsSurviveStoreRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	ws, err := workspace.Open(t.TempDir(), workspace.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := richProject()
+	want := entityFingerprints(t, original)
+	if _, err := SaveProject(ctx, ws, original, false); err != nil {
+		t.Fatalf("SaveProject: %v", err)
+	}
+	loaded, err := LoadProject(ctx, ws)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	got := entityFingerprints(t, loaded)
+	for _, entity := range original.Entities() {
+		if got[entity.ID] != want[entity.ID] {
+			t.Errorf("%s fingerprint changed across store: got %s, want %s",
+				entity.ID, got[entity.ID], want[entity.ID])
+		}
+	}
+}
+
+func entityFingerprints(t *testing.T, project canonical.Project) map[string]string {
+	t.Helper()
+	fingerprints := make(map[string]string, len(project.Entities()))
+	for _, entity := range project.Entities() {
+		fingerprint, ok := canonical.EntityFingerprint(project, entity.ID)
+		if !ok {
+			t.Fatalf("fingerprint %s", entity.ID)
+		}
+		fingerprints[entity.ID] = fingerprint
+	}
+	return fingerprints
 }
 
 func TestEncodingIsStable(t *testing.T) {

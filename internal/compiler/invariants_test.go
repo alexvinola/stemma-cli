@@ -13,6 +13,7 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/manifest"
 	"github.com/alexvinola/stemma-cli/internal/profiles"
+	"github.com/alexvinola/stemma-cli/internal/provenance"
 	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
@@ -26,6 +27,9 @@ func assertProjectionInvariants(t *testing.T, project canonical.Project, out com
 	for _, m := range out.Mappings {
 		if !adapters.KnownOutcome(m.Outcome) {
 			t.Errorf("entity %s has unknown outcome %q", m.EntityID, m.Outcome)
+		}
+		if err := m.Activation.Validate(); err != nil {
+			t.Errorf("entity %s has invalid projection activation: %v", m.EntityID, err)
 		}
 		seen[m.EntityID]++
 	}
@@ -99,6 +103,54 @@ func assertProjectionInvariants(t *testing.T, project canonical.Project, out com
 	// 7. Token numbers are always marked approximate.
 	if !out.TokenReport.Approximate {
 		t.Error("token report is not marked approximate")
+	}
+}
+
+func TestProjectionActivationTotality(t *testing.T) {
+	project := canonical.NewProject("prj_activation", "Projection activation")
+	project.ContextDocuments = []canonical.ContextDocument{{
+		ID: "context.guide", Title: "Guide", Kind: canonical.KindConventions,
+		Content: "Follow the guide.", Audience: canonical.AudienceAgent, Activation: canonical.Always(),
+	}}
+	project.Rules = []canonical.Rule{
+		{ID: "rule.always", Title: "Always", Instruction: "Always validate.", Priority: canonical.PriorityMust, Enabled: true, Activation: canonical.Always()},
+		{ID: "rule.scoped", Title: "Scoped", Instruction: "Validate source files.", Priority: canonical.PriorityShould, Enabled: true, Activation: canonical.PathScoped([]string{"src/**"}, nil)},
+		{ID: "rule.demand", Title: "Demand", Instruction: "Review when requested.", Priority: canonical.PriorityMay, Enabled: true, Activation: canonical.OnDemand("when requested", "review")},
+		{ID: "rule.docs", Title: "Docs", Instruction: "Explain the rationale.", Priority: canonical.PriorityMay, Enabled: true, Activation: canonical.DocumentationOnly()},
+	}
+	project.Procedures = []canonical.Procedure{{
+		ID: "procedure.release", Name: "release", Description: "Cut a release", Content: "Tag it.",
+	}}
+	project.Skills = []canonical.Skill{{
+		ID: "skill.audit", Name: "audit", Description: "Audit changes", Content: "Review the diff.",
+	}}
+	project.Agents = []canonical.Agent{{
+		ID: "agent.reviewer", Name: "reviewer", Description: "Reviews changes", Instructions: "Review them.",
+	}}
+	project.Decisions = []canonical.Decision{{
+		ID: "decision.storage", Title: "Storage", Status: canonical.DecisionAccepted,
+		Decision: "Use files.", AgentConstraints: []string{"Keep files deterministic."},
+	}}
+	project.OpaqueBlocks = []canonical.OpaqueBlock{{
+		ID: "opaque.preserved", Provider: string(canonical.TargetClaude), SourcePath: "CLAUDE.md",
+		Content: "Preserved input.", Reason: "not modelled", Hash: provenance.HashString("Preserved input."),
+	}}
+	if diags := canonical.Validate(project); len(diags) != 0 {
+		t.Fatalf("manual entities with zero provenance should be valid: %+v", diags)
+	}
+
+	for _, target := range []canonical.TargetFormat{
+		canonical.TargetClaude, canonical.TargetCodex, canonical.TargetCopilot, canonical.TargetKiro,
+	} {
+		t.Run(string(target), func(t *testing.T) {
+			out, err := compiler.Compile(context.Background(), project, compiler.CompileOptions{
+				Target: target, Profile: profiles.Default(target),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertProjectionInvariants(t, project, out)
+		})
 	}
 }
 

@@ -1,7 +1,15 @@
-# The canonical model
+# The canonical intermediate representation
 
-The canonical project under `.stemma/` is the source of truth once a repository
-has been imported. Provider files are projections of it.
+Stemma's canonical project is its provider-neutral intermediate representation
+(IR). Provider configuration files are inputs to importers and outputs from
+exporters; after import, neither a provider file nor a provider's schema is the
+semantic source of truth.
+
+The editable files under `.stemma/` are a durable serialization of the IR, not
+the IR itself. Loading them reconstructs the same in-memory `canonical.Project`;
+saving a project renders that value back to Markdown entity files and JSON
+bookkeeping. This names the existing schema boundary and does not migrate or
+change schema version 2.
 
 Schema: `schema/canonical-v2.schema.json`. Go types: `internal/canonical`;
 on-disk layout: `internal/store`.
@@ -22,7 +30,8 @@ on-disk layout: `internal/store`.
 └── manifest.json
 ```
 
-Entities are Markdown because almost everything in them *is* Markdown. Holding
+IR entities are serialized as Markdown because almost everything in them *is*
+Markdown. Holding
 multi-line prose inside JSON strings made the file people are supposed to edit
 the least pleasant one in the repository, and produced diffs where changing one
 word rewrote a whole line. The file name is the entity's slug, so the
@@ -46,14 +55,47 @@ extension values remain opaque and may have any supported YAML value type.
 These checks belong to the canonical file reader, not the general Markdown
 parser: a provider's ordinary Markdown file may legitimately have no front matter.
 
-There are two serializations of a project, and they have different jobs:
+There are two serializations of the IR, and they have different jobs:
 
 | Form | Where | Job |
 | --- | --- | --- |
-| Markdown + `project.json` | `.stemma/` | what people read and edit |
-| One canonical JSON document | in memory only | giving a project exactly one byte form to hash, which is what manifests and plans compare |
+| Markdown + `project.json` | `.stemma/` | the durable, human-editable serialization |
+| One canonical JSON document | in memory only | giving the IR exactly one byte form to hash, which is what manifests and plans compare |
 
 The second never touches disk except in compact test fixtures.
+
+## IR invariants
+
+The six semantic entity types are context documents, rules, procedures, skills,
+specialist agents and architecture decisions. Their shared contracts are:
+
+- **Provider neutrality.** Modelled field names and meanings do not belong to a
+  provider. Unrecognised provider-specific source keys are retained only under
+  `extensions.<provider>.<key>`; explicitly modelled opaque values such as tool
+  and model names are preserved without translation.
+- **ActivationClosedUnion.** Activation has exactly the four tags documented
+  below; the zero value, unknown tags and fields belonging to another tag are
+  invalid. Only context documents and rules store activation in schema version
+  2. Procedures, skills, agents and decisions receive an explicit activation
+  when each target projects them; that activation may differ by target.
+- **ProjectionActivationTotality.** Every projection mapping has one valid
+  activation, including skipped and blocked mappings. This records the delivery
+  decision even for entity types that do not store activation in the IR.
+- **Stable semantic fingerprints.** `EntityFingerprint` covers every field of
+  one of the six entities, including provider extensions, but excludes
+  provenance. It therefore survives both canonical JSON and `.stemma/` storage
+  round trips, and bookkeeping changes cannot make edited semantics look
+  unchanged.
+- **Complete imported provenance.** An imported entity records source format,
+  source path and hash, importer version and disposition; its canonical content
+  hash is stamped after import. A span is recorded where known. A hand-authored
+  entity may instead have an entirely zero provenance value.
+
+`OpaqueBlock` is deliberately outside the six-type semantic entity union. It is
+an auxiliary loss-preservation record with its own provider, source, byte span,
+content hash, reason and re-emission flag. It participates in projection
+accounting so that preserved input also receives exactly one outcome, but it
+does not acquire entity fields, activation or provider extensions.
 
 ## Entity identifiers
 
@@ -139,12 +181,15 @@ edit. A test enforces that the human-only parts never leak into generated files.
 An ordered, invocable workflow: `name`, `description`, optional `trigger`,
 `content`. Copilot has a native prompt-file format for these; the other
 supported providers deliver them as skills, which is reported as `adapted`.
+The IR does not store an activation for a procedure; exporters assign its
+on-demand activation when projecting it.
 
 ### Skill
 
 Reusable on-demand capability documentation: `name`, `description`, `content`,
 optional `allowedTools` and `invocationPolicy`. All four implemented providers
-support skills natively.
+support skills natively. The on-demand activation is assigned during
+projection, not stored on the skill.
 
 ### Specialist agent
 
@@ -152,6 +197,9 @@ support skills natively.
 **opaque provider metadata**. Stemma never translates tool or model names
 between providers: when an agent crosses providers with a tool list, the
 mapping is `lossy` and `STEMMA3301` asks a human to check the names.
+Agent activation is also a projection decision: targets with native specialist
+agents use on-demand delivery, while a target that must flatten an agent into
+root instructions records always-on delivery.
 
 ### Architecture decision
 
@@ -159,6 +207,8 @@ mapping is `lossy` and `STEMMA3301` asks a human to check the names.
 Only `agentConstraints` is normally projected into agent-facing context; the
 rest is human documentation. A decision record without agent constraints is
 `skipped-explicitly` with that explanation.
+Decisions do not store activation; a projection that emits their agent
+constraints records an explicit always-on activation.
 
 ## Provenance
 
@@ -188,7 +238,7 @@ saying whether it must be re-emitted for same-format round trips.
 Examples: a file whose front matter could not be parsed safely, a heading with
 no body, an `AGENTS.override.md` whose override semantics are not modelled.
 
-Opaque blocks receive projection outcomes like any other entity: `exact` when
+Opaque blocks receive auxiliary projection outcomes: `exact` when
 re-emitted into the same format, `lossy` when they belong to this target but
 their file is no longer generated, `skipped-explicitly` when they belong to a
 different provider.
@@ -196,8 +246,9 @@ different provider.
 ## Provider extensions
 
 Unrecognised front matter keys and provider-specific values are preserved under
-`extensions.<provider>.<key>` rather than dropped. When exporting back to the
-same provider they are re-emitted.
+`extensions.<provider>.<key>` rather than dropped. This is the only place in a
+semantic entity where provider-specific schema keys belong. When exporting back
+to the same provider they are re-emitted.
 
 Keys starting with `stemma.` are reserved. They are Stemma's own round-trip
 hints — the original file name of a rule, the directory name of a skill, which
