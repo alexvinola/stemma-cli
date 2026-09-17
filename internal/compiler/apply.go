@@ -69,6 +69,8 @@ func Apply(ctx context.Context, ws *workspace.Workspace, plan Plan, opts ApplyOp
 		}
 		current, exists, err := ws.HashFile(c.Path)
 		if err != nil {
+			bag.Add(inspectionDiagnostic(c.Path, plan.Target, err))
+			res.Diagnostics = bag.Items()
 			return res, fmt.Errorf("re-check %q: %w", c.Path, err)
 		}
 		var recorded string

@@ -258,6 +258,9 @@ func (w *Workspace) ReadFile(ctx context.Context, rel string) (File, error) {
 // HashFile streams the digest of an existing file. It returns ok=false when
 // the file does not exist.
 func (w *Workspace) HashFile(rel string) (hash string, ok bool, err error) {
+	if err := w.CheckNoSymlink(rel); err != nil {
+		return "", false, err
+	}
 	native, err := w.Native(rel)
 	if err != nil {
 		return "", false, err

@@ -8,6 +8,7 @@ import (
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/compiler"
+	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/store"
 )
 
@@ -93,7 +94,16 @@ func applyOne(
 			return fail(env, "apply", jsonOut, code, berr, nil)
 		}
 		if verr := compiler.VerifyPlanMatches(saved, rebuilt); verr != nil {
-			return fail(env, "apply", jsonOut, ExitStalePlan, verr, nil)
+			var symlinkDiags []diagnostics.Diagnostic
+			for _, d := range rebuilt.Diagnostics {
+				if d.Code == diagnostics.SymlinkRejected {
+					symlinkDiags = append(symlinkDiags, d)
+				}
+			}
+			if len(symlinkDiags) == 0 {
+				return fail(env, "apply", jsonOut, ExitStalePlan, verr, nil)
+			}
+			return failPlanReplay(env, jsonOut, verr, symlinkDiags)
 		}
 		plan = rebuilt
 	} else {
@@ -197,6 +207,20 @@ func applyOne(
 		PrintDiagnostics(env.Stdout, result.Diagnostics, true)
 	}
 	return ExitOK
+}
+
+func failPlanReplay(env Env, jsonOut bool, err error, diags []diagnostics.Diagnostic) int {
+	if jsonOut {
+		doc := NewEnvelope("apply", ExitStalePlan, diags, nil)
+		doc.Error = err.Error()
+		if writeErr := WriteJSON(env, doc); writeErr != nil {
+			return ExitInternal
+		}
+		return ExitStalePlan
+	}
+	PrintDiagnostics(env.Stderr, diags, true)
+	fmt.Fprintf(env.Stderr, "stemma: %s\n", SanitizeLine(err.Error()))
+	return ExitStalePlan
 }
 
 func isWriteFailure(err error) bool {
