@@ -256,9 +256,9 @@ func inspectionDiagnostic(path string, target canonical.TargetFormat, err error)
 	suggestion := ""
 	if errors.Is(err, workspace.ErrSymlink) {
 		code = diagnostics.SymlinkRejected
-		summary = "destination is a symbolic link"
-		suggestion = "Stemma never writes through a symlink. Replace it with a regular file, " +
-			"or point the target profile somewhere else."
+		summary = "destination path contains a symbolic link"
+		suggestion = "Stemma never writes through a symlink, including one in a parent directory. " +
+			"Replace it with a regular file or directory, or point the target profile somewhere else."
 	}
 	d := diagnostics.New(code, diagnostics.SeverityError, summary).
 		WithPath(path).WithTarget(string(target)).WithDetail("%v", err)

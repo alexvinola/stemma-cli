@@ -90,6 +90,102 @@ func TestApplyIsStaleWhenAFileChanges(t *testing.T) {
 	}
 }
 
+func TestApplyRejectsAncestorSymlinkIntroducedAfterPlanning(t *testing.T) {
+	for _, manifestExists := range []bool{false, true} {
+		name := "manifest absent"
+		if manifestExists {
+			name = "manifest exists"
+		}
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			ws, project := importFixture(t, "copilot/basic", canonical.TargetCopilot)
+			m := manifest.New()
+			plan, err := compiler.BuildPlan(ctx, ws, project, compiler.PlanOptions{
+				Target: canonical.TargetClaude, Profile: profiles.Default(canonical.TargetClaude), Manifest: m,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var matching compiler.Change
+			for _, c := range plan.Changes {
+				if strings.HasPrefix(c.Path, ".claude/") {
+					matching = c
+					break
+				}
+			}
+			if matching.Path == "" {
+				t.Fatal("plan has no output beneath .claude")
+			}
+			outside := t.TempDir()
+			outsideFile := filepath.Join(outside, filepath.FromSlash(strings.TrimPrefix(matching.Path, ".claude/")))
+			if err := os.MkdirAll(filepath.Dir(outsideFile), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(outsideFile, []byte(matching.Content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			const manifestPath = ".stemma/manifest.json"
+			manifestNative, err := ws.Native(manifestPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var manifestBefore []byte
+			if manifestExists {
+				manifestBefore, err = manifest.Marshal(m)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.MkdirAll(filepath.Dir(manifestNative), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(manifestNative, manifestBefore, 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.Symlink(outside, filepath.Join(ws.Root(), ".claude")); err != nil {
+				t.Skipf("symlinks unavailable: %v", err)
+			}
+
+			res, err := compiler.Apply(ctx, ws, plan, compiler.ApplyOptions{
+				Manifest: m, ManifestPath: manifestPath,
+			})
+			if !errors.Is(err, workspace.ErrSymlink) {
+				t.Fatalf("Apply err = %v, want ErrSymlink", err)
+			}
+			if len(res.Written) != 0 {
+				t.Fatalf("Written = %v, want empty", res.Written)
+			}
+			found := false
+			for _, d := range res.Diagnostics {
+				if d.Code == diagnostics.SymlinkRejected && d.Path == matching.Path &&
+					d.Target == "claude" && d.Blocking {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("missing structured symlink diagnostic: %+v", res.Diagnostics)
+			}
+			if _, owned := res.Manifest.Tracked("claude", matching.Path); owned {
+				t.Fatal("failed apply recorded ownership")
+			}
+			outsideAfter, readErr := os.ReadFile(outsideFile)
+			if readErr != nil || string(outsideAfter) != matching.Content {
+				t.Fatalf("external file changed: %q, %v", outsideAfter, readErr)
+			}
+			manifestAfter, readErr := os.ReadFile(manifestNative)
+			if manifestExists {
+				if readErr != nil || !reflect.DeepEqual(manifestAfter, manifestBefore) {
+					t.Fatalf("manifest changed: %q, %v", manifestAfter, readErr)
+				}
+			} else if !errors.Is(readErr, os.ErrNotExist) {
+				t.Fatalf("failed apply created a manifest: %v", readErr)
+			}
+		})
+	}
+}
+
 func TestApplyRollsBackOnPartialFailure(t *testing.T) {
 	ctx := context.Background()
 	ws, project := importFixture(t, "copilot/basic", canonical.TargetCopilot)
@@ -315,6 +411,7 @@ func TestApplyRetainsPlanDiagnosticsOnEveryOutcome(t *testing.T) {
 				if err := os.Mkdir(native, 0o755); err != nil {
 					t.Fatal(err)
 				}
+				wantExtra = diagnostics.FileUnreadable
 			case "rollback":
 				// Both writes can be queued, but a file cannot also be the
 				// parent directory of the manifest during commit.

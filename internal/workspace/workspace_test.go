@@ -55,6 +55,70 @@ func TestReadFileAndHash(t *testing.T) {
 	}
 }
 
+func TestHashFileRejectsSymlinksInEveryPathComponent(t *testing.T) {
+	ws := newTestWorkspace(t)
+	wantHash := "sha256:5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
+
+	t.Run("regular control", func(t *testing.T) {
+		write(t, ws, "regular/file.md", "hello\n")
+		hash, ok, err := ws.HashFile("regular/file.md")
+		if err != nil || !ok || hash != wantHash {
+			t.Fatalf("HashFile = (%q, %t, %v), want (%q, true, nil)", hash, ok, err, wantHash)
+		}
+	})
+
+	outside := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(outside, "nested"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(outside, "nested", "matching.md"), []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(outside, "nested", "different.md"), []byte("different\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(ws.Root(), "linked")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(outside, "nested", "matching.md"), filepath.Join(ws.Root(), "leaf.md")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	for _, rel := range []string{
+		"linked/nested/matching.md",
+		"linked/nested/different.md",
+		"linked/nested/missing.md",
+		"leaf.md",
+	} {
+		t.Run(rel, func(t *testing.T) {
+			hash, ok, err := ws.HashFile(rel)
+			if !errors.Is(err, ErrSymlink) {
+				t.Fatalf("HashFile = (%q, %t, %v), want ErrSymlink", hash, ok, err)
+			}
+			if hash != "" || ok {
+				t.Fatalf("HashFile returned a result through a symlink: (%q, %t)", hash, ok)
+			}
+		})
+	}
+}
+
+func TestHashFileRejectsCaseAliasedAncestorSymlinkWhenSupported(t *testing.T) {
+	ws := newTestWorkspace(t)
+	outside := t.TempDir()
+	if err := os.WriteFile(filepath.Join(outside, "file.md"), []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(ws.Root(), "Linked")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(ws.Root(), "linked")); err != nil {
+		t.Skip("filesystem is case-sensitive")
+	}
+	if _, _, err := ws.HashFile("linked/file.md"); !errors.Is(err, ErrSymlink) {
+		t.Fatalf("HashFile err = %v, want ErrSymlink", err)
+	}
+}
+
 func TestReadFileRejectsEscape(t *testing.T) {
 	ws := newTestWorkspace(t)
 	if _, err := ws.ReadFile(context.Background(), "../outside.md"); !errors.Is(err, ErrPathEscape) {
