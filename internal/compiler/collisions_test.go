@@ -248,6 +248,7 @@ func TestConflictingHintsAndPinsBlockAllOwners(t *testing.T) {
 				if !errors.Is(err, compiler.ErrInvariant) || len(out.Files) != 0 {
 					t.Fatalf("collision allowed: err=%v output=%+v", err, out)
 				}
+				assertProjectionInvariants(t, p, out)
 				for _, m := range out.Mappings {
 					if !slices.Contains(ids, m.EntityID) || m.Outcome != adapters.OutcomeBlocked || len(m.Diagnostics) == 0 {
 						t.Fatalf("unblocked mapping: %+v", m)

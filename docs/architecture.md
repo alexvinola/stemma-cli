@@ -1,11 +1,11 @@
 # Architecture
 
-Stemma is a compiler. It has a front end (importers), a middle (canonical model,
-validation, optimization), and a back end (target profiles, projection,
+Stemma is a compiler. It has a front end (importers), a middle (provider-neutral
+canonical IR, validation, optimization), and a back end (target profiles, projection,
 exporters), plus a transactional writer.
 
 ```
- provider files
+ provider configuration files (inputs)
       │  discovery: classify paths (never opens source code)
       ▼
  registered configuration files
@@ -15,7 +15,9 @@ exporters), plus a transactional writer.
       │  importer: normalize into canonical entities,
       │            preserve unknown content
       ▼
- canonical project  (.stemma/: Markdown entities + project.json)
+ provider-neutral canonical IR (in memory)
+      │  store codec: load/save the durable .stemma/ serialization
+      │               (Markdown entities + JSON bookkeeping)
       │  validation, deterministic optimization passes
       ▼
  canonical project + target profile (.stemma/profiles/<target>.json)
@@ -28,7 +30,7 @@ exporters), plus a transactional writer.
  plan (create / update / unchanged / delete-proposed / conflict)
       │  apply: re-check hashes, temp files, atomic rename, rollback
       ▼
- provider files + updated manifest (.stemma/manifest.json)
+ provider configuration files (outputs) + updated manifest
 ```
 
 ## Packages
@@ -39,7 +41,7 @@ exporters), plus a transactional writer.
 | `internal/diagnostics` | Stable codes, severities, fingerprints, ordering |
 | `internal/globs` | The glob dialect: matching, validation, bounded brace expansion, directory derivation |
 | `internal/provenance` | Where content came from; hashing |
-| `internal/canonical` | The provider-neutral model, IDs, JSON codec, validation |
+| `internal/canonical` | The provider-neutral IR, IDs, canonical JSON codec, validation |
 | `internal/tokenestimate` | Replaceable local estimator and the cost report |
 | `internal/parser` | Markdown splitting and the restricted front matter subset |
 | `internal/workspace` | Every filesystem effect: paths, limits, walking, transactions |
@@ -56,6 +58,9 @@ exporters), plus a transactional writer.
 | `internal/cli` | Flags, human and JSON output, exit codes |
 
 The dependency graph is acyclic and flows downwards through that table.
+`internal/canonical` is an enforced boundary: its production import graph may
+not reach `internal/parser`, `internal/adapters` or any of their subpackages.
+The IR therefore cannot depend on a provider parser or projection backend.
 
 ## Purity boundary
 
@@ -70,12 +75,18 @@ the only function that writes, and it writes through `workspace.Transaction`.
 This split is what makes the compiler testable without a filesystem and what
 guarantees that `plan`, `scan`, `check` and `explain` cannot modify anything.
 
-## Canonical model
+## Canonical IR
 
 See `docs/canonical-model.md`. The short version: rules, context documents,
-procedures, skills, specialist agents and architecture decisions, each with a
-stable id, an activation, provenance, provider extensions — plus opaque blocks
-for content Stemma deliberately did not interpret.
+procedures, skills, specialist agents and architecture decisions have stable
+ids, provenance and provider extensions. Context documents and rules store
+activation; the other entity types receive activation during projection. Opaque
+blocks are auxiliary loss-preservation records rather than semantic entities.
+
+Provider files sit outside this boundary: importers consume them and exporters
+produce them. The files under `.stemma/` are the editable storage serialization
+of the IR. Provider-specific source keys may survive only in an entity's
+`Extensions`; they do not become canonical fields.
 
 ## Projection profiles
 

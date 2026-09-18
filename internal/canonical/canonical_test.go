@@ -60,12 +60,20 @@ func TestParseID(t *testing.T) {
 	}
 }
 
-func TestActivationValidation(t *testing.T) {
-	if err := Always().Validate(); err != nil {
-		t.Errorf("always: %v", err)
+func TestActivationClosedUnion(t *testing.T) {
+	valid := []Activation{
+		Always(),
+		PathScoped([]string{"src/**"}, nil),
+		OnDemand("when requested", "review"),
+		DocumentationOnly(),
 	}
-	if err := PathScoped([]string{"src/**"}, nil).Validate(); err != nil {
-		t.Errorf("path-scoped: %v", err)
+	for _, activation := range valid {
+		if !KnownActivationType(activation.Type) {
+			t.Errorf("known activation %q was not recognised", activation.Type)
+		}
+		if err := activation.Validate(); err != nil {
+			t.Errorf("%s: %v", activation.Type, err)
+		}
 	}
 	if err := (Activation{Type: ActivationPathScoped}).Validate(); err == nil {
 		t.Error("path-scoped with no include must be invalid")

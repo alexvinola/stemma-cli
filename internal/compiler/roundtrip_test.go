@@ -37,6 +37,40 @@ func fixtureNames() []string {
 	return out
 }
 
+func TestImportMatrixHasCompleteProvenance(t *testing.T) {
+	for _, name := range fixtureNames() {
+		format := fixtureFormats[name]
+		t.Run(name, func(t *testing.T) {
+			ws := materialize(t, filepath.Join(testdataDir, name, "input"))
+			res, err := compiler.Import(context.Background(), ws, compiler.ImportOptions{
+				Format: format, ProjectID: "prj_fixture", ProjectName: "Fixture",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			entities := res.Project.Entities()
+			if len(entities) == 0 {
+				t.Fatal("fixture imported no semantic entities")
+			}
+			for _, entity := range entities {
+				pv, ok := adapters.ProvenanceOf(res.Project, entity.ID)
+				if !ok {
+					t.Fatalf("%s has no provenance record", entity.ID)
+				}
+				if pv.SourceFormat != string(format) || pv.SourcePath == "" || pv.SourceHash == "" ||
+					pv.ImporterVersion == "" || !pv.Disposition.Valid() {
+					t.Errorf("%s has incomplete provenance: %+v", entity.ID, pv)
+				}
+				fingerprint, ok := canonical.EntityFingerprint(res.Project, entity.ID)
+				if !ok || pv.ContentHash == "" || pv.ContentHash != fingerprint {
+					t.Errorf("%s content hash = %q, want complete canonical fingerprint %q",
+						entity.ID, pv.ContentHash, fingerprint)
+				}
+			}
+		})
+	}
+}
+
 // TestSameFormatRoundTripIsByteIdentical checks the strongest round-trip
 // guarantee: importing a provider's files and compiling straight back to the
 // same provider, with no semantic change, must reproduce the original bytes
