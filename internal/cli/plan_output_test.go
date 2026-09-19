@@ -76,7 +76,10 @@ func TestPlanHumanOutputDistinguishesWrites(t *testing.T) {
 		if strings.Contains(res.stderr, "\x1b") {
 			t.Fatalf("stderr contains an unsanitized escape: %q", res.stderr)
 		}
-		if !strings.Contains(res.stderr, "blocked/\\e[31mplan.json") {
+		// OS errors may expose a raw path (escaped by SanitizeLine as \\e)
+		// or quote it with %q first (escaping ESC as \\x1b). Both are safe.
+		if !strings.Contains(res.stderr, `blocked/\e[31mplan.json`) &&
+			!strings.Contains(res.stderr, `blocked/\x1b[31mplan.json`) {
 			t.Fatalf("failed-save output lacks the sanitized path:\n%s", res.stderr)
 		}
 		if strings.Contains(res.stdout+res.stderr, "Plan file written transactionally") {
