@@ -8,6 +8,7 @@ package optimizer
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
@@ -41,6 +42,10 @@ type Options struct {
 	// DeduplicateNormalized also removes entities that are identical after
 	// conservative whitespace normalization.
 	DeduplicateNormalized bool
+	// PreserveEntityIDs excludes projection-sensitive entities from
+	// deduplication. The compiler populates this for profile overrides, whose
+	// target-specific effects are resolved by adapters after optimization.
+	PreserveEntityIDs map[string]struct{}
 }
 
 // DefaultOptions enables the passes that are always safe.
@@ -55,16 +60,18 @@ func Run(p canonical.Project, opts Options) Result {
 	var dropped []Dropped
 
 	if opts.DeduplicateExact || opts.DeduplicateNormalized {
-		out, dropped = deduplicate(out, opts.DeduplicateNormalized, &bag)
+		out, dropped = deduplicate(out, opts, &bag)
 	}
 	sort.Slice(dropped, func(i, j int) bool { return dropped[i].ID < dropped[j].ID })
 	return Result{Project: out, Dropped: dropped, Diagnostics: bag.Items()}
 }
 
-// deduplicate removes entities whose agent-facing content and activation are
-// identical to an earlier entity. The entity with the lexicographically
-// smallest ID is kept, so the result does not depend on input order.
-func deduplicate(p canonical.Project, normalize bool, bag *diagnostics.Bag) (canonical.Project, []Dropped) {
+// deduplicate considers only active, agent-facing entities without extensions,
+// profile-sensitive IDs or on-demand delivery (whose name can depend on the
+// entity's identity). It compares content, activation and canonical metadata;
+// uncertain candidates remain for the exporter to resolve independently.
+// The lexicographically smallest eligible ID is kept, independent of input order.
+func deduplicate(p canonical.Project, opts Options, bag *diagnostics.Bag) (canonical.Project, []Dropped) {
 	var dropped []Dropped
 
 	docs := append([]canonical.ContextDocument{}, p.ContextDocuments...)
@@ -72,13 +79,17 @@ func deduplicate(p canonical.Project, normalize bool, bag *diagnostics.Bag) (can
 	seen := map[string]string{}
 	keptDocs := docs[:0:0]
 	for _, d := range docs {
-		key := dedupeKey(d.Content, d.Activation, normalize)
+		if !documentCandidate(d, opts.PreserveEntityIDs) {
+			keptDocs = append(keptDocs, d)
+			continue
+		}
+		key := documentDedupeKey(d, opts.DeduplicateNormalized)
 		if prev, ok := seen[key]; ok {
 			dropped = append(dropped, Dropped{
 				ID: d.ID, Type: canonical.EntityContext, KeptID: prev,
 				Reason: fmt.Sprintf("identical content and activation to %s", prev),
 			})
-			bag.Add(duplicateDiag(d.ID, prev, d.Provenance.SourcePath, normalize))
+			bag.Add(duplicateDiag(d.ID, prev, d.Provenance.SourcePath, opts.DeduplicateNormalized))
 			continue
 		}
 		seen[key] = d.ID
@@ -91,13 +102,17 @@ func deduplicate(p canonical.Project, normalize bool, bag *diagnostics.Bag) (can
 	seenRules := map[string]string{}
 	keptRules := rules[:0:0]
 	for _, r := range rules {
-		key := dedupeKey(string(r.Priority)+"\x00"+r.Instruction, r.Activation, normalize)
+		if !ruleCandidate(r, opts.PreserveEntityIDs) {
+			keptRules = append(keptRules, r)
+			continue
+		}
+		key := ruleDedupeKey(r, opts.DeduplicateNormalized)
 		if prev, ok := seenRules[key]; ok {
 			dropped = append(dropped, Dropped{
 				ID: r.ID, Type: canonical.EntityRule, KeptID: prev,
 				Reason: fmt.Sprintf("identical instruction, priority and activation to %s", prev),
 			})
-			bag.Add(duplicateDiag(r.ID, prev, r.Provenance.SourcePath, normalize))
+			bag.Add(duplicateDiag(r.ID, prev, r.Provenance.SourcePath, opts.DeduplicateNormalized))
 			continue
 		}
 		seenRules[key] = r.ID
@@ -106,6 +121,23 @@ func deduplicate(p canonical.Project, normalize bool, bag *diagnostics.Bag) (can
 	p.Rules = keptRules
 
 	return p, dropped
+}
+
+func documentCandidate(d canonical.ContextDocument, preserve map[string]struct{}) bool {
+	if _, ok := preserve[d.ID]; ok {
+		return false
+	}
+	return canonical.IsEnabled(d.Enabled) && d.Audience != canonical.AudienceHuman &&
+		d.Activation.AgentFacing() && d.Activation.Type != canonical.ActivationOnDemand &&
+		len(d.Extensions) == 0
+}
+
+func ruleCandidate(r canonical.Rule, preserve map[string]struct{}) bool {
+	if _, ok := preserve[r.ID]; ok {
+		return false
+	}
+	return r.Enabled && r.Activation.AgentFacing() &&
+		r.Activation.Type != canonical.ActivationOnDemand && len(r.Extensions) == 0
 }
 
 func duplicateDiag(id, kept, path string, normalized bool) diagnostics.Diagnostic {
@@ -121,14 +153,38 @@ func duplicateDiag(id, kept, path string, normalized bool) diagnostics.Diagnosti
 		WithBlocking(false)
 }
 
-func dedupeKey(content string, a canonical.Activation, normalize bool) string {
+func documentDedupeKey(d canonical.ContextDocument, normalize bool) string {
+	return dedupeKey(d.Content, d.Activation, normalize, string(d.Kind), string(d.Audience))
+}
+
+func ruleDedupeKey(r canonical.Rule, normalize bool) string {
+	return dedupeKey(r.Instruction, r.Activation, normalize, string(r.Priority))
+}
+
+func dedupeKey(content string, a canonical.Activation, normalize bool, metadata ...string) string {
 	if normalize {
 		content = NormalizeWhitespace(content)
 	}
-	scope := string(a.Type) + "|" +
-		strings.Join(sortedCopy(a.Include), ",") + "|" +
-		strings.Join(sortedCopy(a.Exclude), ",") + "|" + a.Trigger
-	return scope + "\x00" + content
+	var key []byte
+	appendPart := func(value string) {
+		key = strconv.AppendInt(key, int64(len(value)), 10)
+		key = append(key, ':')
+		key = append(key, value...)
+	}
+	for _, value := range metadata {
+		appendPart(value)
+	}
+	appendPart(string(a.Type))
+	for _, patterns := range [][]string{sortedCopy(a.Include), sortedCopy(a.Exclude)} {
+		appendPart(strconv.Itoa(len(patterns)))
+		for _, pattern := range patterns {
+			appendPart(pattern)
+		}
+	}
+	appendPart(a.Trigger)
+	appendPart(a.InvocationName)
+	appendPart(content)
+	return string(key)
 }
 
 func sortedCopy(in []string) []string {

@@ -67,6 +67,204 @@ func TestNormalizedDeduplication(t *testing.T) {
 	}
 }
 
+func TestDeduplicateRequiresProjectionEquivalence(t *testing.T) {
+	falseValue := false
+	baseDoc := canonical.ContextDocument{
+		Title: "Guide", Kind: canonical.KindConventions, Content: "Keep this guidance.",
+		Audience: canonical.AudienceAgent, Activation: canonical.Always(),
+	}
+	baseRule := canonical.Rule{
+		Title: "Rule", Instruction: "Keep this instruction.", Priority: canonical.PriorityMust,
+		Enabled: true, Activation: canonical.Always(),
+	}
+
+	tests := []struct {
+		name     string
+		project  func() canonical.Project
+		options  Options
+		wantDocs int
+		wantRule int
+	}{
+		{
+			name: "document nil enablement equals true",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseDoc, baseDoc
+				a.ID, b.ID = "context.a", "context.b"
+				enabled := true
+				b.Enabled = &enabled
+				p.ContextDocuments = []canonical.ContextDocument{a, b}
+				return p
+			},
+			options: DefaultOptions(), wantDocs: 1,
+		},
+		{
+			name: "document disabled differs from default",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseDoc, baseDoc
+				a.ID, b.ID = "context.a", "context.b"
+				a.Enabled = &falseValue
+				p.ContextDocuments = []canonical.ContextDocument{a, b}
+				return p
+			},
+			options: DefaultOptions(), wantDocs: 2,
+		},
+		{
+			name: "document audience differs",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseDoc, baseDoc
+				a.ID, b.ID = "context.a", "context.b"
+				a.Audience = canonical.AudienceHuman
+				p.ContextDocuments = []canonical.ContextDocument{a, b}
+				return p
+			},
+			options: DefaultOptions(), wantDocs: 2,
+		},
+		{
+			name: "document extension is uncertain",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseDoc, baseDoc
+				a.ID, b.ID = "context.a", "context.b"
+				a.Extensions = canonical.Extensions{"future": {"mode": "one"}}
+				b.Extensions = canonical.Extensions{"future": {"mode": "two"}}
+				p.ContextDocuments = []canonical.ContextDocument{a, b}
+				return p
+			},
+			options: DefaultOptions(), wantDocs: 2,
+		},
+		{
+			name: "rule enabled differs",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseRule, baseRule
+				a.ID, b.ID = "rule.a", "rule.b"
+				a.Enabled = false
+				p.Rules = []canonical.Rule{a, b}
+				return p
+			},
+			options: DefaultOptions(), wantRule: 2,
+		},
+		{
+			name: "rule extension is uncertain",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseRule, baseRule
+				a.ID, b.ID = "rule.a", "rule.b"
+				a.Extensions = canonical.Extensions{"future": {"mode": "one"}}
+				b.Extensions = canonical.Extensions{"future": {"mode": "two"}}
+				p.Rules = []canonical.Rule{a, b}
+				return p
+			},
+			options: DefaultOptions(), wantRule: 2,
+		},
+		{
+			name: "profile-sensitive rule is preserved",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseRule, baseRule
+				a.ID, b.ID = "rule.a", "rule.b"
+				p.Rules = []canonical.Rule{a, b}
+				return p
+			},
+			options: Options{
+				DeduplicateExact: true, DeduplicateNormalized: true,
+				PreserveEntityIDs: map[string]struct{}{"rule.a": {}},
+			},
+			wantRule: 2,
+		},
+		{
+			name: "on-demand rules are preserved",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseRule, baseRule
+				a.ID, b.ID = "rule.a", "rule.b"
+				a.Activation = canonical.OnDemand("review", "")
+				b.Activation = canonical.OnDemand("review", "")
+				p.Rules = []canonical.Rule{a, b}
+				return p
+			},
+			options: DefaultOptions(), wantRule: 2,
+		},
+		{
+			name: "different invocation names are preserved",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseRule, baseRule
+				a.ID, b.ID = "rule.a", "rule.b"
+				a.Activation = canonical.OnDemand("review", "first")
+				b.Activation = canonical.OnDemand("review", "second")
+				p.Rules = []canonical.Rule{a, b}
+				return p
+			},
+			options: DefaultOptions(), wantRule: 2,
+		},
+		{
+			name: "scope fields cannot collide through delimiters",
+			project: func() canonical.Project {
+				p := canonical.NewProject("prj", "x")
+				a, b := baseRule, baseRule
+				a.ID, b.ID = "rule.a", "rule.b"
+				a.Activation = canonical.PathScoped([]string{"a,b"}, nil)
+				b.Activation = canonical.PathScoped([]string{"a", "b"}, nil)
+				p.Rules = []canonical.Rule{a, b}
+				return p
+			},
+			options: DefaultOptions(), wantRule: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			project := tt.project()
+			before, err := canonical.MarshalProject(project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			preservedBefore := copyIDSet(tt.options.PreserveEntityIDs)
+			result := Run(project, tt.options)
+			if got := len(result.Project.ContextDocuments); got != tt.wantDocs {
+				t.Errorf("documents = %d, want %d", got, tt.wantDocs)
+			}
+			if got := len(result.Project.Rules); got != tt.wantRule {
+				t.Errorf("rules = %d, want %d", got, tt.wantRule)
+			}
+			after, err := canonical.MarshalProject(project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(after) != string(before) {
+				t.Fatal("optimizer mutated its canonical input")
+			}
+			if !equalIDSets(tt.options.PreserveEntityIDs, preservedBefore) {
+				t.Fatal("optimizer mutated PreserveEntityIDs")
+			}
+		})
+	}
+}
+
+func copyIDSet(in map[string]struct{}) map[string]struct{} {
+	out := make(map[string]struct{}, len(in))
+	for id := range in {
+		out[id] = struct{}{}
+	}
+	return out
+}
+
+func equalIDSets(a, b map[string]struct{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for id := range a {
+		if _, ok := b[id]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func TestOptimizerIsOrderIndependent(t *testing.T) {
 	p := canonical.NewProject("prj", "x")
 	mk := func(id, text string) canonical.Rule {
