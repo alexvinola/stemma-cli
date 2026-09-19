@@ -146,6 +146,12 @@ go install github.com/alexvinola/stemma-cli/cmd/stemma@latest
 Builds for macOS, Linux and Windows on amd64 and arm64. Single static binary,
 no runtime, no cgo.
 
+The download links above resolve to the latest stable versioned GitHub release.
+The CI workflow's rolling build from the tip of `master` is currently disabled,
+so a push to `master` does not publish or replace release binaries. Maintainers
+should use the [release checklist](docs/releases/README.md) to keep this wording
+and the workflow in sync.
+
 ---
 
 ## Quick start
@@ -213,7 +219,7 @@ token.
 Preview, then write:
 
 ```bash
-stemma plan --target claude     # read-only
+stemma plan --target claude     # read-only unless --output-plan saves the plan
 stemma apply --all --yes
 ```
 
@@ -251,7 +257,7 @@ this tool would need a language model, and not needing one is the point.
 | `stemma scan` | Detects supported agent configuration | no |
 | `stemma import --from X` | Imports one provider into the canonical project | yes |
 | `stemma validate` | Validates project, profiles and manifest | no |
-| `stemma plan --target T` / `--all` | Compiles and classifies every file change | no |
+| `stemma plan --target T` / `--all` | Compiles and classifies every file change | only a plan file with `--output-plan` |
 | `stemma apply --target T` / `--all` | Applies a plan transactionally | yes |
 | `stemma check --all` | Fails when generated output is stale (CI) | no |
 | `stemma explain ID --target T` | Explains one entity's projection | no |
@@ -331,6 +337,7 @@ execution, source-code analysis, automatic deletion of your files.
 | [round-trip.md](docs/round-trip.md) | What survives a conversion, and what does not |
 | [diagnostics.md](docs/diagnostics.md) | Every diagnostic code and exit code |
 | [security.md](docs/security.md) | Threat model |
+| [releases/README.md](docs/releases/README.md) | Release automation state and maintainer checklist |
 
 ## Development
 

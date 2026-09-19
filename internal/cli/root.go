@@ -26,7 +26,7 @@ Commands:
   scan        Detect supported agent configuration (read-only)
   import      Import provider configuration into the canonical project
   validate    Validate the canonical project, profiles and manifest
-  plan        Compile a target and show what would change (read-only)
+  plan        Compile a target and show what would change (read-only unless --output-plan)
   apply       Apply a reviewed plan transactionally
   check       Verify that generated output is up to date (for CI)
   explain     Explain how one entity maps to a target

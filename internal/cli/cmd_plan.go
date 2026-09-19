@@ -49,6 +49,7 @@ func runPlan(ctx context.Context, env Env, args []string) int {
 		ws = planWS
 	}
 	plan := plans[0]
+	savedPlanPath := ""
 
 	if *outputPlan != "" {
 		path, perr := workspace.NormalizeRel(*outputPlan)
@@ -66,6 +67,7 @@ func runPlan(ctx context.Context, env Env, args []string) int {
 		if cerr := tx.Commit(); cerr != nil {
 			return fail(env, "plan", *jsonOut, ExitWriteFailed, cerr, nil)
 		}
+		savedPlanPath = path
 	}
 
 	exit := ExitOK
@@ -94,14 +96,25 @@ func runPlan(ctx context.Context, env Env, args []string) int {
 		}
 		printPlan(env, p, *showUnchanged, *explain)
 	}
-	if *outputPlan != "" {
-		fmt.Fprintf(env.Stdout, "\nPlan written to %s\n", *outputPlan)
+	blocking := diagnostics.HasBlocking(allDiags)
+	if savedPlanPath != "" {
+		fmt.Fprintf(env.Stdout, "\nPlan file written transactionally: %s\n", SanitizeLine(savedPlanPath))
+		fmt.Fprintln(env.Stdout, "No generated target changes were applied.")
+		if blocking {
+			fmt.Fprintln(env.Stdout, "Blocking diagnostics prevent the saved plan from being applied.")
+		} else {
+			fmt.Fprintln(env.Stdout, "Review it, then apply it with `stemma apply --plan <path>`.")
+		}
+		return exit
 	}
-	if len(plans) == 1 {
-		fmt.Fprintf(env.Stdout, "\nNothing was modified. Run `stemma apply --target %s` to write these changes.\n",
-			plan.Target)
+
+	fmt.Fprint(env.Stdout, "\nNothing was modified.")
+	if blocking {
+		fmt.Fprintln(env.Stdout, " Blocking diagnostics prevent this plan from being applied.")
+	} else if len(plans) == 1 {
+		fmt.Fprintf(env.Stdout, " Run `stemma apply --target %s` to write these changes.\n", plan.Target)
 	} else {
-		fmt.Fprintf(env.Stdout, "\nNothing was modified. Run `stemma apply --all` to write these changes.\n")
+		fmt.Fprintln(env.Stdout, " Run `stemma apply --all` to write these changes.")
 	}
 	return exit
 }
