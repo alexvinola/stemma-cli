@@ -109,7 +109,18 @@ func Compile(ctx context.Context, project canonical.Project, opts CompileOptions
 			WithSuggestion("Add %q to \"targets\" in .stemma/project.json.", opts.Target))
 	}
 
-	opt := optimizer.Run(project, opts.Optimizer)
+	optimization := opts.Optimizer
+	if len(opts.Profile.Overrides) > 0 {
+		preserve := make(map[string]struct{}, len(optimization.PreserveEntityIDs)+len(opts.Profile.Overrides))
+		for id := range optimization.PreserveEntityIDs {
+			preserve[id] = struct{}{}
+		}
+		for id := range opts.Profile.Overrides {
+			preserve[id] = struct{}{}
+		}
+		optimization.PreserveEntityIDs = preserve
+	}
+	opt := optimizer.Run(project, optimization)
 	bag.Extend(opt.Diagnostics)
 
 	tokens := tokenestimate.NewBuilder(opts.Estimator)
