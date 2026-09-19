@@ -41,8 +41,10 @@ that paths like `main.go` or `package.json` never classify.
 - `.stemma/recovery/` (mode 0700, files 0600) only when a rollback could not
   complete.
 
-Nothing else, ever, and nothing at all under `scan`, `plan`, `check` or
-`explain`.
+Nothing else, ever. `scan`, `check` and `explain` write nothing. `plan` also
+writes nothing unless `--output-plan` is given; that option writes only the
+requested plan file through the same transactional workspace writer and does
+not apply generated target changes.
 
 ## Saved plans are untrusted input
 

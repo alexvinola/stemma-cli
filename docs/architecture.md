@@ -70,10 +70,14 @@ existing file bytes for byte-identical reuse — is passed in through
 `CompileOptions.Originals`.
 
 `BuildPlan` adds reading (hashing destinations, loading originals). `Apply` is
-the only function that writes, and it writes through `workspace.Transaction`.
+the only compiler function that writes generated target files, and it writes
+through `workspace.Transaction`.
 
-This split is what makes the compiler testable without a filesystem and what
-guarantees that `plan`, `scan`, `check` and `explain` cannot modify anything.
+This split is what makes the compiler testable without a filesystem. `scan`,
+`check`, `explain` and `plan` without `--output-plan` do not write. The CLI's
+`plan --output-plan PATH` option is the narrow exception: after building the
+plan, it writes that one plan file through `workspace.Transaction`. It does not
+apply any generated target changes.
 
 ## Canonical IR
 
