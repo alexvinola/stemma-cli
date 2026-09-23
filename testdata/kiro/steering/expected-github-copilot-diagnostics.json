@@ -21,6 +21,18 @@
     "fingerprint": "dg_14239299d6bd8bbe"
   },
   {
+    "code": "STEMMA3801_EXTENSION_NOT_PROJECTED",
+    "severity": "warning",
+    "summary": "kiro field \"resources\" is not written for github-copilot",
+    "detail": "agent.reviewer declares extensions.kiro.resources (context: files, skills and knowledge bases loaded for the agent). It was imported from .kiro/agents/reviewer.json. The github-copilot output has no place for it, so the field stays in the canonical project but does not reach the generated files.",
+    "entityId": "agent.reviewer",
+    "target": "github-copilot",
+    "field": "extensions.kiro.resources",
+    "suggestion": "Check whether github-copilot needs an equivalent setting; once reviewed, accept this diagnostic in the github-copilot profile.",
+    "blocking": false,
+    "fingerprint": "dg_1c2977a0ed94c9db"
+  },
+  {
     "code": "STEMMA3402_ON_DEMAND_ADAPTED",
     "severity": "info",
     "summary": "on-demand content is delivered as a Copilot prompt file",

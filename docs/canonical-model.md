@@ -248,7 +248,32 @@ different provider.
 Unrecognised front matter keys and provider-specific values are preserved under
 `extensions.<provider>.<key>` rather than dropped. This is the only place in a
 semantic entity where provider-specific schema keys belong. When exporting back
-to the same provider they are re-emitted.
+to the same provider they are re-emitted, including when the file is
+regenerated rather than reused byte for byte.
+
+Another provider cannot write them, and what that costs depends on what the key
+does. Every key is classified per provider in `internal/capabilities`, with the
+official documentation it was checked against:
+
+| Kind | Examples | Losing it |
+| --- | --- | --- |
+| `presentation` | Kiro `welcomeMessage`, Claude `color`, skill `license`; keys that mirror a canonical field, such as Kiro steering `inclusion` | Silent; the mapping outcome is unchanged |
+| `context` | Kiro agent `resources`, Claude subagent `skills` | `lossy`, warning `STEMMA3801` naming the field |
+| `behaviour` | Copilot `excludeAgent`, prompt `model`, Kiro `toolAliases` | `lossy`, warning `STEMMA3801` naming the field |
+| `security` | Kiro `allowedTools`/`permissions`/`hooks`/`mcpServers`, Claude `permissionMode`/`disallowedTools` | `lossy`, blocking error `STEMMA3802` until its fingerprint is accepted in the target profile |
+
+A key the table does not list is treated as `behaviour`: Stemma cannot tell
+whether an unknown field changes what the agent does, so its loss is never
+silent. The explanation of the mapping lists every reported field.
+
+A field is promoted into the canonical model only when it is genuinely
+interoperable across providers; tool lists and model preferences already are
+(`tools`, `allowedTools`, `modelPreference`). The classified keys above stay
+extensions because no other provider has an equivalent with the same meaning.
+
+Provider-specific values at the project level — front matter on `CLAUDE.md`,
+`.github/copilot-instructions.md` or `AGENTS.md` — are not attached to an entity
+and are not yet part of this classification.
 
 Keys starting with `stemma.` are reserved. They are Stemma's own round-trip
 hints — the original file name of a rule, the directory name of a skill, which

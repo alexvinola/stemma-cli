@@ -7,7 +7,7 @@
       ".claude/agents/agent-reviewer.md"
     ],
     "activation": "on demand (reviewer)",
-    "explanation": "claude supports specialist agents, but the declared tool names come from kiro and are not verified against this provider."
+    "explanation": "claude supports specialist agents, but the declared tool names come from kiro and are not verified against this provider. Provider-specific fields not written for claude: kiro.resources (context)."
   },
   {
     "entityId": "context.api-conventions",

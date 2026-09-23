@@ -103,7 +103,8 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"has no negative pattern syntax, so canonical exclude patterns cannot be represented. " +
 			"Copilot also reads AGENTS.md and CLAUDE.md; Stemma never writes those files for this " +
 			"target, to avoid two targets owning one file. Unknown keys such as excludeAgent are " +
-			"preserved as provider extensions rather than interpreted. Recognized front matter fields " +
+			"preserved as provider extensions rather than interpreted, and written back when a Copilot " +
+			"file is regenerated. Recognized front matter fields " +
 			"are checked without type coercion; wrong types block import and preserve the file verbatim.",
 		Sources: []Source{
 			{Title: "Agent Skills specification (directory and name constraints)", URL: "https://agentskills.io/specification", LastVerified: "2026-09-06"},
@@ -121,6 +122,11 @@ var table = map[canonical.TargetFormat]Capabilities{
 				Title:        "Custom agents configuration",
 				URL:          "https://docs.github.com/en/copilot/reference/custom-agents-configuration",
 				LastVerified: "2026-09-06",
+			},
+			{
+				Title:        "Prompt files in VS Code (GitHub Copilot)",
+				URL:          "https://code.visualstudio.com/docs/copilot/customization/prompt-files",
+				LastVerified: "2026-09-23",
 			},
 		},
 	},

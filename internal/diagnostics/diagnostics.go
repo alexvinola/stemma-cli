@@ -85,6 +85,13 @@ const (
 	OpaqueNotReemitted     Code = "STEMMA3501_OPAQUE_BLOCK_NOT_REEMITTED"
 	TargetOverridesContent Code = "STEMMA3601_TARGET_CONTENT_OVERRIDDEN"
 	RegeneratedFile        Code = "STEMMA3701_FILE_REGENERATED"
+	// ExtensionNotProjected: a context, behaviour or unclassified provider
+	// extension field was not written for the target (warning).
+	ExtensionNotProjected Code = "STEMMA3801_EXTENSION_NOT_PROJECTED"
+	// SecurityExtensionNotProjected: a security provider extension field
+	// (permissions, tool allowlists, hooks, MCP servers) was not written for
+	// the target (error; accept its fingerprint in the target profile).
+	SecurityExtensionNotProjected Code = "STEMMA3802_SECURITY_EXTENSION_NOT_PROJECTED"
 
 	// 4xxx: filesystem and transactions.
 	PathEscape                Code = "STEMMA4001_PATH_ESCAPE"
@@ -115,17 +122,21 @@ type Position struct {
 
 // Diagnostic is a single structured message.
 type Diagnostic struct {
-	Code        Code     `json:"code"`
-	Severity    Severity `json:"severity"`
-	Summary     string   `json:"summary"`
-	Detail      string   `json:"detail,omitempty"`
-	Path        string   `json:"path,omitempty"`
-	Position    Position `json:"position,omitzero"`
-	EntityID    string   `json:"entityId,omitempty"`
-	Target      string   `json:"target,omitempty"`
-	Suggestion  string   `json:"suggestion,omitempty"`
-	Blocking    bool     `json:"blocking"`
-	Fingerprint string   `json:"fingerprint"`
+	Code     Code     `json:"code"`
+	Severity Severity `json:"severity"`
+	Summary  string   `json:"summary"`
+	Detail   string   `json:"detail,omitempty"`
+	Path     string   `json:"path,omitempty"`
+	Position Position `json:"position,omitzero"`
+	EntityID string   `json:"entityId,omitempty"`
+	Target   string   `json:"target,omitempty"`
+	// Field names the specific field a diagnostic is about, when one entity
+	// can produce several diagnostics with the same code for one target, for
+	// example "extensions.kiro.allowedTools".
+	Field       string `json:"field,omitempty"`
+	Suggestion  string `json:"suggestion,omitempty"`
+	Blocking    bool   `json:"blocking"`
+	Fingerprint string `json:"fingerprint"`
 }
 
 // New builds a diagnostic and computes its stable fingerprint.
@@ -164,6 +175,13 @@ func (d Diagnostic) WithTarget(target string) Diagnostic {
 	return d
 }
 
+// WithField returns a copy anchored to a specific field of the entity.
+func (d Diagnostic) WithField(field string) Diagnostic {
+	d.Field = field
+	d.Fingerprint = d.computeFingerprint()
+	return d
+}
+
 // WithDetail returns a copy carrying a longer explanation.
 func (d Diagnostic) WithDetail(format string, args ...any) Diagnostic {
 	d.Detail = fmt.Sprintf(format, args...)
@@ -189,16 +207,21 @@ func (d Diagnostic) WithBlocking(blocking bool) Diagnostic {
 //
 // The fingerprint intentionally excludes free-form human prose (summary,
 // detail, suggestion) so that improving a message does not invalidate a
-// previously accepted diagnostic.
+// previously accepted diagnostic. Field is only hashed when set, so every
+// diagnostic without one keeps the fingerprint it had before fields existed.
 func (d Diagnostic) computeFingerprint() string {
 	h := sha256.New()
-	for _, part := range []string{
+	parts := []string{
 		string(d.Code),
 		string(d.Severity),
 		d.Path,
 		d.EntityID,
 		d.Target,
-	} {
+	}
+	if d.Field != "" {
+		parts = append(parts, d.Field)
+	}
+	for _, part := range parts {
 		h.Write([]byte(part))
 		h.Write([]byte{0})
 	}
@@ -249,7 +272,7 @@ func dedupe(in []Diagnostic) []Diagnostic {
 	seen := make(map[string]struct{}, len(in))
 	for _, d := range in {
 		key := strings.Join([]string{
-			string(d.Code), d.Path, d.EntityID, d.Target, d.Summary, d.Detail,
+			string(d.Code), d.Path, d.EntityID, d.Target, d.Field, d.Summary, d.Detail,
 			fmt.Sprintf("%d:%d", d.Position.Line, d.Position.Column),
 		}, "\x00")
 		if _, ok := seen[key]; ok {
@@ -262,7 +285,7 @@ func dedupe(in []Diagnostic) []Diagnostic {
 }
 
 // Sort orders diagnostics deterministically: severity, then code, then path,
-// then position, then entity, then target, then summary.
+// then position, then entity, then target, then field, then summary.
 func Sort(ds []Diagnostic) {
 	sort.SliceStable(ds, func(i, j int) bool {
 		a, b := ds[i], ds[j]
@@ -286,6 +309,9 @@ func Sort(ds []Diagnostic) {
 		}
 		if a.Target != b.Target {
 			return a.Target < b.Target
+		}
+		if a.Field != b.Field {
+			return a.Field < b.Field
 		}
 		return a.Summary < b.Summary
 	})

@@ -102,7 +102,16 @@ of agent-facing text from the first project is still present.
 Being explicit about this matters more than pretending it is lossless:
 
 - **Provider extensions** of the original provider are kept in the canonical
-  model but are not written into a different provider's files.
+  model but are not written into a different provider's files. This is no
+  longer a silent omission: each extension key is classified (presentation,
+  context, behaviour or security) and only presentation fields may disappear
+  without a diagnostic. Losing a context, behaviour or unclassified field makes
+  the mapping `lossy` with `STEMMA3801`; losing a security field such as a Kiro
+  `allowedTools` list or a Claude `permissionMode` makes it `lossy` with a
+  blocking `STEMMA3802` that must be accepted by fingerprint in the target
+  profile. A regenerated file of the *same* provider writes its extensions
+  back; if an exporter ever fails to, the same diagnostics report it. See
+  [provider extension classification](provider-compatibility.md#provider-extension-classification).
 - **Entity ids and file names** are re-derived from titles in the target
   layout, so a Copilot instructions file called `api.instructions.md` may come
   back as a Claude rule named after its description.

@@ -7,7 +7,7 @@
       "AGENTS.md"
     ],
     "activation": "always-on",
-    "explanation": "Flattened into always-on guidance because this target has no specialist-agent format."
+    "explanation": "Flattened into always-on guidance because this target has no specialist-agent format. Provider-specific fields not written for codex: kiro.resources (context)."
   },
   {
     "entityId": "context.api-conventions",

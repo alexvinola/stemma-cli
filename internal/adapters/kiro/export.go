@@ -117,7 +117,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			fileName = v
 		}
 		dest := b.Path(res, AgentsDir, fileName)
-		content, err := renderAgent(agent, res.Content)
+		content, written, err := renderAgent(agent, res.Content)
 		if err != nil {
 			b.Diag(diagnostics.New(diagnostics.InternalInvariant, diagnostics.SeverityError,
 				"the agent definition could not be encoded as JSON").
@@ -125,6 +125,9 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Record(agent.ID, canonical.EntityAgent, adapters.OutcomeBlocked, res, agent.Provenance,
 				nil, "The agent could not be encoded as a Kiro agent definition.")
 			continue
+		}
+		for _, key := range written {
+			b.MarkExtensionProjected(agent.ID, key)
 		}
 		b.Emit(dest, content, []string{agent.ID})
 		outcome, explanation, diagIDs := adapters.AgentOutcome(agent, canonical.TargetKiro, b, res)
@@ -215,7 +218,7 @@ func exportSteering(
 		res.Activation.Type != canonical.ActivationOnDemand && desc != "" {
 		entries = append(entries, adapters.KV{Key: "description", Value: desc})
 	}
-	entries = append(entries, adapters.ExtensionEntries(ext, string(canonical.TargetKiro),
+	entries = append(entries, b.ExtensionEntries(id, ext,
 		"inclusion", "fileMatchPattern", "description", "name")...)
 
 	b.Emit(dest, adapters.RenderFrontMatter(entries)+md.String(), []string{id})
@@ -250,7 +253,7 @@ func writeSkill(
 	if len(tools) > 0 {
 		entries = append(entries, adapters.KV{Key: "allowed-tools", Value: tools})
 	}
-	entries = append(entries, adapters.ExtensionEntries(ext, string(canonical.TargetKiro),
+	entries = append(entries, b.ExtensionEntries(id, ext,
 		"name", "description", "allowed-tools")...)
 	var md adapters.Markdown
 	md.Heading(1, name)
@@ -260,8 +263,9 @@ func writeSkill(
 }
 
 // renderAgent encodes a canonical agent as a Kiro agent definition. Keys are
-// sorted by encoding/json, so output is deterministic.
-func renderAgent(agent canonical.Agent, instructions string) (string, error) {
+// sorted by encoding/json, so output is deterministic. It also returns the
+// Kiro extension keys it wrote; one shadowed by a modelled field is not.
+func renderAgent(agent canonical.Agent, instructions string) (string, []string, error) {
 	out := map[string]any{
 		"name": agent.Name,
 	}
@@ -279,6 +283,7 @@ func renderAgent(agent canonical.Agent, instructions string) (string, error) {
 	if agent.ModelPreference != "" {
 		out["model"] = agent.ModelPreference
 	}
+	var written []string
 	if ext, ok := agent.Extensions[string(canonical.TargetKiro)]; ok {
 		keys := make([]string, 0, len(ext))
 		for k := range ext {
@@ -293,6 +298,7 @@ func renderAgent(agent canonical.Agent, instructions string) (string, error) {
 				continue
 			}
 			out[k] = ext[k]
+			written = append(written, k)
 		}
 	}
 	var buf bytes.Buffer
@@ -300,9 +306,9 @@ func renderAgent(agent canonical.Agent, instructions string) (string, error) {
 	enc.SetIndent("", "  ")
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(out); err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return buf.String(), nil
+	return buf.String(), written, nil
 }
 
 func safeName(name string) bool {
