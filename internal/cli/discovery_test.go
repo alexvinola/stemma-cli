@@ -2,6 +2,8 @@ package cli_test
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -98,5 +100,32 @@ func TestScanNamesProvidersThatAlsoReadAFile(t *testing.T) {
 	}
 	if strings.Contains(res.stdout, "INCOMPLETE") {
 		t.Errorf("a complete scan must not be reported as incomplete:\n%s", res.stdout)
+	}
+}
+
+func TestScanAndImportReportUnreadableDirectory(t *testing.T) {
+	h := newHarness(t)
+	h.write("CLAUDE.md", "# Project\n\n## Style\n\nUse tabs.\n")
+	h.write("hidden/CLAUDE.md", "# Hidden\n")
+	hidden := filepath.Join(h.root, "hidden")
+	if err := os.Chmod(hidden, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(hidden, 0o755) })
+	if _, err := os.ReadDir(hidden); err == nil {
+		t.Skip("directory permissions are not enforced for this user")
+	}
+	res := h.run("scan")
+	for _, want := range []string{"Scan INCOMPLETE: 1 unreadable directory", "STEMMA1305_DIRECTORY_UNREADABLE"} {
+		if !strings.Contains(res.stdout, want) {
+			t.Errorf("scan output lacks %q:\n%s", want, res.stdout)
+		}
+	}
+	res = h.run("import")
+	if res.code != cli.ExitDiagnostics || !strings.Contains(res.stderr, "STEMMA1303_DISCOVERY_INCOMPLETE") {
+		t.Errorf("import exit = %d, stderr:\n%s", res.code, res.stderr)
+	}
+	if h.exists(".stemma/project.json") {
+		t.Error("a refused import wrote the project")
 	}
 }

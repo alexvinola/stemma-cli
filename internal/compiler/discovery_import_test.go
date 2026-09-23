@@ -256,3 +256,45 @@ func TestClaudeNestedDirectoryHintFallsBackToRules(t *testing.T) {
 		})
 	}
 }
+
+// A directory that cannot be read hides whatever configuration it holds, so
+// it makes discovery incomplete exactly like a resource limit.
+func TestUnreadableDirectoryBlocksImportUnlessAllowed(t *testing.T) {
+	ws := workspaceWith(t, workspace.DefaultLimits(), map[string]string{
+		"CLAUDE.md":        "Root instructions.",
+		"hidden/CLAUDE.md": "Hidden instructions.",
+	})
+	hidden, err := ws.Native("hidden")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(hidden, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(hidden, 0o755) })
+	if _, err := os.ReadDir(hidden); err == nil {
+		t.Skip("directory permissions are not enforced for this user")
+	}
+
+	res, err := compiler.Import(context.Background(), ws, compiler.ImportOptions{Format: canonical.TargetClaude})
+	if !errors.Is(err, compiler.ErrIncompleteScan) {
+		t.Fatalf("err = %v, want ErrIncompleteScan; sources = %+v", err, res.Sources)
+	}
+	d, ok := findDiagnostic(res.Diagnostics, diagnostics.DiscoveryIncomplete)
+	if !ok || !d.Blocking || !strings.Contains(d.Detail, "1 unreadable directory") {
+		t.Fatalf("want a blocking STEMMA1303 naming the unreadable directory: %+v", res.Diagnostics)
+	}
+	if u, ok := findDiagnostic(res.Diagnostics, diagnostics.DirectoryUnreadable); !ok || u.Path != "hidden" {
+		t.Errorf("want STEMMA1305 at hidden: %+v", res.Diagnostics)
+	}
+
+	res, err = compiler.Import(context.Background(), ws, compiler.ImportOptions{
+		Format: canonical.TargetClaude, AllowIncompleteScan: true,
+	})
+	if err != nil || diagnostics.HasBlocking(res.Diagnostics) {
+		t.Fatalf("allowed import: %v %+v", err, res.Diagnostics)
+	}
+	if len(res.Sources) != 1 || res.Sources[0].Path != "CLAUDE.md" {
+		t.Errorf("sources = %+v", res.Sources)
+	}
+}

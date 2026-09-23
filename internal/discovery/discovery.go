@@ -66,9 +66,15 @@ type Result struct {
 	SkippedDirs []string    `json:"skippedDirectories"`
 	// LimitsReached names the walk limits that truncated the scan.
 	LimitsReached []string `json:"limitsReached"`
-	// Complete is false when a limit truncated the scan, so configuration
-	// may exist that was never seen. Import refuses an incomplete scan
-	// unless the caller explicitly allows it.
+	// UnreadableDirs lists (bounded, sorted) directories whose entries could
+	// not be read; UnreadableCount counts all of them.
+	UnreadableDirs  []string `json:"unreadableDirectories"`
+	UnreadableCount int      `json:"unreadableDirectoryCount"`
+	// Complete is false when a limit truncated the scan or a directory could
+	// not be read, so configuration may exist that was never seen. It never
+	// covers the fixed skip list or symbolic links, which are not inspected
+	// by design. Import refuses an incomplete scan unless the caller
+	// explicitly allows it.
 	Complete bool `json:"complete"`
 	// FilesVisited counts every regular file inspected, candidates or not.
 	FilesVisited int `json:"filesVisited"`
@@ -225,13 +231,15 @@ func Scan(ctx context.Context, ws *workspace.Workspace) (Result, error) {
 		return Result{}, err
 	}
 	res := Result{
-		SkippedDirs:    walk.SkippedDirs,
-		LimitsReached:  walk.LimitsReached,
-		Complete:       walk.Complete(),
-		FilesVisited:   walk.FilesVisited,
-		EntriesVisited: walk.EntriesVisited,
-		Detections:     []Detection{},
-		Diagnostics:    []diagnostics.Diagnostic{},
+		SkippedDirs:     walk.SkippedDirs,
+		LimitsReached:   walk.LimitsReached,
+		UnreadableDirs:  walk.UnreadableDirs,
+		UnreadableCount: walk.UnreadableCount,
+		Complete:        walk.Complete(),
+		FilesVisited:    walk.FilesVisited,
+		EntriesVisited:  walk.EntriesVisited,
+		Detections:      []Detection{},
+		Diagnostics:     []diagnostics.Diagnostic{},
 	}
 	byFormat := map[canonical.TargetFormat]*Detection{}
 	var bag diagnostics.Bag
@@ -280,6 +288,20 @@ func Scan(ctx context.Context, ws *workspace.Workspace) (Result, error) {
 		}
 		bag.Add(d)
 	}
+	for _, dir := range walk.UnreadableDirs {
+		bag.Add(diagnostics.New(diagnostics.DirectoryUnreadable, diagnostics.SeverityWarning,
+			"a directory could not be read, so configuration inside it was not discovered").
+			WithPath(dir).
+			WithDetail("Stemma could not list this directory's entries, typically because of its " +
+				"permissions. Nothing below it was inspected.").
+			WithSuggestion("Make the directory readable, or move configuration out of it. " +
+				"stemma import refuses an incomplete scan unless --allow-incomplete-scan is given."))
+	}
+	if extra := walk.UnreadableCount - len(walk.UnreadableDirs); extra > 0 {
+		bag.Add(diagnostics.New(diagnostics.DirectoryUnreadable, diagnostics.SeverityWarning,
+			fmt.Sprintf("%d more directories could not be read", extra)).
+			WithDetail("Only the first %d unreadable directories are listed.", workspace.MaxListedUnreadable))
+	}
 	if len(res.Detections) == 0 {
 		bag.Add(diagnostics.New(diagnostics.NoSourcesDetected, diagnostics.SeverityInfo,
 			"no supported agent configuration was detected").
@@ -310,6 +332,21 @@ func depthTruncated(skipped []string, maxDepth int) string {
 	out := strings.Join(names, ", ")
 	if total > len(names) {
 		out += fmt.Sprintf(" and %d more", total-len(names))
+	}
+	return out
+}
+
+// IncompleteReasons describes, deterministically, why the scan is incomplete.
+// It is empty for a complete scan.
+func (r Result) IncompleteReasons() []string {
+	var out []string
+	if len(r.LimitsReached) > 0 {
+		out = append(out, "limits reached: "+strings.Join(r.LimitsReached, ", "))
+	}
+	if r.UnreadableCount == 1 {
+		out = append(out, "1 unreadable directory")
+	} else if r.UnreadableCount > 1 {
+		out = append(out, fmt.Sprintf("%d unreadable directories", r.UnreadableCount))
 	}
 	return out
 }

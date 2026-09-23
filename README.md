@@ -268,8 +268,8 @@ Every command accepts `--json`. Exit codes are stable and documented in
 
 Discovery looks only at registered configuration paths, so source code never
 consumes its budget, but it is still bounded (depth 32, 20 000 configuration
-files, 1 000 000 directory entries). When a limit truncates it, `stemma scan`
-says the scan is incomplete and `stemma import` refuses to import a possible
+files, 1 000 000 directory entries). When a limit truncates it, or a directory
+cannot be read, `stemma scan` says the scan is incomplete and `stemma import` refuses to import a possible
 subset (`STEMMA1303`, exit 1) unless you pass `--allow-incomplete-scan`.
 
 ### In CI

@@ -304,6 +304,10 @@ const (
 	LimitMaxEntries = "max-entries"
 )
 
+// MaxListedUnreadable bounds how many unreadable directories a walk names.
+// Every one is still counted in WalkResult.UnreadableCount.
+const MaxListedUnreadable = 100
+
 // WalkResult reports what a directory walk observed.
 type WalkResult struct {
 	// Files is the sorted list of repository-relative candidate files.
@@ -316,12 +320,21 @@ type WalkResult struct {
 	FilesVisited int
 	// EntriesVisited counts every directory entry inspected.
 	EntriesVisited int
+	// UnreadableDirs lists, sorted, the first MaxListedUnreadable directories
+	// (in walk order) whose entries could not be read. "." is the start
+	// directory itself.
+	UnreadableDirs []string
+	// UnreadableCount counts every directory that could not be read.
+	UnreadableCount int
 }
 
-// Complete reports whether the walk inspected everything it was asked to:
-// no limit truncated it. Deliberately skipped directories (SkippedDirectories)
-// do not make a walk incomplete.
-func (r WalkResult) Complete() bool { return len(r.LimitsReached) == 0 }
+// Complete reports whether the walk inspected every directory it was asked
+// to: no limit truncated it and every directory it entered could be read.
+// Deliberately skipped directories (SkippedDirectories) and symbolic links,
+// which are never followed, do not make a walk incomplete.
+func (r WalkResult) Complete() bool {
+	return len(r.LimitsReached) == 0 && r.UnreadableCount == 0
+}
 
 // Walk visits every non-skipped directory under sub (relative to the root, ""
 // for the whole workspace) and reports every regular file as a candidate.
@@ -357,10 +370,27 @@ func (w *Workspace) WalkFiltered(ctx context.Context, sub string, keep func(rel 
 			return ctxErr
 		}
 		if err != nil {
+			if native == start && d == nil {
+				return err // the start directory itself could not be inspected
+			}
 			if d != nil && d.IsDir() {
+				// The directory was entered but its entries could not be
+				// read: whatever it holds was never inspected.
+				rel := "."
+				if native != start {
+					if r, relErr := w.RelFromNative(native); relErr == nil {
+						rel = r
+					}
+				} else if sub != "" {
+					rel = sub
+				}
+				res.UnreadableCount++
+				if len(res.UnreadableDirs) < MaxListedUnreadable {
+					res.UnreadableDirs = append(res.UnreadableDirs, rel)
+				}
 				return fs.SkipDir
 			}
-			return nil // unreadable entries are reported by the caller, not fatal
+			return nil // a file entry error: files are opened, and checked, only when read
 		}
 		if native != start {
 			if res.EntriesVisited >= w.limits.MaxEntries {
@@ -420,6 +450,7 @@ func (w *Workspace) WalkFiltered(ctx context.Context, sub string, keep func(rel 
 	}
 	sort.Strings(res.Files)
 	sort.Strings(res.SkippedDirs)
+	sort.Strings(res.UnreadableDirs)
 	for k := range limitHit {
 		res.LimitsReached = append(res.LimitsReached, k)
 	}
@@ -432,6 +463,9 @@ func (w *Workspace) WalkFiltered(ctx context.Context, sub string, keep func(rel 
 	}
 	if res.LimitsReached == nil {
 		res.LimitsReached = []string{}
+	}
+	if res.UnreadableDirs == nil {
+		res.UnreadableDirs = []string{}
 	}
 	return res, nil
 }

@@ -31,7 +31,7 @@ func runImport(ctx context.Context, env Env, args []string) int {
 	overwrite := fs.Bool("overwrite", false, "replace an existing canonical project")
 	name := fs.String("name", "", "project name (default: the workspace directory name)")
 	allowIncomplete := fs.Bool("allow-incomplete-scan", false,
-		"import even if discovery stopped at a resource limit (the import may be a subset)")
+		"import even if discovery was incomplete (a limit was reached or a directory was unreadable; the import may be a subset)")
 	var enable stringList
 	fs.Var(&enable, "targets", "targets to enable in the project (repeatable, or comma-separated). "+
 		"Default: the imported format only")

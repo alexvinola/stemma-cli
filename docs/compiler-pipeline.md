@@ -48,8 +48,9 @@ filters by path while it runs: only registered paths count against the
 candidate budget (`MaxFiles`, 20 000), so thousands of source files that sort
 before a configuration file cannot hide it. Every inspected entry counts against
 a separate, larger bound (`MaxEntries`, 1 000 000) that keeps the walk finite,
-and depth is bounded at 32 levels. Hitting any of these makes the scan
-*incomplete*: `scan` reports it and `import` refuses it unless
+and depth is bounded at 32 levels. Hitting any of these, or failing to read a
+directory's entries (`STEMMA1305`), makes the scan *incomplete*: `scan`
+reports it and `import` refuses it unless
 `--allow-incomplete-scan` is given (`STEMMA1303`, see
 [diagnostics](diagnostics.md)). Per-file and total size limits apply when
 registered files are read.

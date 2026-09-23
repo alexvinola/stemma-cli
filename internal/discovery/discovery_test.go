@@ -336,3 +336,39 @@ func FuzzClassify(f *testing.F) {
 		}
 	})
 }
+
+func TestScanReportsUnreadableDirectory(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{"CLAUDE.md": "root", "hidden/CLAUDE.md": "hidden"})
+	hidden := filepath.Join(root, "hidden")
+	if err := os.Chmod(hidden, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(hidden, 0o755) })
+	if _, err := os.ReadDir(hidden); err == nil {
+		t.Skip("directory permissions are not enforced for this user")
+	}
+	ws, err := workspace.Open(root, workspace.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := Scan(context.Background(), ws)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Complete || res.UnreadableCount != 1 || len(res.UnreadableDirs) != 1 || res.UnreadableDirs[0] != "hidden" {
+		t.Fatalf("complete = %v, unreadable = %d %v", res.Complete, res.UnreadableCount, res.UnreadableDirs)
+	}
+	var found bool
+	for _, d := range res.Diagnostics {
+		if d.Code == diagnostics.DirectoryUnreadable {
+			found = d.Path == "hidden" && d.Severity == diagnostics.SeverityWarning
+		}
+	}
+	if !found {
+		t.Errorf("want a STEMMA1305 warning for hidden: %+v", res.Diagnostics)
+	}
+	if got := res.IncompleteReasons(); len(got) != 1 || got[0] != "1 unreadable directory" {
+		t.Errorf("reasons = %v", got)
+	}
+}

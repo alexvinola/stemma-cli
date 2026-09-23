@@ -332,3 +332,46 @@ func TestContextCancellation(t *testing.T) {
 		t.Fatal("expected a cancellation error")
 	}
 }
+
+// makeUnreadable removes every permission from dir for the rest of the test
+// and restores it before cleanup. It skips when permissions are not enforced
+// (for example when running as root, or on Windows).
+func makeUnreadable(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.Chmod(dir, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	if _, err := os.ReadDir(dir); err == nil {
+		t.Skip("directory permissions are not enforced for this user")
+	}
+}
+
+func TestWalkReportsUnreadableDirectories(t *testing.T) {
+	ws := newTestWorkspace(t)
+	write(t, ws, "CLAUDE.md", "root")
+	write(t, ws, "hidden/CLAUDE.md", "hidden")
+	write(t, ws, "open/CLAUDE.md", "open")
+	native, err := ws.Native("hidden")
+	if err != nil {
+		t.Fatal(err)
+	}
+	makeUnreadable(t, native)
+
+	res, err := ws.WalkFiltered(context.Background(), "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Complete() {
+		t.Fatal("a walk that could not read a directory must not be complete")
+	}
+	if res.UnreadableCount != 1 || len(res.UnreadableDirs) != 1 || res.UnreadableDirs[0] != "hidden" {
+		t.Fatalf("unreadable = %d %v, want [hidden]", res.UnreadableCount, res.UnreadableDirs)
+	}
+	if len(res.LimitsReached) != 0 {
+		t.Errorf("limits reached = %v, want none", res.LimitsReached)
+	}
+	if strings.Join(res.Files, ",") != "CLAUDE.md,open/CLAUDE.md" {
+		t.Errorf("files = %v", res.Files)
+	}
+}

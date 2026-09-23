@@ -26,8 +26,9 @@ var ErrNoSources = errors.New("no supported agent configuration found")
 // selected explicitly.
 var ErrAmbiguousSource = errors.New("several agent configurations found")
 
-// ErrIncompleteScan reports that discovery was truncated by a resource limit
-// and the caller did not explicitly accept importing a possible subset.
+// ErrIncompleteScan reports that discovery was truncated, by a resource limit
+// or an unreadable directory, and the caller did not explicitly accept
+// importing a possible subset.
 var ErrIncompleteScan = errors.New("discovery was incomplete")
 
 // ImportOptions configures an import.
@@ -35,8 +36,9 @@ type ImportOptions struct {
 	// Format selects the source provider; empty means auto-detect.
 	Format canonical.TargetFormat
 	// AllowIncompleteScan accepts importing from a scan that a resource limit
-	// truncated. Without it such an import is refused, because configuration
-	// that was never discovered would be silently left out.
+	// or an unreadable directory truncated. Without it such an import is
+	// refused, because configuration that was never discovered would be
+	// silently left out.
 	AllowIncompleteScan bool
 	// ProjectID and ProjectName seed the canonical project. When ProjectID is
 	// empty a deterministic identifier is derived from the workspace name.
@@ -66,21 +68,21 @@ func Import(ctx context.Context, ws *workspace.Workspace, opts ImportOptions) (I
 	bag.Extend(scan.Diagnostics)
 
 	if !scan.Complete {
-		limits := strings.Join(scan.LimitsReached, ", ")
+		limits := strings.Join(scan.IncompleteReasons(), "; ")
 		if opts.AllowIncompleteScan {
 			bag.Add(diagnostics.New(diagnostics.DiscoveryIncomplete, diagnostics.SeverityWarning,
 				"importing from an incomplete scan because it was explicitly allowed").
-				WithDetail("Discovery stopped at a resource limit (%s). Configuration that was not "+
+				WithDetail("Discovery did not inspect the whole workspace (%s). Configuration that was not "+
 					"discovered is not part of this import.", limits))
 		} else {
 			bag.Add(diagnostics.New(diagnostics.DiscoveryIncomplete, diagnostics.SeverityError,
 				"discovery was incomplete, so the import could silently miss configuration").
-				WithDetail("Discovery stopped at a resource limit (%s). Stemma will not import a "+
+				WithDetail("Discovery did not inspect the whole workspace (%s). Stemma will not import a "+
 					"possible subset of the repository's configuration without being told to.", limits).
-				WithSuggestion("Reduce what the scan has to walk, or re-run with --allow-incomplete-scan " +
+				WithSuggestion("Reduce what the scan has to walk or fix unreadable directories, or re-run with --allow-incomplete-scan " +
 					"to import only what was discovered."))
 			return ImportResult{Scan: scan, Diagnostics: bag.Items()},
-				fmt.Errorf("%w: limits reached: %s", ErrIncompleteScan, limits)
+				fmt.Errorf("%w: %s", ErrIncompleteScan, limits)
 		}
 	}
 

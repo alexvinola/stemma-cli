@@ -55,6 +55,7 @@ const (
 	NoSourcesDetected     Code = "STEMMA1302_NO_SOURCES_DETECTED"
 	DiscoveryIncomplete   Code = "STEMMA1303_DISCOVERY_INCOMPLETE"
 	SharedFileNotImported Code = "STEMMA1304_SHARED_FILE_NOT_IMPORTED"
+	DirectoryUnreadable   Code = "STEMMA1305_DIRECTORY_UNREADABLE"
 	MixedLineEndings      Code = "STEMMA1401_MIXED_LINE_ENDINGS"
 	InvalidAgentJSON      Code = "STEMMA1501_INVALID_AGENT_JSON"
 	DuplicateJSONKey      Code = "STEMMA1502_DUPLICATE_JSON_KEY"

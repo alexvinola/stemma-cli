@@ -65,7 +65,7 @@ func runScan(ctx context.Context, env Env, args []string) int {
 		Plural(result.FilesVisited, "file", "files"),
 		Plural(len(result.SkippedDirs), "directory", "directories"))
 	if !result.Complete {
-		fmt.Fprintf(env.Stdout, "Scan INCOMPLETE: limits reached: %s.\n", strings.Join(result.LimitsReached, ", "))
+		fmt.Fprintf(env.Stdout, "Scan INCOMPLETE: %s.\n", strings.Join(result.IncompleteReasons(), "; "))
 		fmt.Fprintf(env.Stdout, "Configuration may exist that was not discovered; "+
 			"stemma import refuses this scan unless --allow-incomplete-scan is given.\n")
 	}
