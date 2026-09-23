@@ -269,9 +269,18 @@ func resolveDirectory(
 	b *adapters.Builder, id string, res adapters.Resolution,
 ) (dir string, outcome adapters.Outcome, explanation string, diagIDs []string) {
 	pinned := res.Directory != ""
-	if pinned {
+	literal := ""
+	if len(res.Activation.Include) == 1 {
+		literal, _ = globs.LiteralSubtreeDir(res.Activation.Include[0])
+	}
+	switch {
+	case pinned:
 		dir = res.Directory
-	} else {
+	case literal != "":
+		// The pattern is exactly one directory's subtree, possibly with
+		// quoted special characters in the directory name ("app/[id]").
+		dir = literal
+	default:
 		derived, ok := globs.DirectoryScope(res.Activation.Include)
 		if !ok {
 			fp := b.Diag(diagnostics.New(diagnostics.DirectoryScopeAmbig, diagnostics.SeverityWarning,
@@ -310,7 +319,7 @@ func resolveDirectory(
 			origin + ", which cannot express the exclude patterns.", []string{fp}
 	}
 
-	if len(res.Activation.Include) == 1 && res.Activation.Include[0] == dir+"/**" {
+	if len(res.Activation.Include) == 1 && res.Activation.Include[0] == globs.LiteralSubtree(dir) {
 		return dir, adapters.OutcomeExact,
 			fmt.Sprintf("The pattern %s is exactly the subtree of %s, which a nested %s expresses "+
 				"directly.", res.Activation.Include[0], dir, RootFile), nil

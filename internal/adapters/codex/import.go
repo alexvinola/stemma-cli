@@ -92,7 +92,11 @@ func importInstructions(c *adapters.ImportCtx, project *canonical.Project, file 
 
 	activation := canonical.Always()
 	if dir != "" {
-		activation = canonical.PathScoped([]string{dir + "/**"}, nil)
+		scoped, ok := c.DirectoryActivation(file, doc, dir)
+		if !ok {
+			return
+		}
+		activation = scoped
 	}
 
 	units := adapters.SplitDocument(doc)

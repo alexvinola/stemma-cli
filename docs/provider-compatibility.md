@@ -137,7 +137,7 @@ Instruction, skill and agent metadata sources last verified 2026-09-06:
 | Item | Status | Notes |
 | --- | --- | --- |
 | `CLAUDE.md`, `.claude/CLAUDE.md` | Implemented | Always-on project instructions; the file that was imported is written back |
-| Nested `<dir>/CLAUDE.md` | Implemented | Claude Code loads it on demand when it reads files in `<dir>`. Imported as context scoped to `<dir>/**`, detected with `medium` confidence, and written back to `<dir>/CLAUDE.md` (`exact`) while the scope is still exactly that subtree with no excludes or profile pin; otherwise exported as a `.claude/rules` file with `paths`. Other providers' directory-scoped content is exported as `.claude/rules` files, as before. `.claude/rules/**/CLAUDE.md` stays a rule |
+| Nested `<dir>/CLAUDE.md` | Implemented | Claude Code loads it on demand when it reads files in `<dir>`. Imported as context scoped to `<dir>/**` (glob characters in the directory name quoted, as for nested `AGENTS.md`), detected with `medium` confidence, and written back to `<dir>/CLAUDE.md` (`exact`) while the scope is still exactly that subtree with no excludes or profile pin; otherwise exported as a `.claude/rules` file with `paths`. Other providers' directory-scoped content is exported as `.claude/rules` files, as before. `.claude/rules/**/CLAUDE.md` stays a rule |
 | `.claude/rules/**/*.md` | Implemented | Discovered recursively; directory name makes "rule" structurally explicit |
 | `paths:` front matter | Implemented | Maps to path-scoped activation; a rule without `paths` is always-on |
 | `.claude/skills/*/SKILL.md` | Implemented | Skills round-trip natively |
@@ -169,7 +169,7 @@ Skill and agent metadata sources, last verified 2026-09-06:
 | Item | Status | Notes |
 | --- | --- | --- |
 | Root `AGENTS.md` | Implemented | Always-on context |
-| Nested `<dir>/AGENTS.md` | Implemented | Imported as path-scoped context for `<dir>/**`; the nearest file wins |
+| Nested `<dir>/AGENTS.md` | Implemented | Imported as path-scoped context for `<dir>/**`; the nearest file wins. Glob characters in the directory name are quoted as single-character classes (`app/[id]` becomes `app/[[]id]/**`), so the scope is exactly that directory |
 | `AGENTS.override.md` | Partial | Override semantics are **not modelled**. The file is preserved verbatim as an opaque block and written back unchanged |
 | `.agents/skills/*/SKILL.md` | Implemented | Skills round-trip natively |
 | Glob-based scoping | Unsupported | Scoping is file location only. A path-scoped rule is projected natively only when its patterns resolve to a single concrete directory |

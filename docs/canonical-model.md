@@ -141,6 +141,18 @@ Validation rejects patterns beyond either bound because it cannot check every
 alternative. Importers report a blocking `STEMMA2102`; no partial expansion or
 unvalidated pattern is imported. Split a rejected pattern into smaller groups.
 
+A directory-scoped instructions file (a nested `AGENTS.md` or `CLAUDE.md`)
+is scoped to its physical directory, whose name is not a pattern. Each glob
+character in the name (`*`, `?`, `[`, `{`, `}`) is quoted as a
+single-character class, since the dialect has no backslash escape:
+`app/[id]/CLAUDE.md` becomes `app/[[]id]/**`, which matches `app/[id]/page.ts`
+and not `app/i/page.ts`. Commas stay literal, so Copilot still reports them
+with `STEMMA3102`. A directory whose quoted scope would exceed the 1024-byte
+pattern limit is refused with a blocking `STEMMA2101` and preserved verbatim,
+never imported with another scope. Exporters recognise the quoted form: the
+same directory is written back for Claude and Codex, and `exact` is reported
+only when the pattern is precisely that quoted subtree.
+
 `documentation-only` entities are never projected into agent-facing output. A
 target profile can override the activation, which makes the decision explicit
 and visible.

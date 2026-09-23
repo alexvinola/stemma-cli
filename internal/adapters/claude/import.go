@@ -118,7 +118,8 @@ func importMemory(c *adapters.ImportCtx, project *canonical.Project, file adapte
 
 // importNestedMemory maps a CLAUDE.md below the repository root to context
 // scoped to its own directory subtree. Claude Code loads such a file on demand
-// when it reads files in that directory, which is what <dir>/** expresses.
+// when it reads files in that directory, which is what <dir>/** expresses,
+// with the directory quoted as a literal (see adapters.DirectoryActivation).
 func importNestedMemory(c *adapters.ImportCtx, project *canonical.Project, file adapters.SourceFile, dir string) {
 	doc, ok := c.ParseDocument(file)
 	if !ok {
@@ -135,7 +136,10 @@ func importNestedMemory(c *adapters.ImportCtx, project *canonical.Project, file 
 	}
 	warnImports(c, file, doc.Body, "together with this file")
 
-	activation := canonical.PathScoped([]string{dir + "/**"}, nil)
+	activation, scoped := c.DirectoryActivation(file, doc, dir)
+	if !scoped {
+		return
+	}
 	units := adapters.SplitDocument(doc)
 	if len(units) == 0 {
 		if strings.TrimSpace(string(file.Data)) != "" {

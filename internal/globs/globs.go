@@ -604,3 +604,89 @@ func Normalize(patterns []string) []string {
 	}
 	return out
 }
+
+// literalSpecial lists the characters this dialect interprets outside a
+// character class: wildcards, the class opener and brace-group delimiters.
+// ']' is literal outside a class and a comma only separates alternatives
+// inside a real brace group, which quoting '{' prevents, so neither needs
+// quoting. '!' and '^' are special only right after '[' and must not be
+// quoted: "[!]" is an unterminated negated class.
+const literalSpecial = "*?[{}"
+
+// QuoteLiteral encodes text so that it matches only itself, one segment
+// character at a time. Each special character becomes a single-character
+// class ("[" becomes "[[]", "*" becomes "[*]"), because the dialect has no
+// backslash escape. '/' is left alone, so a repository path keeps its
+// segments.
+//
+// A comma is kept as written: it is literal in the dialect once no brace group
+// can form, and a target whose pattern list is comma-separated must still see
+// it and report the pattern as not representable.
+func QuoteLiteral(s string) string {
+	if !strings.ContainsAny(s, literalSpecial) {
+		return s
+	}
+	var b strings.Builder
+	for _, r := range s {
+		if strings.ContainsRune(literalSpecial, r) {
+			b.WriteByte('[')
+			b.WriteRune(r)
+			b.WriteByte(']')
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+// UnquoteLiteral reverses [QuoteLiteral]. It reports ok=false when the
+// pattern contains any construct QuoteLiteral never produces, so a pattern
+// that matches more than one path is never mistaken for a literal.
+func UnquoteLiteral(pattern string) (string, bool) {
+	var b strings.Builder
+	for i := 0; i < len(pattern); i++ {
+		c := pattern[i]
+		if c == '[' {
+			if i+2 < len(pattern) && pattern[i+2] == ']' &&
+				strings.IndexByte(literalSpecial, pattern[i+1]) >= 0 {
+				b.WriteByte(pattern[i+1])
+				i += 2
+				continue
+			}
+			return "", false
+		}
+		if strings.IndexByte(literalSpecial, c) >= 0 {
+			return "", false
+		}
+		b.WriteByte(c)
+	}
+	return b.String(), true
+}
+
+// LiteralSubtree returns the pattern matching everything below the literal
+// directory dir, and nothing else: the quoted directory followed by "/**".
+// It is how a physical directory, such as one holding a nested instructions
+// file, becomes a canonical scope. A directory named "app/[id]" must not
+// become "app/[id]/**", which matches "app/i/x" and not "app/[id]/x".
+func LiteralSubtree(dir string) string {
+	return QuoteLiteral(dir) + "/**"
+}
+
+// LiteralSubtreeDir reports whether pattern is exactly [LiteralSubtree] of
+// some directory, and returns that directory.
+func LiteralSubtreeDir(pattern string) (string, bool) {
+	quoted, ok := strings.CutSuffix(pattern, "/**")
+	if !ok || quoted == "" {
+		return "", false
+	}
+	dir, ok := UnquoteLiteral(quoted)
+	if !ok || dir == "" || LiteralSubtree(dir) != pattern {
+		return "", false
+	}
+	for _, seg := range strings.Split(dir, "/") {
+		if seg == "" || seg == "." || seg == ".." {
+			return "", false
+		}
+	}
+	return dir, true
+}

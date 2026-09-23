@@ -10,6 +10,7 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/discovery"
+	"github.com/alexvinola/stemma-cli/internal/globs"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
 	"github.com/alexvinola/stemma-cli/internal/workspace"
@@ -336,7 +337,7 @@ func nestedMemoryDestination(ext canonical.Extensions, res adapters.Resolution) 
 		return "", "", false
 	}
 	if len(res.Activation.Exclude) > 0 || len(res.Activation.Include) != 1 ||
-		res.Activation.Include[0] != dir+"/**" {
+		res.Activation.Include[0] != globs.LiteralSubtree(dir) {
 		return "", "", false
 	}
 	dest, err := workspace.JoinRel(dir, defaultMemoryPath)
