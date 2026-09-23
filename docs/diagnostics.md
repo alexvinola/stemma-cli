@@ -44,7 +44,7 @@ human and JSON output use this order.
 | Code | Severity | Meaning |
 | --- | --- | --- |
 | `STEMMA1001_UNRECOGNIZED_FORMAT` | warning | A registered path has no importer for its role |
-| `STEMMA1002_LIMIT_REACHED` | warning/error | A scan or document limit stopped the work early |
+| `STEMMA1002_LIMIT_REACHED` | warning/error | A scan or document limit stopped the work early; for a scan the detail names the limit and what was not inspected |
 | `STEMMA1003_FILE_UNREADABLE` | error | A configuration file could not be read |
 | `STEMMA1004_INVALID_ENCODING` | error | The file is not valid UTF-8; it is preserved, not interpreted |
 | `STEMMA1101_INVALID_FRONT_MATTER` | warning/error | Front matter could not be parsed in the supported subset, or a recognized provider/canonical field has the wrong type (error; names the key and found type) |
@@ -55,9 +55,24 @@ human and JSON output use this order.
 | `STEMMA1203_OPAQUE_BLOCK_PRESERVED` | info | Content preserved verbatim without interpretation |
 | `STEMMA1301_MULTIPLE_SOURCES` | error | Several providers detected; Stemma will not merge silently |
 | `STEMMA1302_NO_SOURCES_DETECTED` | info | Nothing supported was found |
+| `STEMMA1303_DISCOVERY_INCOMPLETE` | error/warning | Import refused: a scan limit truncated discovery, so configuration may be missing. A warning when `--allow-incomplete-scan` accepts the subset |
+| `STEMMA1304_SHARED_FILE_NOT_IMPORTED` | warning | The selected provider also reads this file, but another adapter owns it and the selected adapter does not import it (for example `AGENTS.md` under `--from kiro`); the file is left out of the import and untouched |
 | `STEMMA1401_MIXED_LINE_ENDINGS` | info | The file mixes LF and CRLF; generated output uses LF |
 | `STEMMA1501_INVALID_AGENT_JSON` | error | An agent definition is not valid JSON, or has wrong field types |
 | `STEMMA1502_DUPLICATE_JSON_KEY` | error | A JSON object repeats a key; Stemma will not guess which wins |
+
+A scan is **incomplete** when a walk limit truncated it: `max-depth` (a
+directory deeper than 32 levels), `max-files` (more than 20 000 registered
+configuration files) or `max-entries` (more than 1 000 000 directory entries
+inspected). Only registered configuration paths count against `max-files`;
+source code only counts against `max-entries`. `stemma scan` reports an
+incomplete scan with `STEMMA1002` warnings, `"complete": false` in JSON and a
+line in its human output, and still exits 0. `stemma import` refuses it with a
+blocking `STEMMA1303` error and exit code 1 before reading any file, because
+auto-detection and the imported project could both be based on a subset.
+`--allow-incomplete-scan` imports what was discovered; `STEMMA1303` then remains
+visible as a warning. Directories in the fixed skip list (`node_modules`,
+`vendor`, …) never make a scan incomplete.
 
 ### 2xxx — canonical validation
 

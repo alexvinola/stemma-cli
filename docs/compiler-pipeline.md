@@ -23,22 +23,42 @@ CLAUDE.md
 .claude/agents/*.md
 AGENTS.md
 AGENTS.override.md
-**/AGENTS.md
-**/AGENTS.override.md
 .agents/skills/*/SKILL.md
 .kiro/steering/**/*.md
 .kiro/skills/*/SKILL.md
 .kiro/agents/*.json
+**/CLAUDE.md
+**/AGENTS.md
+**/AGENTS.override.md
 ```
 
+The first matching pattern wins, in this order. The recursive `**/` patterns
+come last, so a provider's own directories win: `.claude/rules/CLAUDE.md` is a
+Claude rule and `.kiro/steering/AGENTS.md` is Kiro steering, not directory-scoped
+instructions. Each file has exactly one owning adapter. When another provider is
+documented to read the same file but its adapter does not import it (Kiro reads
+`AGENTS.md`), the match lists it in `alsoReadBy`: `scan` shows
+`(also read by kiro)`, and `import --from kiro` names each such file with
+`STEMMA1304` instead of leaving it out silently. It never creates a detection
+on its own, so a repository whose only file is `AGENTS.md` is detected as Codex.
+
 Heavy directories (`.git`, `node_modules`, `dist`, `vendor`, …) are skipped.
-Symlinked files and directories are never followed or reported. Walking is
-bounded by depth, file count, per-file size and total size; hitting a limit is
-reported, not silently ignored.
+Symlinked files and directories are never followed or reported. The walk
+filters by path while it runs: only registered paths count against the
+candidate budget (`MaxFiles`, 20 000), so thousands of source files that sort
+before a configuration file cannot hide it. Every inspected entry counts against
+a separate, larger bound (`MaxEntries`, 1 000 000) that keeps the walk finite,
+and depth is bounded at 32 levels. Hitting any of these makes the scan
+*incomplete*: `scan` reports it and `import` refuses it unless
+`--allow-incomplete-scan` is given (`STEMMA1303`, see
+[diagnostics](diagnostics.md)). Per-file and total size limits apply when
+registered files are read.
 
 Detection reports `high` confidence when a primary entry point is present
-(`copilot-instructions.md`, an instructions file, `CLAUDE.md`, `.claude/rules`,
-`AGENTS.md`, `.kiro/steering`) and `medium` when only secondary files are found.
+(`copilot-instructions.md`, an instructions file, a root or `.claude/`
+`CLAUDE.md`, `.claude/rules`, a root `AGENTS.md`, `.kiro/steering`) and `medium`
+when only secondary files are found, such as nested `CLAUDE.md` or `AGENTS.md`
+files.
 
 ## 2. Read
 

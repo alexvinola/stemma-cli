@@ -208,6 +208,7 @@ func goldenCases() []goldenCase {
 		{"claude/brace-globs", []canonical.TargetFormat{copilot}, false},
 		{"claude/character-class-globs", []canonical.TargetFormat{copilot}, false},
 		{"claude/duplicate-titles", []canonical.TargetFormat{copilot, codex}, false},
+		{"claude/nested", []canonical.TargetFormat{claude, codex}, false},
 		{"codex/nested", all, true},
 		{"copilot/basic", all, true},
 		{"copilot/brace-globs", []canonical.TargetFormat{claude, codex}, false},

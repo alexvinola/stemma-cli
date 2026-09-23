@@ -26,10 +26,18 @@ var ErrNoSources = errors.New("no supported agent configuration found")
 // selected explicitly.
 var ErrAmbiguousSource = errors.New("several agent configurations found")
 
+// ErrIncompleteScan reports that discovery was truncated by a resource limit
+// and the caller did not explicitly accept importing a possible subset.
+var ErrIncompleteScan = errors.New("discovery was incomplete")
+
 // ImportOptions configures an import.
 type ImportOptions struct {
 	// Format selects the source provider; empty means auto-detect.
 	Format canonical.TargetFormat
+	// AllowIncompleteScan accepts importing from a scan that a resource limit
+	// truncated. Without it such an import is refused, because configuration
+	// that was never discovered would be silently left out.
+	AllowIncompleteScan bool
 	// ProjectID and ProjectName seed the canonical project. When ProjectID is
 	// empty a deterministic identifier is derived from the workspace name.
 	ProjectID   string
@@ -56,6 +64,25 @@ func Import(ctx context.Context, ws *workspace.Workspace, opts ImportOptions) (I
 	}
 	var bag diagnostics.Bag
 	bag.Extend(scan.Diagnostics)
+
+	if !scan.Complete {
+		limits := strings.Join(scan.LimitsReached, ", ")
+		if opts.AllowIncompleteScan {
+			bag.Add(diagnostics.New(diagnostics.DiscoveryIncomplete, diagnostics.SeverityWarning,
+				"importing from an incomplete scan because it was explicitly allowed").
+				WithDetail("Discovery stopped at a resource limit (%s). Configuration that was not "+
+					"discovered is not part of this import.", limits))
+		} else {
+			bag.Add(diagnostics.New(diagnostics.DiscoveryIncomplete, diagnostics.SeverityError,
+				"discovery was incomplete, so the import could silently miss configuration").
+				WithDetail("Discovery stopped at a resource limit (%s). Stemma will not import a "+
+					"possible subset of the repository's configuration without being told to.", limits).
+				WithSuggestion("Reduce what the scan has to walk, or re-run with --allow-incomplete-scan " +
+					"to import only what was discovered."))
+			return ImportResult{Scan: scan, Diagnostics: bag.Items()},
+				fmt.Errorf("%w: limits reached: %s", ErrIncompleteScan, limits)
+		}
+	}
 
 	format := opts.Format
 	if format == "" {
@@ -87,6 +114,22 @@ func Import(ctx context.Context, ws *workspace.Workspace, opts ImportOptions) (I
 			WithTarget(string(format)))
 		return ImportResult{Scan: scan, Diagnostics: bag.Items()},
 			fmt.Errorf("%w: %q has no importer", ErrTargetUnavailable, format)
+	}
+
+	// Files this provider also reads, but whose adapter does not import them,
+	// are named rather than silently left out.
+	for _, m := range scan.AllMatches() {
+		for _, reader := range m.AlsoReadBy {
+			if reader != format {
+				continue
+			}
+			bag.Add(diagnostics.New(diagnostics.SharedFileNotImported, diagnostics.SeverityWarning,
+				fmt.Sprintf("%s also reads this file, but the %s adapter does not import it", format, format)).
+				WithPath(m.Path).WithTarget(string(format)).
+				WithDetail("Stemma models this file with the %s adapter only, so that two targets never "+
+					"own one file. It is not part of this import and is left untouched.", m.Format).
+				WithSuggestion("Import it with --from %s to bring it into the canonical project.", m.Format))
+		}
 	}
 
 	matches := scan.Files(format)

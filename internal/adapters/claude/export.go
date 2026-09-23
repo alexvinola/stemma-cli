@@ -9,8 +9,10 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/adapters"
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
+	"github.com/alexvinola/stemma-cli/internal/discovery"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
+	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 // Destination paths.
@@ -31,6 +33,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 	b := adapters.NewBuilder(canonical.TargetClaude, in)
 	always := adapters.NewAlwaysBucket()
 	memoryPath := memoryFilePath(in.Project)
+	nested := map[string]*adapters.AlwaysBucket{}
 
 	for _, doc := range in.Project.ContextDocuments {
 		if err := ctx.Err(); err != nil {
@@ -49,6 +52,19 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 				"Always-on context is written into the project memory file, which Claude Code loads every session.")
 			b.CountAlwaysOn(res.Content)
 		case canonical.ActivationPathScoped:
+			if dir, dest, ok := nestedMemoryDestination(doc.Extensions, res); ok {
+				bk, seen := nested[dir]
+				if !seen {
+					bk = adapters.NewAlwaysBucket()
+					nested[dir] = bk
+				}
+				bk.AddSection(doc.ID, doc.Title, res.Content)
+				b.Exact(doc.ID, canonical.EntityContext, res, doc.Provenance, []string{dest},
+					"The pattern "+res.Activation.Include[0]+" is exactly the subtree of "+dir+
+						", and a CLAUDE.md in that directory loads when Claude reads files there.")
+				b.CountScoped(tokenestimate.ScopeName(res.Activation.Include), doc.ID, res.Content)
+				continue
+			}
 			exportScopedRule(b, doc.ID, canonical.EntityContext, doc.Title, ruleFileName(doc.Extensions, doc.Title, doc.ID),
 				descriptionOf(doc.Extensions), res, doc.Provenance, nil)
 		case canonical.ActivationOnDemand:
@@ -198,6 +214,17 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		content += b.ReemitOpaque(memoryPath)
 		b.Emit(memoryPath, content, always.EntityIDs())
 	}
+	dirs := make([]string, 0, len(nested))
+	for d := range nested {
+		dirs = append(dirs, d)
+	}
+	sort.Strings(dirs)
+	for _, d := range dirs {
+		dest := path.Join(d, defaultMemoryPath)
+		content := nested[d].Render("Instructions for "+d, nil)
+		content += b.ReemitOpaque(dest)
+		b.Emit(dest, content, nested[d].EntityIDs())
+	}
 	b.ReportUnemittedOpaque()
 	return b.Result(), nil
 }
@@ -293,6 +320,34 @@ func exportAsSkill(
 		[]string{b.Diag(diagnostics.New(diagnostics.OnDemandAdapted, diagnostics.SeverityInfo,
 			"on-demand content is delivered as a Claude skill").WithEntity(id).WithPath(dest))})
 	b.CountOnDemand(res.Content)
+}
+
+// nestedMemoryDestination reports whether a path-scoped context document
+// goes back into a nested <dir>/CLAUDE.md, and where.
+//
+// Only content imported from a nested CLAUDE.md carries the directory hint,
+// and it is honoured only while the scope is still exactly <dir>/**, nothing
+// is excluded, the profile pins no destination, and the destination would be
+// discovered again as a nested CLAUDE.md. Otherwise the document becomes a
+// .claude/rules file with paths front matter, which expresses any scope.
+func nestedMemoryDestination(ext canonical.Extensions, res adapters.Resolution) (dir, dest string, ok bool) {
+	dir, has := ext.GetString(string(canonical.TargetClaude), "stemma.directory")
+	if !has || dir == "" || res.Directory != "" || res.Filename != "" {
+		return "", "", false
+	}
+	if len(res.Activation.Exclude) > 0 || len(res.Activation.Include) != 1 ||
+		res.Activation.Include[0] != dir+"/**" {
+		return "", "", false
+	}
+	dest, err := workspace.JoinRel(dir, defaultMemoryPath)
+	if err != nil || path.Dir(dest) != dir {
+		return "", "", false
+	}
+	format, role, classified := discovery.Classify(dest)
+	if !classified || format != canonical.TargetClaude || role != discovery.RoleNestedInstructions {
+		return "", "", false
+	}
+	return dir, dest, true
 }
 
 func memoryFilePath(p canonical.Project) string {

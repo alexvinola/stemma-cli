@@ -3,6 +3,7 @@
 // Recognised paths:
 //
 //	CLAUDE.md, .claude/CLAUDE.md   always-on project instructions
+//	<dir>/CLAUDE.md                instructions scoped to a directory subtree
 //	.claude/rules/**/*.md          rules, path-scoped when they declare paths
 //	.claude/skills/*/SKILL.md      skills
 //	.claude/agents/*.md            subagents
@@ -10,6 +11,7 @@ package claude
 
 import (
 	"context"
+	"path"
 	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/adapters"
@@ -43,6 +45,8 @@ func (Importer) Import(ctx context.Context, in adapters.ImportInput) (adapters.I
 		switch file.Role {
 		case discovery.RoleRootInstructions:
 			importMemory(c, &project, file)
+		case discovery.RoleNestedInstructions:
+			importNestedMemory(c, &project, file, path.Dir(file.Path))
 		case discovery.RoleRule:
 			importRule(c, &project, file)
 		case discovery.RoleSkill:
@@ -78,15 +82,7 @@ func importMemory(c *adapters.ImportCtx, project *canonical.Project, file adapte
 			project.Extensions.Set(string(canonical.TargetClaude), "memory."+k, doc.FrontMatter.Fields[k])
 		}
 	}
-	if imports := findImports(doc.Body); len(imports) > 0 {
-		c.Bag.Add(diagnostics.New(diagnostics.UnknownSectionKept, diagnostics.SeverityWarning,
-			"the memory file uses @-imports, which are preserved verbatim but not resolved").
-			WithPath(file.Path).
-			WithDetail("Imported files (%s) are loaded into context at launch by Claude Code, so "+
-				"they still cost tokens. Stemma keeps the import lines as ordinary text and does "+
-				"not follow them.", strings.Join(imports, ", ")).
-			WithSuggestion("Import those files with Stemma separately if you want them modelled."))
-	}
+	warnImports(c, file, doc.Body, "at launch")
 
 	units := adapters.SplitDocument(doc)
 	if len(units) == 0 {
@@ -118,6 +114,76 @@ func importMemory(c *adapters.ImportCtx, project *canonical.Project, file adapte
 			Provenance: c.Provenance(file, u.Span, provenance.DispositionParsed),
 		})
 	}
+}
+
+// importNestedMemory maps a CLAUDE.md below the repository root to context
+// scoped to its own directory subtree. Claude Code loads such a file on demand
+// when it reads files in that directory, which is what <dir>/** expresses.
+func importNestedMemory(c *adapters.ImportCtx, project *canonical.Project, file adapters.SourceFile, dir string) {
+	doc, ok := c.ParseDocument(file)
+	if !ok {
+		return
+	}
+	if doc.FrontMatter != nil && len(doc.FrontMatter.Keys) > 0 {
+		for _, k := range doc.FrontMatter.Keys {
+			project.Extensions.Set(string(canonical.TargetClaude),
+				"frontMatter."+file.Path+"."+k, doc.FrontMatter.Fields[k])
+		}
+		c.Bag.Add(diagnostics.New(diagnostics.UnknownKeysKept, diagnostics.SeverityInfo,
+			"front matter on a nested CLAUDE.md file was preserved as a project extension").
+			WithPath(file.Path))
+	}
+	warnImports(c, file, doc.Body, "together with this file")
+
+	activation := canonical.PathScoped([]string{dir + "/**"}, nil)
+	units := adapters.SplitDocument(doc)
+	if len(units) == 0 {
+		if strings.TrimSpace(string(file.Data)) != "" {
+			c.AddOpaque(file, string(file.Data),
+				"the memory file has no headings or body text that could be modelled",
+				adapters.FullSpan(file, doc), true)
+		}
+		return
+	}
+	for _, u := range units {
+		title := u.Title
+		if title == "" {
+			title = firstNonEmpty(doc.Title, "Instructions for "+dir)
+		}
+		if strings.TrimSpace(u.Content) == "" {
+			c.AddOpaque(file, strings.Repeat("#", maxInt(u.Level, 2))+" "+u.Title,
+				"heading with no content", u.Span, true)
+			continue
+		}
+		id := c.IDs.Allocate(canonical.EntityContext, canonical.Slug(dir+"-"+title), file.Path+"#"+title)
+		entity := canonical.ContextDocument{
+			ID:         id,
+			Title:      title,
+			Kind:       adapters.KindFromHeading(title),
+			Content:    u.Content,
+			Audience:   canonical.AudienceAgent,
+			Activation: activation,
+			Provenance: c.Provenance(file, u.Span, provenance.DispositionParsed),
+		}
+		entity.Extensions.Set(string(canonical.TargetClaude), "stemma.directory", dir)
+		project.ContextDocuments = append(project.ContextDocuments, entity)
+	}
+}
+
+// warnImports reports @path imports, which Claude Code expands into context
+// when the memory file loads. Stemma keeps them as text and never follows them.
+func warnImports(c *adapters.ImportCtx, file adapters.SourceFile, body, when string) {
+	imports := findImports(body)
+	if len(imports) == 0 {
+		return
+	}
+	c.Bag.Add(diagnostics.New(diagnostics.UnknownSectionKept, diagnostics.SeverityWarning,
+		"the memory file uses @-imports, which are preserved verbatim but not resolved").
+		WithPath(file.Path).
+		WithDetail("Imported files (%s) are loaded into context %s by Claude Code, so "+
+			"they still cost tokens. Stemma keeps the import lines as ordinary text and does "+
+			"not follow them.", strings.Join(imports, ", "), when).
+		WithSuggestion("Import those files with Stemma separately if you want them modelled."))
 }
 
 // importRule maps a .claude/rules file to a canonical rule.
