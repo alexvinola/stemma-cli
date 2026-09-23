@@ -67,7 +67,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 				continue
 			}
 			exportScopedRule(b, doc.ID, canonical.EntityContext, doc.Title, ruleFileName(doc.Extensions, doc.Title, doc.ID),
-				descriptionOf(doc.Extensions), res, doc.Provenance, nil)
+				descriptionOf(doc.Extensions), res, doc.Provenance, doc.Extensions)
 		case canonical.ActivationOnDemand:
 			exportAsSkill(b, doc.ID, canonical.EntityContext, doc.Title, descriptionOf(doc.Extensions), res, doc.Provenance,
 				"Claude Code has no on-demand context format other than skills, so the document is "+
@@ -89,7 +89,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			// An always-on rule keeps its own file under .claude/rules when it
 			// came from there, so file identity survives a round trip.
 			if file := ruleFileHint(rule.Extensions); file != "" {
-				exportRuleFile(b, rule, res, file, nil)
+				exportRuleFile(b, rule, res, file)
 				continue
 			}
 			always.AddRule(rule.ID, rule.Priority, res.Content)
@@ -97,7 +97,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 				"The rule is written as a bullet in the project memory file.")
 			b.CountAlwaysOn(res.Content)
 		case canonical.ActivationPathScoped:
-			exportRuleFile(b, rule, res, ruleFileName(rule.Extensions, rule.Title, rule.ID), res.Activation.Include)
+			exportRuleFile(b, rule, res, ruleFileName(rule.Extensions, rule.Title, rule.ID))
 		case canonical.ActivationOnDemand:
 			exportAsSkill(b, rule.ID, canonical.EntityRule, rule.Title, descriptionOf(rule.Extensions), res, rule.Provenance,
 				"On-demand rules are delivered as skills, which Claude Code loads when invoked.")
@@ -167,7 +167,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		if len(skill.AllowedTools) > 0 {
 			entries = append(entries, adapters.KV{Key: "allowed-tools", Value: skill.AllowedTools})
 		}
-		entries = append(entries, adapters.ExtensionEntries(skill.Extensions, string(canonical.TargetClaude),
+		entries = append(entries, b.ExtensionEntries(skill.ID, skill.Extensions,
 			"name", "description", "allowed-tools")...)
 		var md adapters.Markdown
 		md.Heading(1, skill.Name)
@@ -199,7 +199,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		if agent.ModelPreference != "" {
 			entries = append(entries, adapters.KV{Key: "model", Value: agent.ModelPreference})
 		}
-		entries = append(entries, adapters.ExtensionEntries(agent.Extensions, string(canonical.TargetClaude),
+		entries = append(entries, b.ExtensionEntries(agent.ID, agent.Extensions,
 			"name", "description", "tools", "model")...)
 		var md adapters.Markdown
 		md.Paragraph(res.Content)
@@ -231,9 +231,9 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 }
 
 // exportRuleFile writes a rule as a .claude/rules file.
-func exportRuleFile(b *adapters.Builder, rule canonical.Rule, res adapters.Resolution, file string, include []string) {
+func exportRuleFile(b *adapters.Builder, rule canonical.Rule, res adapters.Resolution, file string) {
 	exportScopedRule(b, rule.ID, canonical.EntityRule, rule.Title, file, descriptionOf(rule.Extensions),
-		res, rule.Provenance, include)
+		res, rule.Provenance, rule.Extensions)
 }
 
 // exportScopedRule writes a path-scoped entity as a Claude rule file.
@@ -244,7 +244,7 @@ func exportScopedRule(
 	title, file, description string,
 	res adapters.Resolution,
 	prov provenance.Provenance,
-	_ []string,
+	ext canonical.Extensions,
 ) {
 	dest := b.Path(res, RulesDir, file)
 	var entries []adapters.KV
@@ -254,6 +254,8 @@ func exportScopedRule(
 	if description != "" {
 		entries = append(entries, adapters.KV{Key: "description", Value: description})
 	}
+	// Preserved Claude front matter goes back into the rule file it came from.
+	entries = append(entries, b.ExtensionEntries(id, ext, "paths", "description", "priority", "enabled")...)
 
 	var md adapters.Markdown
 	md.Heading(1, title)

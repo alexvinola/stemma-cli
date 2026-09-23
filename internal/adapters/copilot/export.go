@@ -52,7 +52,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.CountAlwaysOn(res.Content)
 		case canonical.ActivationPathScoped:
 			exportScoped(b, in, doc.ID, canonical.EntityContext, doc.Title, res, doc.Provenance,
-				docDescription(doc), instructionsFileName(doc))
+				docDescription(doc), instructionsFileName(doc), doc.Extensions)
 		case canonical.ActivationOnDemand:
 			exportOnDemand(b, doc.ID, canonical.EntityContext, doc.Title, res, doc.Provenance)
 		default:
@@ -77,7 +77,8 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 				"The rule is written as a bullet in the repository-wide instructions file.")
 			b.CountAlwaysOn(res.Content)
 		case canonical.ActivationPathScoped:
-			exportScoped(b, in, rule.ID, canonical.EntityRule, rule.Title, res, rule.Provenance, "", "")
+			exportScoped(b, in, rule.ID, canonical.EntityRule, rule.Title, res, rule.Provenance, "", "",
+				rule.Extensions)
 		case canonical.ActivationOnDemand:
 			exportOnDemand(b, rule.ID, canonical.EntityRule, rule.Title, res, rule.Provenance)
 		default:
@@ -118,7 +119,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		if proc.Description != "" {
 			entries = append(entries, adapters.KV{Key: "description", Value: proc.Description})
 		}
-		entries = append(entries, adapters.ExtensionEntries(proc.Extensions, string(canonical.TargetCopilot),
+		entries = append(entries, b.ExtensionEntries(proc.ID, proc.Extensions,
 			"description")...)
 		var md adapters.Markdown
 		md.Heading(1, proc.Name)
@@ -151,7 +152,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		if len(skill.AllowedTools) > 0 {
 			entries = append(entries, adapters.KV{Key: "allowed-tools", Value: skill.AllowedTools})
 		}
-		entries = append(entries, adapters.ExtensionEntries(skill.Extensions, string(canonical.TargetCopilot),
+		entries = append(entries, b.ExtensionEntries(skill.ID, skill.Extensions,
 			"name", "description", "allowed-tools")...)
 		var md adapters.Markdown
 		md.Heading(1, skill.Name)
@@ -180,7 +181,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		if len(agent.Tools) > 0 {
 			entries = append(entries, adapters.KV{Key: "tools", Value: agent.Tools})
 		}
-		entries = append(entries, adapters.ExtensionEntries(agent.Extensions, string(canonical.TargetCopilot),
+		entries = append(entries, b.ExtensionEntries(agent.ID, agent.Extensions,
 			"name", "description", "tools", "model")...)
 		var md adapters.Markdown
 		md.Heading(1, agent.Name)
@@ -218,6 +219,7 @@ func exportScoped(
 	prov provenance.Provenance,
 	description string,
 	pinnedFile string,
+	ext canonical.Extensions,
 ) {
 	name := adapters.FileSlug(id)
 	file := name + ".instructions.md"
@@ -230,6 +232,9 @@ func exportScoped(
 	if description != "" {
 		entries = append(entries, adapters.KV{Key: "description", Value: description})
 	}
+	// Preserved Copilot keys such as excludeAgent go back into the file they
+	// came from; dropping them would change which agents read it.
+	entries = append(entries, b.ExtensionEntries(id, ext, "applyTo", "description")...)
 
 	var md adapters.Markdown
 	md.Heading(1, title)

@@ -1,6 +1,7 @@
 ---
 applyTo: src/api/**,src/handlers/**
 description: API layer conventions
+excludeAgent: copilot-cli
 ---
 
 # API layer conventions

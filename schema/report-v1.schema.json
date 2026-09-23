@@ -34,6 +34,7 @@
         },
         "entityId": { "type": "string" },
         "target": { "type": "string" },
+        "field": { "type": "string" },
         "suggestion": { "type": "string" },
         "blocking": { "type": "boolean" },
         "fingerprint": { "type": "string", "pattern": "^dg_[0-9a-f]{16}$" }

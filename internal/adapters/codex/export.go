@@ -391,7 +391,7 @@ func writeSkill(
 	if len(tools) > 0 {
 		entries = append(entries, adapters.KV{Key: "allowed-tools", Value: tools})
 	}
-	entries = append(entries, adapters.ExtensionEntries(ext, string(canonical.TargetCodex),
+	entries = append(entries, b.ExtensionEntries(id, ext,
 		"name", "description", "allowed-tools")...)
 	var md adapters.Markdown
 	md.Heading(1, name)

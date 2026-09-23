@@ -57,6 +57,12 @@ type Capabilities struct {
 	NativeProcedures bool `json:"nativeProcedures"`
 	// ManualActivation: content can be invoked explicitly by a user.
 	ManualActivation bool `json:"manualActivation"`
+	// OnDemandInvocation lists who can load an on-demand context document or
+	// rule as this target delivers it: only a person, the agent by itself
+	// when the description matches, or both modes when the target's format
+	// states the mode explicitly. Extension values that describe an
+	// invocation mode are only lost when the target cannot carry them.
+	OnDemandInvocation []Invocation `json:"onDemandInvocation"`
 	// AgentToolAllowlist: agent definitions can declare permitted tools.
 	AgentToolAllowlist bool `json:"agentToolAllowlist"`
 	// ReemitOpaqueBlocks: Stemma can write unknown provider content back.
@@ -87,6 +93,7 @@ var table = map[canonical.TargetFormat]Capabilities{
 		NativeAgents:            true,
 		NativeProcedures:        true,
 		ManualActivation:        true,
+		OnDemandInvocation:      []Invocation{InvocationUserOnly},
 		AgentToolAllowlist:      true,
 		ReemitOpaqueBlocks:      true,
 		RecognizedPaths: []string{
@@ -103,7 +110,8 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"has no negative pattern syntax, so canonical exclude patterns cannot be represented. " +
 			"Copilot also reads AGENTS.md and CLAUDE.md; Stemma never writes those files for this " +
 			"target, to avoid two targets owning one file. Unknown keys such as excludeAgent are " +
-			"preserved as provider extensions rather than interpreted. Recognized front matter fields " +
+			"preserved as provider extensions rather than interpreted, and written back when a Copilot " +
+			"file is regenerated. Recognized front matter fields " +
 			"are checked without type coercion; wrong types block import and preserve the file verbatim.",
 		Sources: []Source{
 			{Title: "Agent Skills specification (directory and name constraints)", URL: "https://agentskills.io/specification", LastVerified: "2026-09-06"},
@@ -122,6 +130,11 @@ var table = map[canonical.TargetFormat]Capabilities{
 				URL:          "https://docs.github.com/en/copilot/reference/custom-agents-configuration",
 				LastVerified: "2026-09-06",
 			},
+			{
+				Title:        "Prompt files in VS Code (GitHub Copilot)",
+				URL:          "https://code.visualstudio.com/docs/copilot/customization/prompt-files",
+				LastVerified: "2026-09-23",
+			},
 		},
 	},
 	canonical.TargetClaude: {
@@ -138,6 +151,7 @@ var table = map[canonical.TargetFormat]Capabilities{
 		NativeAgents:            true,
 		NativeProcedures:        false,
 		ManualActivation:        true,
+		OnDemandInvocation:      []Invocation{InvocationAutomatic},
 		AgentToolAllowlist:      true,
 		ReemitOpaqueBlocks:      true,
 		RecognizedPaths: []string{
@@ -191,6 +205,7 @@ var table = map[canonical.TargetFormat]Capabilities{
 		NativeAgents:            false,
 		NativeProcedures:        false,
 		ManualActivation:        true,
+		OnDemandInvocation:      []Invocation{InvocationAutomatic},
 		AgentToolAllowlist:      false,
 		ReemitOpaqueBlocks:      true,
 		RecognizedPaths: []string{
@@ -232,6 +247,7 @@ var table = map[canonical.TargetFormat]Capabilities{
 		NativeAgents:            true,
 		NativeProcedures:        false,
 		ManualActivation:        true,
+		OnDemandInvocation:      []Invocation{InvocationAutomatic, InvocationUserOnly},
 		AgentToolAllowlist:      true,
 		ReemitOpaqueBlocks:      true,
 		RecognizedPaths: []string{
@@ -268,8 +284,9 @@ var table = map[canonical.TargetFormat]Capabilities{
 		}},
 	},
 	canonical.TargetCursor: {
-		Target:    canonical.TargetCursor,
-		Available: false,
+		Target:             canonical.TargetCursor,
+		Available:          false,
+		OnDemandInvocation: []Invocation{},
 		Notes: "Declared target identifier only. No importer or exporter is implemented, so " +
 			"Stemma refuses to compile for Cursor rather than producing plausible output.",
 		RecognizedPaths:   []string{},
