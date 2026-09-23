@@ -142,7 +142,7 @@ func TestApplyWarningsDoNotChangeWriteFailureExitCode(t *testing.T) {
 	if !strings.Contains(errOut.String(), string(diagnostics.AgentNotNative)) {
 		t.Fatalf("write failure lost the compilation warning: %s", errOut.String())
 	}
-	if h.exists(".agents/skills/skill-migration/SKILL.md") {
+	if h.exists(".agents/skills/migration/SKILL.md") {
 		t.Fatal("failed apply wrote a generated skill")
 	}
 }

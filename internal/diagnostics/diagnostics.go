@@ -88,6 +88,11 @@ const (
 	OpaqueNotReemitted     Code = "STEMMA3501_OPAQUE_BLOCK_NOT_REEMITTED"
 	TargetOverridesContent Code = "STEMMA3601_TARGET_CONTENT_OVERRIDDEN"
 	RegeneratedFile        Code = "STEMMA3701_FILE_REGENERATED"
+	// SourceNameNotKept: a file or skill directory name recorded from another
+	// provider was not reused for this target because it is invalid there,
+	// ambiguous or colliding, so the destination uses the complete canonical
+	// ID instead (info).
+	SourceNameNotKept Code = "STEMMA3702_SOURCE_NAME_NOT_PRESERVED"
 	// ExtensionNotProjected: a context, behaviour or unclassified provider
 	// extension field was not written for the target (warning).
 	ExtensionNotProjected Code = "STEMMA3801_EXTENSION_NOT_PROJECTED"

@@ -4,30 +4,30 @@
     "entityType": "agent",
     "outcome": "lossy",
     "files": [
-      ".github/agents/agent-reviewer.md"
+      ".github/agents/reviewer.md"
     ],
     "activation": "on demand (reviewer)",
-    "explanation": "github-copilot supports specialist agents, but the declared tool names come from kiro and are not verified against this provider. Provider-specific fields not written for github-copilot: kiro.resources (context)."
+    "explanation": "github-copilot supports specialist agents, but the declared tool names come from kiro and are not verified against this provider. The destination keeps the name \"reviewer\" of its kiro source. Provider-specific fields not written for github-copilot: kiro.resources (context)."
   },
   {
     "entityId": "context.api-conventions",
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".github/instructions/context-api-conventions.instructions.md"
+      ".github/instructions/api.instructions.md"
     ],
     "activation": "paths src/api/**, src/handlers/**",
-    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+    "explanation": "Copilot applyTo represents the canonical include patterns directly. The destination keeps the name \"api\" of its kiro source."
   },
   {
     "entityId": "context.incident-response",
     "entityType": "context",
     "outcome": "adapted",
     "files": [
-      ".github/prompts/context-incident-response.prompt.md"
+      ".github/prompts/incident.prompt.md"
     ],
     "activation": "on demand (incident-response)",
-    "explanation": "On-demand context has no dedicated Copilot format; it is delivered as a prompt file that a developer invokes explicitly."
+    "explanation": "On-demand context has no dedicated Copilot format; it is delivered as a prompt file that a developer invokes explicitly. The destination keeps the name \"incident\" of its kiro source."
   },
   {
     "entityId": "context.product",
@@ -42,11 +42,11 @@
   {
     "entityId": "skill.audit",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".github/skills/skill-audit/SKILL.md"
+      ".github/skills/audit/SKILL.md"
     ],
     "activation": "on demand (audit)",
-    "explanation": "Copilot supports agent skills natively. The skill invocation name is \"skill-audit\" to match its destination directory."
+    "explanation": "Copilot supports agent skills natively. The destination keeps the name \"audit\" of its kiro source."
   }
 ]

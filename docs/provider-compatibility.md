@@ -76,33 +76,103 @@ values inside a valid provider extension mapping remain preserved.
 
 ## Generated names and destination collisions
 
-Fallback filenames use the complete canonical ID with its type prefix, for
-example `rule.testing` becomes `rule-testing.instructions.md` for Copilot.
-Titles may be identical without merging entities, including entities of different
-types. Imported filename/directory hints and explicit profile destinations still
-have precedence. Conflicting destinations (including file/parent-directory
-conflicts) produce blocking `STEMMA6001_INTERNAL_INVARIANT`, blocked mappings and
-CLI exit 6. Destination identity uses Unicode simple case folding on every
-platform, so case-only aliases such as `Scope.md` and `scope.md`, or a file
-`Scope` and a child of `scope/`, are rejected even on a case-sensitive host. It
-does not fold Unicode normalization variants or multi-rune expansions.
-Independently emitted files are never concatenated or overwritten.
-Intentional `CLAUDE.md`, `AGENTS.md` and Copilot root aggregates remain supported.
+Internal identity and destination names are separate. Canonical IDs never
+change for naming; one shared policy (`Builder.Destination` in
+`internal/adapters`) names every file or skill directory that an entity owns,
+for every target, in this order:
+
+1. **Profile destinations.** An explicit `directory` or `filename` override keeps
+   precedence. A pinned directory still receives the name chosen below; a
+   pinned skill directory or filename decides the name by itself.
+2. **The target's own recorded name.** A file or directory name recorded when
+   the same provider was imported (for example `stemma.ruleFile` for Claude) is
+   reused when it is a normalized, safe relative path, so same-provider round
+   trips stay byte-identical. Copilot instructions and prompt files and Kiro
+   steering documents now record their path below their provider directory, so
+   nested files with the same base name come back to their own subdirectories.
+3. **A source name recorded by another provider.** The last path segment of that
+   provider's recorded file or skill directory name, without its provider
+   suffix, for example `.github/instructions/python.instructions.md` →
+   `.claude/rules/python.md` and `.github/skills/review/SKILL.md` →
+   `.claude/skills/review/SKILL.md`. Where each provider records these names is
+   listed in `internal/capabilities` (`Naming.SourceNames`). The name is reused
+   only when all of these hold:
+   - the recorded value is a string and a normalized relative path (no `..`,
+     absolute path, `:`, backslash, NUL or leading `~`), a single segment unless
+     the provider records nested paths, and ends in the provider suffix;
+   - every provider that recorded a name for the entity recorded the same one;
+   - it satisfies the target's name rule. Skill directories follow the
+     [Agent Skills](https://agentskills.io/specification) `name` rule — 1–64
+     characters from `a-z`, `0-9` and single interior hyphens — because the
+     directory is the skill's name and, for Claude Code project skills, its
+     command ([how a skill gets its command name](https://code.claude.com/docs/en/skills#how-a-skill-gets-its-command-name));
+     Kiro documents the same rule. File stems use Stemma's portable subset: at
+     most 64 bytes of ASCII letters, digits, `.`, `_` and `-`, starting with a
+     letter or digit, not ending in `.`, never a Windows device name (`CON`,
+     `NUL`, `COM1`, …) and never a file name that providers load by name
+     (`AGENTS`, `CLAUDE`, `SKILL`, …) in any case. No provider documents a
+     limit for these files; the subset keeps names identical on every
+     filesystem;
+   - discovery classifies the resulting path exactly as it classifies the
+     canonical-ID path (the same provider and role);
+   - it collides with no other destination of the export (below).
+4. **The complete canonical ID** (the previous behaviour, and the fallback for
+   anything above that does not hold): `rule.testing` becomes
+   `rule-testing.instructions.md` for Copilot. Titles may be identical without
+   merging entities, including entities of different types. Fallback skill
+   directories exceeding 64 characters use the full SHA-256 digest of the
+   canonical ID.
+
+**Collision rule.** Each reused source name claims a unit: its file, or for a
+skill its whole directory. It collides when any other destination of the same
+export — another source name, a recorded or pinned name, an aggregate such as
+`CLAUDE.md`, or a canonical-ID name — has the same destination identity as that
+unit, lies inside it, or is a file where one of its parent directories must be.
+Destination identity uses Unicode simple case folding on every platform, so
+`Review` and `review` collide even on a case-sensitive host. **Every** colliding
+source name falls back to its canonical-ID name; there is no tie-break that
+lets one entity keep the name. The result therefore depends only on the set of
+destinations, never on entity or file order, and no entity's name changes
+because of which one was read first. Because a fallback name can itself take a
+name that another source wanted, demotion repeats until nothing changes.
+Examples: `.github/instructions/a/python.instructions.md` and
+`.github/instructions/b/python.instructions.md` both become canonical-ID rules
+for Claude; a prompt `review.prompt.md` and a skill `review` both want
+`.claude/skills/review/`, so both fall back.
+
+Every source name that is not reused produces an informational
+`STEMMA3702_SOURCE_NAME_NOT_PRESERVED` naming the reason, and the mapping
+explanation says why. A reused name is mentioned in the mapping explanation
+too. Canonical-ID names never collide with each other; conflicting recorded
+names or profile destinations (including file/parent-directory conflicts) still
+produce blocking `STEMMA6001_INTERNAL_INVARIANT`, blocked mappings and CLI exit
+6. Independently emitted files are never concatenated or overwritten.
+Intentional `CLAUDE.md`, `AGENTS.md` and Copilot root aggregates remain
+supported. Destination identity does not fold Unicode normalization variants or
+multi-rune expansions; source names are ASCII-only, so they cannot introduce
+such variants.
 
 Regenerated skills use their directory as the front matter `name`, as required
-by the [Agent Skills specification](https://agentskills.io/specification)
-(verified 2026-09-06). A changed invocation name is reported as `adapted` and
-explained in its mapping. Fallback skill directories exceeding 64 characters
-use the full SHA-256 digest of the canonical ID. Unchanged imported originals
+by the Agent Skills specification (verified 2026-09-23). A skill whose source
+directory name survives keeps its invocation name and is `exact` when nothing
+else changes. When the name changes — the source name was invalid, ambiguous or
+colliding, or the canonical name differs from the directory — the mapping is
+`adapted` and explains the new invocation name. Unchanged imported originals
 remain eligible for byte-identical reuse.
 
-**Existing projects:** cross-provider output without a preserved target hint may
-move from a title-based filename to an ID-based filename. Review `plan` before
-applying: Stemma proposes deletion of old generated paths but never deletes them.
-Remove obsolete provider files yourself after reviewing their replacements to
-avoid loading both versions. Profile destinations can keep an existing name if
-it does not conflict. Skill invocations may change alongside their directories;
-the mapping explains the new name.
+**Existing projects.** Cross-provider output generated by earlier versions used
+canonical-ID names such as `.claude/rules/context-python-conventions.md` or
+`.claude/skills/skill-review/`. After upgrading, `plan` creates the source-named
+files and reports each old generated path as `delete-proposed` with
+`STEMMA4401`. Stemma never deletes them: they stay owned in the manifest until
+you remove them yourself, and `check` reports them until then. Remove the old
+files after reviewing their replacements, or both versions load (for skills,
+both `/skill-review` and `/review` exist). A new destination that already exists
+as a file Stemma does not own is a `STEMMA4301` conflict, like any other
+untracked destination. To keep an old name, pin it with a profile `filename`
+(or skill `directory`). Canonical projects saved by earlier versions keep only
+the base name of nested Copilot instructions/prompts and Kiro steering files;
+re-import to record their subdirectories.
 
 ## GitHub Copilot
 
@@ -165,8 +235,14 @@ multiple glob patterns and brace expansion, and that `@`-imports still load into
 context at launch. It also documents that Claude Code can read `AGENTS.md`
 itself; Stemma does not model that overlap.
 
-Skill and agent metadata sources, last verified 2026-09-06:
-[Extend Claude with skills](https://code.claude.com/docs/en/skills) and
+Skill metadata source, last verified 2026-09-23:
+[Extend Claude with skills](https://code.claude.com/docs/en/skills) — in
+particular [how a skill gets its command name](https://code.claude.com/docs/en/skills#how-a-skill-gets-its-command-name):
+a project skill in `.claude/skills/<name>/SKILL.md` is invoked as `/<name>`
+from its **directory name**; its `name` front matter only sets the display
+label. The directory name is therefore the invocation name that Stemma keeps
+or explains (see [generated names](#generated-names-and-destination-collisions)).
+Agent metadata source, last verified 2026-09-06:
 [Create custom subagents](https://code.claude.com/docs/en/sub-agents).
 
 ## Codex / `AGENTS.md`
@@ -216,8 +292,11 @@ single or multiple patterns, the three foundation files, and that Kiro picks up
 `AGENTS.md` at the workspace root and in subdirectories, without inclusion
 modes (always included).
 
-Skill and agent metadata sources, last verified 2026-09-06:
-[Kiro agent skills](https://kiro.dev/docs/skills/) and
+Skill source, last verified 2026-09-23:
+[Kiro agent skills](https://kiro.dev/docs/skills/) — the `name` must match the
+folder name, uses lowercase letters, numbers and hyphens (at most 64
+characters), and is invoked as `/name`.
+Agent metadata source, last verified 2026-09-06:
 [Custom agent configuration reference](https://kiro.dev/docs/custom-agents/configuration-reference/).
 
 ## Cursor

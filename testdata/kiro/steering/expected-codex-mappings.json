@@ -24,10 +24,10 @@
     "entityType": "context",
     "outcome": "lossy",
     "files": [
-      ".agents/skills/context-incident-response/SKILL.md"
+      ".agents/skills/incident/SKILL.md"
     ],
     "activation": "on demand (incident-response)",
-    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill. The skill invocation name is \"context-incident-response\" to match its destination directory. Provider-specific fields not written for codex: kiro.inclusion (behaviour)."
+    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill. The destination keeps the name \"incident\" of its kiro source. The skill invocation name is \"incident\" to match its destination directory. Provider-specific fields not written for codex: kiro.inclusion (behaviour)."
   },
   {
     "entityId": "context.product",
@@ -42,11 +42,11 @@
   {
     "entityId": "skill.audit",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".agents/skills/skill-audit/SKILL.md"
+      ".agents/skills/audit/SKILL.md"
     ],
     "activation": "on demand (audit)",
-    "explanation": "Skills are supported natively. The skill invocation name is \"skill-audit\" to match its destination directory."
+    "explanation": "Skills are supported natively. The destination keeps the name \"audit\" of its kiro source."
   }
 ]

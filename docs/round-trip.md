@@ -117,9 +117,14 @@ Being explicit about this matters more than pretending it is lossless:
   skill the agent may load by itself, and an auto document exported to Copilot
   becomes a prompt file only a person runs. Both are reported. See
   [provider extension classification](provider-compatibility.md#provider-extension-classification).
-- **Entity ids and file names** are re-derived from titles in the target
-  layout, so a Copilot instructions file called `api.instructions.md` may come
-  back as a Claude rule named after its description.
+- **Entity ids** are derived from titles and descriptions and are never renamed
+  for a destination. **File and skill directory names** keep the source name
+  when it is valid, unambiguous and collision-free in the target
+  (`api.instructions.md` becomes the Claude rule `api.md`); otherwise they use
+  the complete canonical ID and `STEMMA3702` explains why. Re-importing the
+  target yields entity IDs from the target files, which may differ from the
+  original ones. See
+  [generated names](provider-compatibility.md#generated-names-and-destination-collisions).
 - **Specialist agents** flattened into `AGENTS.md` come back as ordinary
   context, not as agents. This is reported as `lossy` at compile time.
 - **Exclude patterns** are written only as a human-readable scope note in

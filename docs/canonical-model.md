@@ -302,7 +302,10 @@ and are not yet part of this classification.
 Keys starting with `stemma.` are reserved. They are Stemma's own round-trip
 hints — the original file name of a rule, the directory name of a skill, which
 JSON key held an agent's instructions — and are never written into generated
-provider files.
+provider files. The recorded file and directory names are also the *source
+names* that other targets may reuse when a name is valid and unambiguous there;
+they are untrusted input, validated on every use, and never change an entity ID
+(see [generated names](provider-compatibility.md#generated-names-and-destination-collisions)).
 
 ## Token budgets
 

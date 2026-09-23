@@ -40,11 +40,11 @@
   {
     "entityId": "skill.deploy",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".github/skills/skill-deploy/SKILL.md"
+      ".github/skills/deploy/SKILL.md"
     ],
     "activation": "on demand (deploy)",
-    "explanation": "Copilot supports agent skills natively. The skill invocation name is \"skill-deploy\" to match its destination directory."
+    "explanation": "Copilot supports agent skills natively. The destination keeps the name \"deploy\" of its codex source."
   }
 ]

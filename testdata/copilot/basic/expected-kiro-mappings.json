@@ -4,10 +4,10 @@
     "entityType": "agent",
     "outcome": "lossy",
     "files": [
-      ".kiro/agents/agent-reviewer.json"
+      ".kiro/agents/reviewer.json"
     ],
     "activation": "on demand (reviewer)",
-    "explanation": "kiro supports specialist agents, but the declared tool names come from github-copilot and are not verified against this provider."
+    "explanation": "kiro supports specialist agents, but the declared tool names come from github-copilot and are not verified against this provider. The destination keeps the name \"reviewer\" of its github-copilot source."
   },
   {
     "entityId": "context.acme-ledger",
@@ -24,10 +24,10 @@
     "entityType": "context",
     "outcome": "lossy",
     "files": [
-      ".kiro/steering/context-api-layer-conventions.md"
+      ".kiro/steering/api.md"
     ],
     "activation": "paths src/api/**, src/handlers/**",
-    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns. Provider-specific fields not written for kiro: github-copilot.excludeAgent (behaviour)."
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns. The destination keeps the name \"api\" of its github-copilot source. Provider-specific fields not written for kiro: github-copilot.excludeAgent (behaviour)."
   },
   {
     "entityId": "context.architecture",
@@ -62,19 +62,19 @@
     "entityType": "procedure",
     "outcome": "lossy",
     "files": [
-      ".kiro/skills/procedure-release/SKILL.md"
+      ".kiro/skills/release/SKILL.md"
     ],
     "activation": "on demand (release)",
-    "explanation": "Kiro has no dedicated procedure format; the procedure is delivered as a skill. The skill invocation name is \"procedure-release\" to match its destination directory. Provider-specific fields not written for kiro: github-copilot.mode (unclassified, treated as behaviour), github-copilot.model (behaviour)."
+    "explanation": "Kiro has no dedicated procedure format; the procedure is delivered as a skill. The destination keeps the name \"release\" of its github-copilot source. Provider-specific fields not written for kiro: github-copilot.mode (unclassified, treated as behaviour), github-copilot.model (behaviour)."
   },
   {
     "entityId": "skill.release-checklist",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".kiro/skills/skill-release-checklist/SKILL.md"
+      ".kiro/skills/release-checklist/SKILL.md"
     ],
     "activation": "on demand (release-checklist)",
-    "explanation": "Kiro supports skills natively. The skill invocation name is \"skill-release-checklist\" to match its destination directory."
+    "explanation": "Kiro supports skills natively. The destination keeps the name \"release-checklist\" of its github-copilot source."
   }
 ]

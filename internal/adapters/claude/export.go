@@ -66,10 +66,11 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 				b.CountScoped(tokenestimate.ScopeName(res.Activation.Include), doc.ID, res.Content)
 				continue
 			}
-			exportScopedRule(b, doc.ID, canonical.EntityContext, doc.Title, ruleFileName(doc.Extensions, doc.Title, doc.ID),
+			exportScopedRule(b, doc.ID, canonical.EntityContext, doc.Title,
 				descriptionOf(doc.Extensions), res, doc.Provenance, doc.Extensions)
 		case canonical.ActivationOnDemand:
 			exportAsSkill(b, doc.ID, canonical.EntityContext, doc.Title, descriptionOf(doc.Extensions), res, doc.Provenance,
+				doc.Extensions,
 				"Claude Code has no on-demand context format other than skills, so the document is "+
 					"delivered as a skill that loads when invoked.")
 		default:
@@ -88,8 +89,8 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		case canonical.ActivationAlways:
 			// An always-on rule keeps its own file under .claude/rules when it
 			// came from there, so file identity survives a round trip.
-			if file := ruleFileHint(rule.Extensions); file != "" {
-				exportRuleFile(b, rule, res, file)
+			if ruleFileHint(rule.Extensions) != "" {
+				exportRuleFile(b, rule, res)
 				continue
 			}
 			always.AddRule(rule.ID, rule.Priority, res.Content)
@@ -97,9 +98,10 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 				"The rule is written as a bullet in the project memory file.")
 			b.CountAlwaysOn(res.Content)
 		case canonical.ActivationPathScoped:
-			exportRuleFile(b, rule, res, ruleFileName(rule.Extensions, rule.Title, rule.ID))
+			exportRuleFile(b, rule, res)
 		case canonical.ActivationOnDemand:
 			exportAsSkill(b, rule.ID, canonical.EntityRule, rule.Title, descriptionOf(rule.Extensions), res, rule.Provenance,
+				rule.Extensions,
 				"On-demand rules are delivered as skills, which Claude Code loads when invoked.")
 		default:
 			b.Invariant(rule.ID, canonical.EntityRule, res, rule.Provenance)
@@ -130,8 +132,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(proc.ID, canonical.EntityProcedure, res, proc.Provenance)
 			continue
 		}
-		name := skillDirName(proc.Extensions, proc.Name, proc.ID)
-		dest := b.Path(res, path.Join(skillsDir, name), "SKILL.md")
+		dest := b.Destination(res, skillRequest(proc.ID, proc.Extensions))
 		entries := []adapters.KV{{Key: "name", Value: b.SkillName(proc.ID, proc.Name, dest)}}
 		desc := proc.Description
 		if desc == "" && proc.Trigger != "" {
@@ -158,8 +159,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(skill.ID, canonical.EntitySkill, res, skill.Provenance)
 			continue
 		}
-		name := skillDirName(skill.Extensions, skill.Name, skill.ID)
-		dest := b.Path(res, path.Join(skillsDir, name), "SKILL.md")
+		dest := b.Destination(res, skillRequest(skill.ID, skill.Extensions))
 		entries := []adapters.KV{{Key: "name", Value: b.SkillName(skill.ID, skill.Name, dest)}}
 		if skill.Description != "" {
 			entries = append(entries, adapters.KV{Key: "description", Value: skill.Description})
@@ -184,11 +184,10 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(agent.ID, canonical.EntityAgent, res, agent.Provenance)
 			continue
 		}
-		fileName := adapters.FileSlug(agent.ID) + ".md"
-		if v, ok := agent.Extensions.GetString(string(canonical.TargetClaude), "stemma.sourceFile"); ok && safeName(v) {
-			fileName = v
-		}
-		dest := b.Path(res, agentsDir, fileName)
+		hint, _ := agent.Extensions.GetString(string(canonical.TargetClaude), "stemma.sourceFile")
+		dest := b.Destination(res, adapters.NameRequest{
+			ID: agent.ID, Dir: agentsDir, Suffix: ".md", Hint: hint, Ext: agent.Extensions,
+		})
 		entries := []adapters.KV{{Key: "name", Value: agent.Name}}
 		if agent.Description != "" {
 			entries = append(entries, adapters.KV{Key: "description", Value: agent.Description})
@@ -231,8 +230,8 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 }
 
 // exportRuleFile writes a rule as a .claude/rules file.
-func exportRuleFile(b *adapters.Builder, rule canonical.Rule, res adapters.Resolution, file string) {
-	exportScopedRule(b, rule.ID, canonical.EntityRule, rule.Title, file, descriptionOf(rule.Extensions),
+func exportRuleFile(b *adapters.Builder, rule canonical.Rule, res adapters.Resolution) {
+	exportScopedRule(b, rule.ID, canonical.EntityRule, rule.Title, descriptionOf(rule.Extensions),
 		res, rule.Provenance, rule.Extensions)
 }
 
@@ -241,12 +240,14 @@ func exportScopedRule(
 	b *adapters.Builder,
 	id string,
 	kind canonical.EntityType,
-	title, file, description string,
+	title, description string,
 	res adapters.Resolution,
 	prov provenance.Provenance,
 	ext canonical.Extensions,
 ) {
-	dest := b.Path(res, RulesDir, file)
+	dest := b.Destination(res, adapters.NameRequest{
+		ID: id, Dir: RulesDir, Suffix: ".md", Hint: ruleFileHint(ext), NestedHint: true, Ext: ext,
+	})
 	var entries []adapters.KV
 	if len(res.Activation.Include) > 0 {
 		entries = append(entries, adapters.KV{Key: "paths", Value: res.Activation.Include})
@@ -299,14 +300,14 @@ func exportAsSkill(
 	title, description string,
 	res adapters.Resolution,
 	prov provenance.Provenance,
+	ext canonical.Extensions,
 	explanation string,
 ) {
 	skillName := title
 	if res.Activation.InvocationName != "" {
 		skillName = res.Activation.InvocationName
 	}
-	name := adapters.SkillSlug(id)
-	dest := b.Path(res, path.Join(skillsDir, name), "SKILL.md")
+	dest := b.Destination(res, skillRequest(id, ext))
 	entries := []adapters.KV{{Key: "name", Value: b.SkillName(id, skillName, dest)}}
 	desc := description
 	if desc == "" {
@@ -381,33 +382,19 @@ func memoryFrontMatter(p canonical.Project) []adapters.KV {
 	return out
 }
 
-// ruleFileName picks the destination file name for a rule, preferring the
-// original name so that a round trip does not move files.
-func ruleFileName(ext canonical.Extensions, title, id string) string {
-	if v := ruleFileHint(ext); v != "" {
-		return v
-	}
-	return adapters.FileSlug(id) + ".md"
-}
-
+// ruleFileHint returns the .claude/rules path recorded at import, relative
+// to the rules directory, when it is safe to reuse. Keeping it means a round
+// trip does not move files.
 func ruleFileHint(ext canonical.Extensions) string {
-	v, ok := ext.GetString(string(canonical.TargetClaude), "stemma.ruleFile")
-	if !ok || v == "" {
-		return ""
-	}
-	for _, seg := range strings.Split(v, "/") {
-		if !safeName(seg) {
-			return ""
-		}
-	}
-	return v
+	v, _ := ext.GetString(string(canonical.TargetClaude), "stemma.ruleFile")
+	hint, _ := adapters.ValidHint(v, true)
+	return hint
 }
 
-func skillDirName(ext canonical.Extensions, name, id string) string {
-	if v, ok := ext.GetString(string(canonical.TargetClaude), "stemma.sourceDir"); ok && safeName(v) {
-		return v
-	}
-	return adapters.SkillSlug(id)
+// skillRequest names a skill directory under .claude/skills.
+func skillRequest(id string, ext canonical.Extensions) adapters.NameRequest {
+	hint, _ := ext.GetString(string(canonical.TargetClaude), "stemma.sourceDir")
+	return adapters.NameRequest{ID: id, Dir: skillsDir, Skill: true, Hint: hint, Ext: ext}
 }
 
 func descriptionOf(ext canonical.Extensions) string {
@@ -420,11 +407,4 @@ func descriptionOf(ext canonical.Extensions) string {
 		}
 	}
 	return ""
-}
-
-func safeName(name string) bool {
-	if name == "" || name == "." || name == ".." {
-		return false
-	}
-	return !strings.ContainsAny(name, "/\\\x00")
 }

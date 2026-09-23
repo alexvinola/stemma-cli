@@ -7,7 +7,7 @@
       ".github/instructions/rule-testing.instructions.md"
     ],
     "activation": "paths api/**",
-    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+    "explanation": "Copilot applyTo represents the canonical include patterns directly. The claude source name \"testing\" was not reused because it collides with rule.testing-2 at .github/instructions/testing.instructions.md, so the destination uses the complete canonical ID."
   },
   {
     "entityId": "rule.testing-2",
@@ -17,6 +17,6 @@
       ".github/instructions/rule-testing-2.instructions.md"
     ],
     "activation": "paths web/**",
-    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+    "explanation": "Copilot applyTo represents the canonical include patterns directly. The claude source name \"testing\" was not reused because it collides with rule.testing at .github/instructions/testing.instructions.md, so the destination uses the complete canonical ID."
   }
 ]

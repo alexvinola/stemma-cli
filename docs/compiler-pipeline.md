@@ -142,6 +142,16 @@ The exporter consults `internal/capabilities` and writes provider files, and
 records exactly one projection outcome per entity. Rendering is deterministic:
 sorted maps, sorted lists, fixed section order.
 
+Every file or skill directory an entity owns is named by one shared policy,
+`Builder.Destination`: profile pins, then the target's own recorded name, then
+a valid and unambiguous source name recorded by another provider, then the
+complete canonical ID. Whether a source name collides can only be judged once
+every destination is known, so `adapters.RunExport` runs the exporter twice:
+a probe run that records all destinations, then the real run, in which every
+colliding source name falls back. The exporter is pure, so both runs see the
+same input; see
+[generated names](provider-compatibility.md#generated-names-and-destination-collisions).
+
 Once every file is emitted, the builder compares each projected entity's
 provider extensions with the keys the exporter actually wrote (or re-emitted
 from source bytes). Every key left behind is classified through

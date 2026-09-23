@@ -57,7 +57,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			placeScoped(b, root, bucketFor, doc.ID, canonical.EntityContext, doc.Title, res, doc.Provenance)
 		case canonical.ActivationOnDemand:
 			exportSkillLike(b, doc.ID, canonical.EntityContext, doc.Title, descriptionOf(doc.Extensions),
-				res, doc.Provenance,
+				res, doc.Provenance, doc.Extensions,
 				"This ecosystem has no on-demand instructions format other than skills, so the "+
 					"document is delivered as a skill.")
 		default:
@@ -81,7 +81,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		case canonical.ActivationPathScoped:
 			placeScopedRule(b, root, bucketFor, rule, res)
 		case canonical.ActivationOnDemand:
-			exportSkillLike(b, rule.ID, canonical.EntityRule, rule.Title, "", res, rule.Provenance,
+			exportSkillLike(b, rule.ID, canonical.EntityRule, rule.Title, "", res, rule.Provenance, rule.Extensions,
 				"On-demand rules are delivered as skills.")
 		default:
 			b.Invariant(rule.ID, canonical.EntityRule, res, rule.Provenance)
@@ -354,6 +354,7 @@ func exportSkillLike(
 	title, description string,
 	res adapters.Resolution,
 	prov provenance.Provenance,
+	ext canonical.Extensions,
 	explanation string,
 ) {
 	desc := description
@@ -364,7 +365,9 @@ func exportSkillLike(
 	if res.Activation.InvocationName != "" {
 		name = res.Activation.InvocationName
 	}
-	dest := writeSkill(b, res, name, id, desc, nil, res.Content, nil)
+	// Only the naming policy reads the entity's extensions here: on-demand
+	// context carries no Codex skill metadata to write back.
+	dest := writeSkillNamed(b, res, name, id, desc, nil, res.Content, nil, ext)
 	b.RecordWithDiagnostics(id, kind, adapters.OutcomeAdapted, res, prov, []string{dest}, explanation,
 		[]string{b.Diag(diagnostics.New(diagnostics.OnDemandAdapted, diagnostics.SeverityInfo,
 			"on-demand content is delivered as a skill").WithEntity(id).WithPath(dest))})
@@ -379,11 +382,21 @@ func writeSkill(
 	content string,
 	ext canonical.Extensions,
 ) string {
-	dirName := adapters.SkillSlug(id)
-	if v, ok := ext.GetString(string(canonical.TargetCodex), "stemma.sourceDir"); ok && safeName(v) {
-		dirName = v
-	}
-	dest := b.Path(res, path.Join(SkillsDir, dirName), "SKILL.md")
+	return writeSkillNamed(b, res, name, id, description, tools, content, ext, ext)
+}
+
+// writeSkillNamed writes a skill whose metadata comes from ext and whose
+// directory name comes from the naming policy applied to nameExt.
+func writeSkillNamed(
+	b *adapters.Builder,
+	res adapters.Resolution,
+	name, id, description string,
+	tools []string,
+	content string,
+	ext, nameExt canonical.Extensions,
+) string {
+	hint, _ := nameExt.GetString(string(canonical.TargetCodex), "stemma.sourceDir")
+	dest := b.Destination(res, adapters.NameRequest{ID: id, Dir: SkillsDir, Skill: true, Hint: hint, Ext: nameExt})
 	entries := []adapters.KV{{Key: "name", Value: b.SkillName(id, name, dest)}}
 	if description != "" {
 		entries = append(entries, adapters.KV{Key: "description", Value: description})
@@ -410,11 +423,4 @@ func descriptionOf(ext canonical.Extensions) string {
 		}
 	}
 	return ""
-}
-
-func safeName(name string) bool {
-	if name == "" || name == "." || name == ".." {
-		return false
-	}
-	return !strings.ContainsAny(name, "/\\\x00")
 }
