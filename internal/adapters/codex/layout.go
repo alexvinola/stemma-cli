@@ -33,6 +33,13 @@ type layout struct {
 	// shadowed maps each preserved, shadowed AGENTS.md path to the override
 	// path that shadows it.
 	shadowed map[string]string
+	// preservedFiles maps an instructions file preserved as a whole, because
+	// it had nothing to model, to the ID of the opaque block holding its bytes.
+	preservedFiles map[string]string
+	// legacyOverrides holds override paths of a project imported before
+	// override precedence was modelled; each one's only opaque block is the
+	// complete file.
+	legacyOverrides map[string]bool
 	// written records the instruction files this export generated, so that a
 	// preserved file is never mistaken for one and an unrelated file (a skill
 	// pinned to the same path) still collides visibly.
@@ -40,9 +47,19 @@ type layout struct {
 }
 
 func newLayout(p canonical.Project) layout {
-	l := layout{overrideDirs: map[string]bool{}, shadowed: map[string]string{}, written: map[string]bool{}}
+	l := layout{
+		overrideDirs: map[string]bool{}, shadowed: map[string]string{}, written: map[string]bool{},
+		preservedFiles: map[string]string{}, legacyOverrides: map[string]bool{},
+	}
 	// Reading a map only builds sets here; nothing is emitted in map order.
-	for key := range p.Extensions[string(canonical.TargetCodex)] {
+	for key, value := range p.Extensions[string(canonical.TargetCodex)] {
+		if rel, ok := strings.CutPrefix(key, preservedFileKeyPrefix); ok {
+			id, isString := value.(string)
+			if isString && (isInstructionsPath(rel, RootFile) || isInstructionsPath(rel, OverrideFile)) {
+				l.preservedFiles[rel] = id
+			}
+			continue
+		}
 		rel, ok := strings.CutPrefix(key, shadowedKeyPrefix)
 		if !ok || !isInstructionsPath(rel, RootFile) {
 			continue
@@ -90,6 +107,8 @@ func newLayout(p canonical.Project) layout {
 		}
 		if dir := instructionsDir(blk.SourcePath); !baseSourced[dir] {
 			l.overrideDirs[dir] = true
+		} else {
+			l.legacyOverrides[blk.SourcePath] = true
 		}
 	}
 	return l
@@ -153,27 +172,16 @@ func supersedeEmpty(b *adapters.Builder, dest string) {
 func (l layout) emitPreserved(b *adapters.Builder) {
 	blocks := b.OpaqueBlocksFor()
 
-	// An override Stemma could not model, or an empty one, is written back as
-	// its own file, as long as it is the only thing preserved for that path.
-	byPath := map[string][]canonical.OpaqueBlock{}
+	// A file preserved as a whole is written back as its own file when no
+	// generated file took its path (if one did, the block was re-emitted
+	// into it). A fragment of a file, such as a heading without content, is
+	// never written as if it were the whole file.
 	for _, blk := range blocks {
-		if path.Base(blk.SourcePath) == OverrideFile && blk.ReemitForRoundTrip {
-			byPath[blk.SourcePath] = append(byPath[blk.SourcePath], blk)
-		}
-	}
-	paths := make([]string, 0, len(byPath))
-	for p := range byPath {
-		paths = append(paths, p)
-	}
-	sort.Strings(paths)
-	for _, p := range paths {
-		if l.written[p] || len(byPath[p]) != 1 {
-			// Blocks of a generated file were re-emitted into it; several
-			// fragments without their file are reported as not re-emitted.
+		p := blk.SourcePath
+		if !blk.ReemitForRoundTrip || l.written[p] || !l.wholeFile(blk) {
 			continue
 		}
-		blk := byPath[p][0]
-		if isEmptyInstructions([]byte(blk.Content)) {
+		if path.Base(p) == OverrideFile && isEmptyInstructions([]byte(blk.Content)) {
 			b.EmitInactiveOpaqueFile(blk, adapters.OutcomeExact,
 				"The preserved empty override was written back verbatim. Codex skips it as empty, "+
 					"and it still keeps the AGENTS.md in its directory from being read.", nil)
@@ -209,6 +217,21 @@ func (l layout) emitPreserved(b *adapters.Builder) {
 				"for its directory, so its inactive status depends on a file outside this export.", override),
 			[]string{fp})
 	}
+}
+
+// wholeFile reports whether a preserved block is a complete instructions file
+// rather than a fragment of one: a file marked as preserved whole, an empty
+// override (whose content is always the whole file), or the verbatim override
+// of a project imported before override precedence was modelled.
+func (l layout) wholeFile(blk canonical.OpaqueBlock) bool {
+	p := blk.SourcePath
+	if id, ok := l.preservedFiles[p]; ok && id == blk.ID {
+		return true
+	}
+	if path.Base(p) != OverrideFile {
+		return false
+	}
+	return isEmptyInstructions([]byte(blk.Content)) || l.legacyOverrides[p]
 }
 
 // checkChainSize reports where the instruction files Stemma generates would

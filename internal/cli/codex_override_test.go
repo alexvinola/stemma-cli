@@ -77,3 +77,29 @@ func TestCodexOverrideRoundTripThroughTheCLI(t *testing.T) {
 		t.Fatalf("check after apply: %+v", res)
 	}
 }
+
+// An override with nothing to model (front matter and headings only) is kept
+// as the whole file: import, check and apply leave both files untouched.
+func TestCodexOverrideWithoutGuidanceThroughTheCLI(t *testing.T) {
+	h := newHarness(t)
+	h.write("svc/AGENTS.md", "# Base\n\nINACTIVE BASE\n")
+	h.write("svc/AGENTS.override.md", "---\ncustom: value\n---\n\n# Title\n\n## First\n")
+	before := h.snapshot()
+	if res := h.run("import", "--from", "codex", "--targets", "codex"); res.code != cli.ExitOK {
+		t.Fatalf("import: %+v", res)
+	}
+	if res := h.run("check", "--all"); res.code != cli.ExitOK {
+		t.Fatalf("check after import: %+v", res)
+	}
+	if res := h.run("apply", "--all", "--yes"); res.code != cli.ExitOK {
+		t.Fatalf("apply: %+v", res)
+	}
+	for path, body := range before {
+		if h.read(path) != body {
+			t.Errorf("%s changed", path)
+		}
+	}
+	if res := h.run("check", "--all"); res.code != cli.ExitOK {
+		t.Fatalf("check after apply: %+v", res)
+	}
+}

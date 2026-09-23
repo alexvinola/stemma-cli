@@ -78,7 +78,12 @@ files as active. The resolution rules are table-tested in
 `TestImportResolvesOneEffectiveFilePerDirectory`; absence from every other
 target in `TestShadowedAgentsMDIsNeverActiveGuidance`; the round trip through
 the CLI in `TestCodexOverrideRoundTripThroughTheCLI`; and the size limit in
-`TestChainSizeFollowsCodexBudget`.
+`TestChainSizeFollowsCodexBudget`. Files with nothing to model (headings
+without content, with or without front matter, at the root or nested, with or
+without a shadowed sibling) are covered by
+`TestUnmodelledInstructionsRoundTripAsWholeFiles` through import, save/load,
+plan, apply and re-plan, and `TestOpaqueFragmentIsNeverWrittenAsAWholeFile`
+keeps a heading fragment from being written as a file.
 
 Discovery budgets are tested without committed bulk fixtures: the tests generate
 thousands of irrelevant files in `t.TempDir()` and use small test-only

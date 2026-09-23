@@ -47,11 +47,13 @@ func GlobErrorCode(err error) diagnostics.Code {
 }
 
 // AddOpaque preserves content Stemma refuses to interpret.
-func (c *ImportCtx) AddOpaque(file SourceFile, content, reason string, span provenance.Span, reemit bool) {
+// It returns the block's ID.
+func (c *ImportCtx) AddOpaque(file SourceFile, content, reason string, span provenance.Span, reemit bool) string {
 	id := c.PreserveOpaque(file, content, reason, span, reemit)
 	c.Bag.Add(diagnostics.New(diagnostics.OpaqueBlockKept, diagnostics.SeverityInfo,
 		fmt.Sprintf("content preserved without interpretation: %s", reason)).
 		WithPath(file.Path).WithEntity(id))
+	return id
 }
 
 // PreserveOpaque records an opaque block like AddOpaque and returns its ID,

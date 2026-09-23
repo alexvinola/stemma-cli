@@ -43,6 +43,14 @@ const SkillsDir = ".agents/skills"
 // that shadows it. It is Stemma bookkeeping, like every "stemma." key.
 const shadowedKeyPrefix = "stemma.shadowed."
 
+// preservedFileKeyPrefix is the project-level Codex extension key prefix that
+// marks an instructions file preserved as a whole because it had nothing to
+// model. The full key is the prefix followed by the file's path; the value is
+// the ID of the opaque block holding its complete bytes. Only a block marked
+// this way is ever written back as a file of its own: a fragment of a file
+// (such as a heading without content) never is.
+const preservedFileKeyPrefix = "stemma.preservedFile."
+
 // Importer converts AGENTS.md configuration into canonical entities.
 type Importer struct{}
 
@@ -198,14 +206,21 @@ func importInstructions(c *adapters.ImportCtx, project *canonical.Project, file 
 	if !ok {
 		return
 	}
-	if doc.FrontMatter != nil && len(doc.FrontMatter.Keys) > 0 {
-		for _, k := range doc.FrontMatter.Keys {
-			project.Extensions.Set(string(canonical.TargetCodex),
-				"frontMatter."+file.Path+"."+k, doc.FrontMatter.Fields[k])
+	units := adapters.SplitDocument(doc)
+	if !hasActiveUnit(units) {
+		// Nothing here can become guidance: no body text at all, or only
+		// headings without content. Codex still reads the file when it is not
+		// empty, so the complete original bytes are preserved as one block and
+		// written back as the file itself. Reconstructing fragments ("## Title")
+		// would lose the H1, front matter, spacing and line endings, and front
+		// matter is kept only inside the block, never also as an extension.
+		if !isEmptyInstructions(file.Data) {
+			id := c.AddOpaque(file, string(file.Data),
+				"the instructions file has no body text that could be modelled; the whole file is preserved verbatim",
+				adapters.FullSpan(file, doc), true)
+			project.Extensions.Set(string(canonical.TargetCodex), preservedFileKeyPrefix+file.Path, id)
 		}
-		c.Bag.Add(diagnostics.New(diagnostics.UnknownKeysKept, diagnostics.SeverityInfo,
-			"front matter on an AGENTS.md file was preserved as a project extension").
-			WithPath(file.Path))
+		return
 	}
 
 	activation := canonical.Always()
@@ -217,15 +232,16 @@ func importInstructions(c *adapters.ImportCtx, project *canonical.Project, file 
 		activation = scoped
 	}
 
-	units := adapters.SplitDocument(doc)
-	if len(units) == 0 {
-		if strings.TrimSpace(string(file.Data)) != "" {
-			c.AddOpaque(file, string(file.Data),
-				"the instructions file has no headings or body text that could be modelled",
-				adapters.FullSpan(file, doc), true)
+	if doc.FrontMatter != nil && len(doc.FrontMatter.Keys) > 0 {
+		for _, k := range doc.FrontMatter.Keys {
+			project.Extensions.Set(string(canonical.TargetCodex),
+				"frontMatter."+file.Path+"."+k, doc.FrontMatter.Fields[k])
 		}
-		return
+		c.Bag.Add(diagnostics.New(diagnostics.UnknownKeysKept, diagnostics.SeverityInfo,
+			"front matter on an AGENTS.md file was preserved as a project extension").
+			WithPath(file.Path))
 	}
+
 	for _, u := range units {
 		title := u.Title
 		if title == "" {
@@ -255,6 +271,17 @@ func importInstructions(c *adapters.ImportCtx, project *canonical.Project, file 
 		}
 		project.ContextDocuments = append(project.ContextDocuments, entity)
 	}
+}
+
+// hasActiveUnit reports whether any unit carries body text, which is what
+// becomes a canonical entity.
+func hasActiveUnit(units []adapters.Unit) bool {
+	for _, u := range units {
+		if strings.TrimSpace(u.Content) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func defaultTitle(dir string) string {
