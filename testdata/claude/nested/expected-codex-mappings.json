@@ -1,0 +1,42 @@
+[
+  {
+    "entityId": "context.commands",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.md."
+  },
+  {
+    "entityId": "context.src-api-errors",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "src/api/AGENTS.md"
+    ],
+    "activation": "paths src/api/**",
+    "explanation": "The pattern src/api/** is exactly the subtree of src/api, which a nested AGENTS.md expresses directly."
+  },
+  {
+    "entityId": "context.src-api-validation",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "src/api/AGENTS.md"
+    ],
+    "activation": "paths src/api/**",
+    "explanation": "The pattern src/api/** is exactly the subtree of src/api, which a nested AGENTS.md expresses directly."
+  },
+  {
+    "entityId": "context.web-instructions-for-web",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "web/AGENTS.md"
+    ],
+    "activation": "paths web/**",
+    "explanation": "The pattern web/** is exactly the subtree of web, which a nested AGENTS.md expresses directly."
+  }
+]

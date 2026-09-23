@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestMatch(t *testing.T) {
@@ -372,4 +373,102 @@ func TestExpansionLimitNeverSamplesValidation(t *testing.T) {
 	if err := Validate(atBound); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestLiteralSubtree(t *testing.T) {
+	cases := []struct {
+		dir, pattern string
+		inside       []string
+		outside      []string
+	}{
+		{"src/api", "src/api/**", []string{"src/api/x.ts", "src/api/a/b.ts"}, []string{"src/apix/y.ts", "src/x.ts"}},
+		{"app/[id]", "app/[[]id]/**", []string{"app/[id]/handler.ts"}, []string{"app/i/handler.ts", "app/d/handler.ts"}},
+		{"app/[...slug]", "app/[[]...slug]/**", []string{"app/[...slug]/page.tsx"}, []string{"app/s/page.tsx", "app/./page.tsx"}},
+		{"a/{b,c}", "a/[{]b,c[}]/**", []string{"a/{b,c}/x"}, []string{"a/b/x", "a/c/x"}},
+		{"a/{b}", "a/[{]b[}]/**", []string{"a/{b}/x"}, []string{"a/b/x"}},
+		{"q/a?b", "q/a[?]b/**", []string{"q/a?b/x"}, []string{"q/axb/x"}},
+		{"s/*", "s/[*]/**", []string{"s/*/x"}, []string{"s/anything/x"}},
+		{"s/**", "s/[*][*]/**", []string{"s/**/x"}, []string{"s/a/x", "s/x"}},
+		{"odd/]x", "odd/]x/**", []string{"odd/]x/y"}, []string{"odd/x/y"}},
+		{"odd/[!]", "odd/[[]!]/**", []string{"odd/[!]/y"}, []string{"odd/a/y", "odd/!/y"}},
+		{"odd/!neg", "odd/!neg/**", []string{"odd/!neg/y"}, []string{"odd/neg/y"}},
+	}
+	for _, c := range cases {
+		got := LiteralSubtree(c.dir)
+		if got != c.pattern {
+			t.Errorf("LiteralSubtree(%q) = %q, want %q", c.dir, got, c.pattern)
+		}
+		if err := Validate(got); err != nil {
+			t.Errorf("LiteralSubtree(%q) = %q is invalid: %v", c.dir, got, err)
+		}
+		for _, p := range c.inside {
+			if !Match(got, p) {
+				t.Errorf("%q should match %q", got, p)
+			}
+		}
+		for _, p := range c.outside {
+			if Match(got, p) {
+				t.Errorf("%q must not match %q", got, p)
+			}
+		}
+		if dir, ok := LiteralSubtreeDir(got); !ok || dir != c.dir {
+			t.Errorf("LiteralSubtreeDir(%q) = %q, %v; want %q", got, dir, ok, c.dir)
+		}
+	}
+}
+
+func TestLiteralSubtreeDirRejectsGlobs(t *testing.T) {
+	for _, p := range []string{
+		"src/api/*.ts", "src/*/**", "src/[a]pi/**", "src/[ab]/**", "src/[!a]/**", "src/{a,b}/**",
+		"**", "/**", "src/**/x/**", "src/api", "./src/**", "src/../x/**", "a//b/**",
+	} {
+		if dir, ok := LiteralSubtreeDir(p); ok {
+			t.Errorf("LiteralSubtreeDir(%q) = %q, want no literal directory", p, dir)
+		}
+	}
+}
+
+// FuzzLiteralSubtree checks the quoting invariant for arbitrary directory
+// names: the quoted subtree matches the directory's own files and never a
+// path obtained by replacing a special character.
+func FuzzLiteralSubtree(f *testing.F) {
+	for _, s := range []string{"app/[id]", "a/{b,c}", "q/a?b", "s/*", "x/[!]", "x/]", "plain/dir", "é/[ü]"} {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, dir string) {
+		pattern := LiteralSubtree(dir)
+		_, _ = LiteralSubtreeDir(pattern)
+		_, _ = UnquoteLiteral(dir)
+		if !literalDirCandidate(dir) || Validate(pattern) != nil {
+			return
+		}
+		if !Match(pattern, dir+"/x") || !Match(pattern, dir+"/a/b") {
+			t.Fatalf("%q does not match files in %q", pattern, dir)
+		}
+		if got, ok := LiteralSubtreeDir(pattern); !ok || got != dir {
+			t.Fatalf("LiteralSubtreeDir(%q) = %q, %v; want %q", pattern, got, ok, dir)
+		}
+		sibling := strings.Map(func(r rune) rune {
+			if strings.ContainsRune(literalSpecial, r) {
+				return 'z'
+			}
+			return r
+		}, dir)
+		if sibling != dir && Match(pattern, sibling+"/x") {
+			t.Fatalf("%q matches the glob-expanded sibling %q", pattern, sibling)
+		}
+	})
+}
+
+// literalDirCandidate accepts what a normalized repository directory can be.
+func literalDirCandidate(dir string) bool {
+	if dir == "" || !utf8.ValidString(dir) || strings.ContainsAny(dir, "\\\x00") {
+		return false
+	}
+	for _, seg := range strings.Split(dir, "/") {
+		if seg == "" || seg == "." || seg == ".." {
+			return false
+		}
+	}
+	return true
 }

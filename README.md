@@ -266,6 +266,12 @@ this tool would need a language model, and not needing one is the point.
 Every command accepts `--json`. Exit codes are stable and documented in
 [docs/diagnostics.md](docs/diagnostics.md).
 
+Discovery looks only at registered configuration paths, so source code never
+consumes its budget, but it is still bounded (depth 32, 20 000 configuration
+files, 1 000 000 directory entries). When a limit truncates it, or a directory
+cannot be read, `stemma scan` says the scan is incomplete and `stemma import` refuses to import a possible
+subset (`STEMMA1303`, exit 1) unless you pass `--allow-incomplete-scan`.
+
 ### In CI
 
 ```yaml
@@ -280,9 +286,9 @@ Every command accepts `--json`. Exit codes are stable and documented in
 | | Import | Export | Notes |
 | --- | :---: | :---: | --- |
 | **GitHub Copilot** | ✅ | ✅ | `applyTo` has no negative patterns — excludes are lossy |
-| **Claude Code** | ✅ | ✅ | `.claude/rules/` with `paths:`; procedures become skills |
+| **Claude Code** | ✅ | ✅ | `.claude/rules/` with `paths:`; nested `CLAUDE.md`; procedures become skills |
 | **Codex** (`AGENTS.md`) | ✅ | ✅ | Directory proximity only; no native specialist agents |
-| **Kiro** | ✅ | ✅ | `inclusion: always \| fileMatch \| manual \| auto` |
+| **Kiro** | ✅ | ✅ | `.kiro/` steering, skills and agents, `inclusion: always \| fileMatch \| manual \| auto`. Kiro also reads `AGENTS.md`, which Stemma handles through the Codex adapter only |
 | **Cursor** | ❌ | ❌ | Declared identifier only — requesting it fails with exit 3 |
 
 Every capability claim is traced to official documentation, with the date it was

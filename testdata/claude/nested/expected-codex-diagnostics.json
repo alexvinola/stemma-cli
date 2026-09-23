@@ -1,0 +1,12 @@
+[
+  {
+    "code": "STEMMA3002_TARGET_NOT_ENABLED",
+    "severity": "warning",
+    "summary": "target \"codex\" is not listed in the canonical project",
+    "detail": "Compilation proceeds, but `stemma check --all` will not verify this target.",
+    "target": "codex",
+    "suggestion": "Add \"codex\" to \"targets\" in .stemma/project.json.",
+    "blocking": false,
+    "fingerprint": "dg_89f9dcf5a642964c"
+  }
+]

@@ -155,6 +155,7 @@ var table = map[canonical.TargetFormat]Capabilities{
 		AgentToolAllowlist:      true,
 		ReemitOpaqueBlocks:      true,
 		RecognizedPaths: []string{
+			"**/CLAUDE.md",
 			".claude/CLAUDE.md",
 			".claude/agents/*.md",
 			".claude/rules/**/*.md",
@@ -166,6 +167,9 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"Regenerated skill names match the directory and name changes are reported as adapted. " +
 			"Rules in .claude/rules/ are discovered recursively; a rule without paths front matter " +
 			"loads unconditionally, and one with paths loads when Claude reads a matching file. " +
+			"A CLAUDE.md in a subdirectory loads on demand when Claude reads files in that directory; " +
+			"Stemma imports it as context scoped to <dir>/** and writes it back to the same directory " +
+			"while the scope is still exactly that subtree, otherwise as a .claude/rules file. " +
 			"Procedures have no dedicated format and are exported as skills. Imported files " +
 			"(@path syntax) still enter the context window at launch, so Stemma never presents " +
 			"imports as a context reduction. Claude's glob dialect supports brace expansion, and " +
@@ -174,9 +178,9 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"literal braces in character classes. Recognized front matter fields require strings, " +
 			"string lists or booleans as appropriate; wrong types block import and preserve the file verbatim.",
 		Sources: []Source{{Title: "Agent Skills specification (directory and name constraints)", URL: "https://agentskills.io/specification", LastVerified: "2026-09-06"}, {
-			Title:        "How Claude remembers your project (CLAUDE.md and .claude/rules/)",
+			Title:        "How Claude remembers your project (CLAUDE.md, nested CLAUDE.md and .claude/rules/)",
 			URL:          "https://code.claude.com/docs/en/memory",
-			LastVerified: "2026-09-06",
+			LastVerified: "2026-09-23",
 		}, {
 			Title:        "Extend Claude with skills",
 			URL:          "https://code.claude.com/docs/en/skills",
@@ -260,11 +264,15 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"on-demand activation with a trigger description. product.md, tech.md and " +
 			"structure.md are the documented foundation files, which is why Stemma assigns " +
 			"context kinds to them by filename. Wrong types in recognized steering, skill and JSON " +
-			"agent fields (including null) block import and preserve the original file verbatim.",
+			"agent fields (including null) block import and preserve the original file verbatim. " +
+			"Kiro also reads AGENTS.md (workspace root and subdirectories, always included). This " +
+			"adapter neither imports nor writes AGENTS.md: the Codex adapter owns it, so two targets " +
+			"never own one file. Scan reports the overlap and import --from kiro names each AGENTS.md " +
+			"it leaves out (STEMMA1304).",
 		Sources: []Source{{Title: "Agent Skills specification (directory and name constraints)", URL: "https://agentskills.io/specification", LastVerified: "2026-09-06"}, {
-			Title:        "Kiro steering documents",
+			Title:        "Kiro steering documents (including AGENTS.md support)",
 			URL:          "https://kiro.dev/docs/steering/",
-			LastVerified: "2026-09-06",
+			LastVerified: "2026-09-23",
 		}, {
 			Title:        "Kiro agent skills",
 			URL:          "https://kiro.dev/docs/skills/",

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -210,7 +211,7 @@ func TestWalkIsSorted(t *testing.T) {
 
 func TestFileSizeLimit(t *testing.T) {
 	root := t.TempDir()
-	ws, err := Open(root, Limits{MaxDepth: 5, MaxFiles: 10, MaxFileBytes: 8, MaxTotalBytes: 100})
+	ws, err := Open(root, Limits{MaxDepth: 5, MaxFiles: 10, MaxEntries: 100, MaxFileBytes: 8, MaxTotalBytes: 100})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +223,7 @@ func TestFileSizeLimit(t *testing.T) {
 
 func TestTotalSizeLimit(t *testing.T) {
 	root := t.TempDir()
-	ws, err := Open(root, Limits{MaxDepth: 5, MaxFiles: 10, MaxFileBytes: 100, MaxTotalBytes: 12})
+	ws, err := Open(root, Limits{MaxDepth: 5, MaxFiles: 10, MaxEntries: 100, MaxFileBytes: 100, MaxTotalBytes: 12})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +239,7 @@ func TestTotalSizeLimit(t *testing.T) {
 
 func TestWalkDepthLimit(t *testing.T) {
 	root := t.TempDir()
-	ws, err := Open(root, Limits{MaxDepth: 2, MaxFiles: 100, MaxFileBytes: 100, MaxTotalBytes: 1000})
+	ws, err := Open(root, Limits{MaxDepth: 2, MaxFiles: 100, MaxEntries: 100, MaxFileBytes: 100, MaxTotalBytes: 1000})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,6 +259,70 @@ func TestWalkDepthLimit(t *testing.T) {
 	}
 }
 
+func TestFilteredWalkCountsOnlyCandidatesAgainstMaxFiles(t *testing.T) {
+	root := t.TempDir()
+	ws, err := Open(root, Limits{MaxDepth: 5, MaxFiles: 2, MaxEntries: 100, MaxFileBytes: 100, MaxTotalBytes: 1000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Ten non-candidates sort before the two candidates; an unfiltered walk
+	// with MaxFiles 2 would stop long before reaching them.
+	for i := 0; i < 10; i++ {
+		write(t, ws, "a/"+string(rune('a'+i))+".go", "x")
+	}
+	write(t, ws, "z/one.md", "x")
+	write(t, ws, "z/two.md", "x")
+	keep := func(rel string) bool { return strings.HasSuffix(rel, ".md") }
+
+	res, err := ws.WalkFiltered(context.Background(), "", keep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Complete() || len(res.LimitsReached) != 0 {
+		t.Fatalf("limits reached = %v, want none", res.LimitsReached)
+	}
+	if len(res.Files) != 2 || res.Files[0] != "z/one.md" || res.Files[1] != "z/two.md" {
+		t.Fatalf("files = %v", res.Files)
+	}
+	if res.FilesVisited != 12 {
+		t.Errorf("FilesVisited = %d, want 12", res.FilesVisited)
+	}
+	// Two directories plus twelve files.
+	if res.EntriesVisited != 14 {
+		t.Errorf("EntriesVisited = %d, want 14", res.EntriesVisited)
+	}
+
+	write(t, ws, "z/three.md", "x")
+	res, err = ws.WalkFiltered(context.Background(), "", keep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Complete() || len(res.LimitsReached) != 1 || res.LimitsReached[0] != LimitMaxFiles {
+		t.Fatalf("limits reached = %v, want [%s]", res.LimitsReached, LimitMaxFiles)
+	}
+}
+
+func TestWalkEntryLimitIsReported(t *testing.T) {
+	root := t.TempDir()
+	ws, err := Open(root, Limits{MaxDepth: 5, MaxFiles: 100, MaxEntries: 3, MaxFileBytes: 100, MaxTotalBytes: 1000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{"a.go", "b.go", "c.go", "d.md"} {
+		write(t, ws, p, "x")
+	}
+	res, err := ws.WalkFiltered(context.Background(), "", func(rel string) bool { return rel == "d.md" })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Complete() || len(res.LimitsReached) != 1 || res.LimitsReached[0] != LimitMaxEntries {
+		t.Fatalf("limits reached = %v, want [%s]", res.LimitsReached, LimitMaxEntries)
+	}
+	if len(res.Files) != 0 || res.EntriesVisited != 3 {
+		t.Fatalf("files = %v, entries = %d", res.Files, res.EntriesVisited)
+	}
+}
+
 func TestContextCancellation(t *testing.T) {
 	ws := newTestWorkspace(t)
 	write(t, ws, "a.md", "x")
@@ -265,5 +330,48 @@ func TestContextCancellation(t *testing.T) {
 	cancel()
 	if _, err := ws.ReadFile(ctx, "a.md"); err == nil {
 		t.Fatal("expected a cancellation error")
+	}
+}
+
+// makeUnreadable removes every permission from dir for the rest of the test
+// and restores it before cleanup. It skips when permissions are not enforced
+// (for example when running as root, or on Windows).
+func makeUnreadable(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.Chmod(dir, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	if _, err := os.ReadDir(dir); err == nil {
+		t.Skip("directory permissions are not enforced for this user")
+	}
+}
+
+func TestWalkReportsUnreadableDirectories(t *testing.T) {
+	ws := newTestWorkspace(t)
+	write(t, ws, "CLAUDE.md", "root")
+	write(t, ws, "hidden/CLAUDE.md", "hidden")
+	write(t, ws, "open/CLAUDE.md", "open")
+	native, err := ws.Native("hidden")
+	if err != nil {
+		t.Fatal(err)
+	}
+	makeUnreadable(t, native)
+
+	res, err := ws.WalkFiltered(context.Background(), "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Complete() {
+		t.Fatal("a walk that could not read a directory must not be complete")
+	}
+	if res.UnreadableCount != 1 || len(res.UnreadableDirs) != 1 || res.UnreadableDirs[0] != "hidden" {
+		t.Fatalf("unreadable = %d %v, want [hidden]", res.UnreadableCount, res.UnreadableDirs)
+	}
+	if len(res.LimitsReached) != 0 {
+		t.Errorf("limits reached = %v, want none", res.LimitsReached)
+	}
+	if strings.Join(res.Files, ",") != "CLAUDE.md,open/CLAUDE.md" {
+		t.Errorf("files = %v", res.Files)
 	}
 }

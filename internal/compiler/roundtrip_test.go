@@ -21,6 +21,8 @@ var fixtureFormats = map[string]canonical.TargetFormat{
 	"claude/basic":  canonical.TargetClaude,
 	"codex/nested":  canonical.TargetCodex,
 	"kiro/steering": canonical.TargetKiro,
+	// Nested CLAUDE.md files must come back to their own directories.
+	"claude/nested": canonical.TargetClaude,
 	// Brace groups are expanded into the canonical model, so these two cases
 	// also assert the other half of that contract: a hand-written pattern is
 	// still written back exactly as the author wrote it.

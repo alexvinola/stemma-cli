@@ -57,8 +57,20 @@ contracts; the broader semantic and round-trip tests still run separately.
 | `claude/character-class-globs` | Copilot | No |
 | `copilot/character-class-globs` | Claude | No |
 | `claude/duplicate-titles` | Copilot, Codex | No |
+| `claude/nested` | Claude, Codex | No |
 
 Copilot's format identifier is `github-copilot` in the registry and filenames.
+
+`claude/nested` pins where nested `CLAUDE.md` content is written: back to its
+own directory for Claude, and to the matching nested `AGENTS.md` for Codex. Its
+canonical storage is asserted semantically by
+`TestNestedClaudeMDImportsAsDirectoryScope`, its byte-identical same-format
+round trip by `TestSameFormatRoundTripIsByteIdentical`, and the fallback to
+`.claude/rules` by `TestClaudeNestedDirectoryHintFallsBackToRules`.
+
+Discovery budgets are tested without committed bulk fixtures: the tests generate
+thousands of irrelevant files in `t.TempDir()` and use small test-only
+`workspace.Limits` so that they stay fast.
 
 ## Fuzz inputs
 

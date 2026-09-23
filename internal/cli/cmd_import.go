@@ -30,6 +30,8 @@ func runImport(ctx context.Context, env Env, args []string) int {
 	from := fs.String("from", "auto", "source format: auto, github-copilot, claude, codex, kiro")
 	overwrite := fs.Bool("overwrite", false, "replace an existing canonical project")
 	name := fs.String("name", "", "project name (default: the workspace directory name)")
+	allowIncomplete := fs.Bool("allow-incomplete-scan", false,
+		"import even if discovery was incomplete (a limit was reached or a directory was unreadable; the import may be a subset)")
 	var enable stringList
 	fs.Var(&enable, "targets", "targets to enable in the project (repeatable, or comma-separated). "+
 		"Default: the imported format only")
@@ -92,9 +94,10 @@ func runImport(ctx context.Context, env Env, args []string) int {
 	}
 
 	result, err := compiler.Import(ctx, ws, compiler.ImportOptions{
-		Format:      format,
-		ProjectID:   existingID,
-		ProjectName: *name,
+		Format:              format,
+		ProjectID:           existingID,
+		ProjectName:         *name,
+		AllowIncompleteScan: *allowIncomplete,
 	})
 	if err != nil {
 		code := ExitDiagnostics

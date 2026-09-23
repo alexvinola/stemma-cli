@@ -255,3 +255,27 @@ func SkillFields() []parser.FieldSpec {
 func AgentFields() []parser.FieldSpec {
 	return append(SkillFields(), parser.FieldSpec{Key: "model", Type: parser.StringField})
 }
+
+// DirectoryActivation scopes content found in a directory-scoped instructions
+// file (a nested AGENTS.md or CLAUDE.md) to exactly that directory's subtree.
+//
+// The directory is a physical name, not a pattern, so it is quoted: a
+// directory called "app/[id]" must not become the character class "[id]".
+// When the quoted scope is not a valid pattern (it would exceed the pattern
+// length limit), the file is refused with a blocking diagnostic and preserved
+// verbatim, rather than imported with a wider or empty scope.
+func (c *ImportCtx) DirectoryActivation(file SourceFile, doc parser.Document, dir string) (canonical.Activation, bool) {
+	pattern := globs.LiteralSubtree(dir)
+	if err := globs.Validate(pattern); err != nil {
+		c.Bag.Add(diagnostics.New(GlobErrorCode(err), diagnostics.SeverityError,
+			"the directory of this instructions file cannot be represented as a scope").
+			WithPath(file.Path).
+			WithDetail("The directory %q, quoted as a literal pattern, is not a valid scope: %v. "+
+				"Stemma will not import it with a different scope.", dir, err).
+			WithSuggestion("Move the file to a directory with a shorter path."))
+		c.AddOpaque(file, string(file.Data),
+			"the directory cannot be represented as a canonical scope", FullSpan(file, doc), true)
+		return canonical.Activation{}, false
+	}
+	return canonical.PathScoped([]string{pattern}, nil), true
+}

@@ -19,8 +19,14 @@ import (
 type Limits struct {
 	// MaxDepth is the deepest directory level below the root that is scanned.
 	MaxDepth int
-	// MaxFiles is the maximum number of candidate files visited.
+	// MaxFiles is the maximum number of candidate files a walk reports. With
+	// a filtered walk only files accepted by the filter count against it, so
+	// source code never consumes the budget meant for configuration.
 	MaxFiles int
+	// MaxEntries is the maximum number of directory entries (files,
+	// directories and anything else) a walk inspects, candidates or not. It
+	// keeps a filtered walk bounded in very large repositories.
+	MaxEntries int
 	// MaxFileBytes is the maximum size of a single configuration file.
 	MaxFileBytes int64
 	// MaxTotalBytes is the maximum total size of all configuration read.
@@ -30,8 +36,9 @@ type Limits struct {
 // DefaultLimits returns conservative limits suitable for real repositories.
 func DefaultLimits() Limits {
 	return Limits{
-		MaxDepth:      12,
+		MaxDepth:      32,
 		MaxFiles:      20000,
+		MaxEntries:    1000000,
 		MaxFileBytes:  2 << 20,  // 2 MiB per configuration file
 		MaxTotalBytes: 64 << 20, // 64 MiB in total
 	}
@@ -290,6 +297,17 @@ func (w *Workspace) HashFile(rel string) (hash string, ok bool, err error) {
 	return h.Sum(), true, nil
 }
 
+// Walk limit names reported in WalkResult.LimitsReached.
+const (
+	LimitMaxDepth   = "max-depth"
+	LimitMaxFiles   = "max-files"
+	LimitMaxEntries = "max-entries"
+)
+
+// MaxListedUnreadable bounds how many unreadable directories a walk names.
+// Every one is still counted in WalkResult.UnreadableCount.
+const MaxListedUnreadable = 100
+
 // WalkResult reports what a directory walk observed.
 type WalkResult struct {
 	// Files is the sorted list of repository-relative candidate files.
@@ -298,15 +316,43 @@ type WalkResult struct {
 	SkippedDirs []string
 	// LimitsReached lists the limits that stopped the walk.
 	LimitsReached []string
+	// FilesVisited counts the regular files inspected, candidates or not.
+	FilesVisited int
+	// EntriesVisited counts every directory entry inspected.
+	EntriesVisited int
+	// UnreadableDirs lists, sorted, the first MaxListedUnreadable directories
+	// (in walk order) whose entries could not be read. "." is the start
+	// directory itself.
+	UnreadableDirs []string
+	// UnreadableCount counts every directory that could not be read.
+	UnreadableCount int
+}
+
+// Complete reports whether the walk inspected every directory it was asked
+// to: no limit truncated it and every directory it entered could be read.
+// Deliberately skipped directories (SkippedDirectories) and symbolic links,
+// which are never followed, do not make a walk incomplete.
+func (r WalkResult) Complete() bool {
+	return len(r.LimitsReached) == 0 && r.UnreadableCount == 0
 }
 
 // Walk visits every non-skipped directory under sub (relative to the root, ""
-// for the whole workspace) and reports candidate files.
+// for the whole workspace) and reports every regular file as a candidate.
 //
 // Symlinked directories are never followed and symlinked files are never
 // reported. Results are sorted, so iteration order never depends on the
 // filesystem.
 func (w *Workspace) Walk(ctx context.Context, sub string) (WalkResult, error) {
+	return w.WalkFiltered(ctx, sub, nil)
+}
+
+// WalkFiltered is Walk with a path predicate. Only regular files for which
+// keep returns true are reported and count against MaxFiles; every entry the
+// walk inspects counts against MaxEntries. A nil keep accepts every file.
+//
+// keep receives a normalized repository-relative slash path and must decide
+// from the path alone: the walk never opens a file.
+func (w *Workspace) WalkFiltered(ctx context.Context, sub string, keep func(rel string) bool) (WalkResult, error) {
 	var res WalkResult
 	start := w.root
 	if sub != "" {
@@ -324,10 +370,34 @@ func (w *Workspace) Walk(ctx context.Context, sub string) (WalkResult, error) {
 			return ctxErr
 		}
 		if err != nil {
+			if native == start && d == nil {
+				return err // the start directory itself could not be inspected
+			}
 			if d != nil && d.IsDir() {
+				// The directory was entered but its entries could not be
+				// read: whatever it holds was never inspected.
+				rel := "."
+				if native != start {
+					if r, relErr := w.RelFromNative(native); relErr == nil {
+						rel = r
+					}
+				} else if sub != "" {
+					rel = sub
+				}
+				res.UnreadableCount++
+				if len(res.UnreadableDirs) < MaxListedUnreadable {
+					res.UnreadableDirs = append(res.UnreadableDirs, rel)
+				}
 				return fs.SkipDir
 			}
-			return nil // unreadable entries are reported by the caller, not fatal
+			return nil // a file entry error: files are opened, and checked, only when read
+		}
+		if native != start {
+			if res.EntriesVisited >= w.limits.MaxEntries {
+				limitHit[LimitMaxEntries] = struct{}{}
+				return fs.SkipAll
+			}
+			res.EntriesVisited++
 		}
 		rel, relErr := w.RelFromNative(native)
 		if relErr != nil {
@@ -349,7 +419,7 @@ func (w *Workspace) Walk(ctx context.Context, sub string) (WalkResult, error) {
 				return fs.SkipDir
 			}
 			if depth > w.limits.MaxDepth {
-				limitHit["max-depth"] = struct{}{}
+				limitHit[LimitMaxDepth] = struct{}{}
 				if _, ok := seenSkipped[rel]; !ok {
 					seenSkipped[rel] = struct{}{}
 					res.SkippedDirs = append(res.SkippedDirs, rel)
@@ -364,8 +434,12 @@ func (w *Workspace) Walk(ctx context.Context, sub string) (WalkResult, error) {
 		if !d.Type().IsRegular() {
 			return nil
 		}
+		res.FilesVisited++
+		if keep != nil && !keep(rel) {
+			return nil
+		}
 		if len(res.Files) >= w.limits.MaxFiles {
-			limitHit["max-files"] = struct{}{}
+			limitHit[LimitMaxFiles] = struct{}{}
 			return fs.SkipAll
 		}
 		res.Files = append(res.Files, rel)
@@ -376,6 +450,7 @@ func (w *Workspace) Walk(ctx context.Context, sub string) (WalkResult, error) {
 	}
 	sort.Strings(res.Files)
 	sort.Strings(res.SkippedDirs)
+	sort.Strings(res.UnreadableDirs)
 	for k := range limitHit {
 		res.LimitsReached = append(res.LimitsReached, k)
 	}
@@ -388,6 +463,9 @@ func (w *Workspace) Walk(ctx context.Context, sub string) (WalkResult, error) {
 	}
 	if res.LimitsReached == nil {
 		res.LimitsReached = []string{}
+	}
+	if res.UnreadableDirs == nil {
+		res.UnreadableDirs = []string{}
 	}
 	return res, nil
 }

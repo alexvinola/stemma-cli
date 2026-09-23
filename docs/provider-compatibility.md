@@ -34,6 +34,10 @@ Status vocabulary used below:
 | Agent tool allowlist | yes | yes | no | yes | — |
 | Opaque provider content re-emitted | yes | yes | yes | yes | — |
 
+Directory-scoped instruction files are nested `CLAUDE.md` (Claude Code) and
+nested `AGENTS.md` (Codex). Kiro also reads `AGENTS.md`, but Stemma imports and
+writes that file only through the Codex adapter; see [Kiro](#kiro).
+
 ## Recognized metadata types
 
 Stemma checks recognized fields before creating any entity. Missing optional
@@ -138,6 +142,7 @@ which the extension classification relies on. It does not document `mode`.
 | Item | Status | Notes |
 | --- | --- | --- |
 | `CLAUDE.md`, `.claude/CLAUDE.md` | Implemented | Always-on project instructions; the file that was imported is written back |
+| Nested `<dir>/CLAUDE.md` | Implemented | Claude Code loads it on demand when it reads files in `<dir>`. Imported as context scoped to `<dir>/**` (glob characters in the directory name quoted, as for nested `AGENTS.md`), detected with `medium` confidence, and written back to `<dir>/CLAUDE.md` (`exact`) while the scope is still exactly that subtree with no excludes or profile pin; otherwise exported as a `.claude/rules` file with `paths`. Other providers' directory-scoped content is exported as `.claude/rules` files, as before. `.claude/rules/**/CLAUDE.md` stays a rule |
 | `.claude/rules/**/*.md` | Implemented | Discovered recursively; directory name makes "rule" structurally explicit |
 | `paths:` front matter | Implemented | Maps to path-scoped activation; a rule without `paths` is always-on |
 | `.claude/skills/*/SKILL.md` | Implemented | Skills round-trip natively |
@@ -146,14 +151,19 @@ which the extension classification relies on. It does not document `mode`.
 | Procedures | Lossy → Adapted | No native procedure format; exported as skills, reported as `adapted` |
 | `@path` imports | Partial | Preserved verbatim as text, never resolved. Stemma warns that imported files still enter the context window, so imports are **not** presented as a context reduction |
 | Brace expansion (`{ts,tsx}`) | Implemented | Expanded on import and projection, bounded at 1000 alternatives and 32 nested groups. Oversized groups are rejected on import with blocking `STEMMA2102`; braces inside character classes are preserved |
-| `CLAUDE.local.md`, user- and policy-scope files | Unsupported | Personal or machine-level files are out of scope for a repository compiler |
+| `CLAUDE.local.md` (any directory), user- and policy-scope files | Unsupported | Personal or machine-level files are out of scope for a repository compiler |
+| `AGENTS.md` read by Claude Code | Unsupported | Claude Code can also read `AGENTS.md` when no `CLAUDE.md` applies. Stemma models `AGENTS.md` with the Codex adapter only and does not report this overlap for Claude |
 | Auto memory (`~/.claude/projects/**`) | Unsupported | Machine-local, written by the agent, not repository configuration |
 
-Source, last verified 2026-09-06:
+Source, last verified 2026-09-23:
 [How Claude remembers your project](https://code.claude.com/docs/en/memory)
-— confirms `CLAUDE.md` and `.claude/CLAUDE.md`, `.claude/rules/` with recursive
-discovery, `paths:` front matter with multiple glob patterns and brace
-expansion, and that `@`-imports still load into context at launch.
+— confirms `CLAUDE.md` and `.claude/CLAUDE.md`, that `CLAUDE.md` files in
+subdirectories are discovered and loaded on demand when Claude reads files in
+those subdirectories (and reload the same way after compaction, like `paths:`
+rules), `.claude/rules/` with recursive discovery, `paths:` front matter with
+multiple glob patterns and brace expansion, and that `@`-imports still load into
+context at launch. It also documents that Claude Code can read `AGENTS.md`
+itself; Stemma does not model that overlap.
 
 Skill and agent metadata sources, last verified 2026-09-06:
 [Extend Claude with skills](https://code.claude.com/docs/en/skills) and
@@ -164,7 +174,7 @@ Skill and agent metadata sources, last verified 2026-09-06:
 | Item | Status | Notes |
 | --- | --- | --- |
 | Root `AGENTS.md` | Implemented | Always-on context |
-| Nested `<dir>/AGENTS.md` | Implemented | Imported as path-scoped context for `<dir>/**`; the nearest file wins |
+| Nested `<dir>/AGENTS.md` | Implemented | Imported as path-scoped context for `<dir>/**`; the nearest file wins. Glob characters in the directory name are quoted as single-character classes (`app/[id]` becomes `app/[[]id]/**`), so the scope is exactly that directory |
 | `AGENTS.override.md` | Partial | Override semantics are **not modelled**. The file is preserved verbatim as an opaque block and written back unchanged |
 | `.agents/skills/*/SKILL.md` | Implemented | Skills round-trip natively |
 | Glob-based scoping | Unsupported | Scoping is file location only. A path-scoped rule is projected natively only when its patterns resolve to a single concrete directory |
@@ -187,6 +197,7 @@ Skill metadata source, last verified 2026-09-06:
 | Item | Status | Notes |
 | --- | --- | --- |
 | `.kiro/steering/*.md` | Implemented | `inclusion: always` (documented default when absent) |
+| `AGENTS.md` (root and subdirectories) | Not handled by the Kiro adapter | Kiro reads `AGENTS.md` and always includes it. Stemma models `AGENTS.md` with the **Codex** adapter only, so two targets never own one file: import it with `--from codex`, and enable the `codex` target to write it. A Kiro repository whose only file is `AGENTS.md` is detected as Codex; `scan` marks the file `(also read by kiro)` and `import --from kiro` names every `AGENTS.md` it leaves out with `STEMMA1304`. If you keep an `AGENTS.md` and also export the same content to Kiro steering, Kiro loads both |
 | `inclusion: fileMatch` | Implemented | `fileMatchPattern` accepts one pattern or an array |
 | `inclusion: manual` | Implemented | Imported as on-demand with an invocation name |
 | `inclusion: auto` | Implemented | Imported as on-demand with a trigger description; the mode is preserved and written back |
@@ -198,10 +209,12 @@ Skill metadata source, last verified 2026-09-06:
 | Global `~/.kiro/steering/` | Unsupported | Outside the repository |
 | Procedures | Adapted | Delivered as skills |
 
-Source, last verified 2026-09-06:
+Source, last verified 2026-09-23:
 [Kiro steering documents](https://kiro.dev/docs/steering/) — confirms
 `.kiro/steering/`, the four inclusion modes, that `fileMatchPattern` accepts
-single or multiple patterns, and the three foundation files.
+single or multiple patterns, the three foundation files, and that Kiro picks up
+`AGENTS.md` at the workspace root and in subdirectories, without inclusion
+modes (always included).
 
 Skill and agent metadata sources, last verified 2026-09-06:
 [Kiro agent skills](https://kiro.dev/docs/skills/) and

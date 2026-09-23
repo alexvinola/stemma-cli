@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/discovery"
 )
@@ -48,15 +49,25 @@ func runScan(ctx context.Context, env Env, args []string) int {
 			fmt.Fprintf(env.Stdout, "\n  %s  (confidence: %s, %s)\n",
 				d.Format, d.Confidence, Plural(len(d.Files), "file", "files"))
 			for _, f := range d.Files {
-				fmt.Fprintf(env.Stdout, "    %-52s %s\n", f.Path, f.Role)
+				line := fmt.Sprintf("    %-52s %s", SanitizeLine(f.Path), f.Role)
+				if len(f.AlsoReadBy) > 0 {
+					readers := make([]string, 0, len(f.AlsoReadBy))
+					for _, r := range f.AlsoReadBy {
+						readers = append(readers, string(r))
+					}
+					line += " (also read by " + strings.Join(readers, ", ") + ")"
+				}
+				fmt.Fprintln(env.Stdout, line)
 			}
 		}
 	}
 	fmt.Fprintf(env.Stdout, "\nVisited %s; skipped %s.\n",
 		Plural(result.FilesVisited, "file", "files"),
 		Plural(len(result.SkippedDirs), "directory", "directories"))
-	if len(result.LimitsReached) > 0 {
-		fmt.Fprintf(env.Stdout, "Limits reached: %v\n", result.LimitsReached)
+	if !result.Complete {
+		fmt.Fprintf(env.Stdout, "Scan INCOMPLETE: %s.\n", strings.Join(result.IncompleteReasons(), "; "))
+		fmt.Fprintf(env.Stdout, "Configuration may exist that was not discovered; "+
+			"stemma import refuses this scan unless --allow-incomplete-scan is given.\n")
 	}
 	fmt.Fprintf(env.Stdout, "No files were read or modified.\n")
 	PrintDiagnostics(env.Stdout, result.Diagnostics, false)
