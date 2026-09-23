@@ -201,6 +201,8 @@ func TestConflictingHintsAndPinsBlockAllOwners(t *testing.T) {
 					}
 					p.Skills = p.Skills[:1]
 					p.OpaqueBlocks = []canonical.OpaqueBlock{{ID: "opaque.override", Provider: string(target), SourcePath: "AGENTS.override.md", Content: "Keep original", ReemitForRoundTrip: true}}
+					// Only a block marked as a whole preserved file is written as its own file.
+					p.Extensions.Set(string(target), "stemma.preservedFile.AGENTS.override.md", "opaque.override")
 					profile.Overrides["skill.a"] = profiles.Override{Directory: ".", Filename: "AGENTS.override.md"}
 					ids = []string{"skill.a", "opaque.override"}
 				case "agent-hint":

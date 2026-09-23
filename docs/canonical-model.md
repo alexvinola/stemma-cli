@@ -248,7 +248,18 @@ with its provider, source path, span, hash, a human-readable reason, and a flag
 saying whether it must be re-emitted for same-format round trips.
 
 Examples: a file whose front matter could not be parsed safely, a heading with
-no body, an `AGENTS.override.md` whose override semantics are not modelled.
+no body, an empty `AGENTS.override.md`, and an `AGENTS.md` that Codex never
+reads because an `AGENTS.override.md` in the same directory takes precedence.
+
+Such a shadowed file is inactive: it is preserved only so that it can be
+written back unchanged for Codex, and is never projected as guidance. The
+project-level extension key `stemma.shadowed.<path>` under `codex` (for
+example `"stemma.shadowed.AGENTS.md": "AGENTS.override.md"`) records that the
+block is shadowed and by which file; the Codex exporter uses it to keep the
+directory's instructions in the override. Likewise `stemma.preservedFile.<path>`
+names the opaque block that holds the complete bytes of an instructions file
+with nothing to model; only a block marked this way is written back as a whole
+file, never a fragment such as a heading without content.
 
 Opaque blocks receive auxiliary projection outcomes: `exact` when
 re-emitted into the same format, `lossy` when they belong to this target but

@@ -56,20 +56,5 @@
       "contentHash": "sha256:4c95e1a7cec00ba799b3cc519637191b3e6d6fcefe0a6e915f8ce38e852b1db5"
     }
   },
-  "opaqueBlocks": [
-    {
-      "id": "opaque.agents-override-md",
-      "provider": "codex",
-      "sourcePath": "AGENTS.override.md",
-      "content": "# Local overrides\n\nThis file uses semantics Stemma does not model.\n",
-      "span": {
-        "byteEnd": 67,
-        "lineStart": 1,
-        "lineEnd": 4
-      },
-      "reason": "AGENTS.override.md semantics are not modelled by Stemma; the file is preserved verbatim",
-      "hash": "sha256:318493ba54bbf28b1db7d40d074f68d426ed3a56053725e966f458f577b3c221",
-      "reemitForRoundTrip": true
-    }
-  ]
+  "opaqueBlocks": []
 }

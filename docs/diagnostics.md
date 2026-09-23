@@ -60,6 +60,9 @@ human and JSON output use this order.
 | `STEMMA1201_UNKNOWN_SECTION_PRESERVED` | info/warning | A section was kept without being modelled |
 | `STEMMA1202_UNKNOWN_KEYS_PRESERVED` | info | Unrecognised front matter kept as provider extensions |
 | `STEMMA1203_OPAQUE_BLOCK_PRESERVED` | info | Content preserved verbatim without interpretation |
+| `STEMMA1204_SHADOWED_FILE_PRESERVED` | warning | Import: an instructions file the provider never reads, because a higher-precedence file in the same directory exists (a Codex `AGENTS.md` next to `AGENTS.override.md`), was preserved verbatim as inactive content. It is not projected to any target |
+| `STEMMA1205_SHADOWING_FILE_NOT_GENERATED` | warning | Export: a preserved inactive file is written back, but the export no longer generates the file that kept it inactive, so removing that file would activate the preserved content. The mapping is `lossy` |
+| `STEMMA1206_INSTRUCTION_CHAIN_TOO_LARGE` | warning | Export: the generated instruction files on one root-to-directory chain exceed the provider's documented default load limit (Codex `project_doc_max_bytes`, 32 KiB), so under the default configuration the file named is truncated or not loaded. Reported once, where the chain first crosses the limit; accept the fingerprint if your configuration raises the limit |
 | `STEMMA1301_MULTIPLE_SOURCES` | error | Several providers detected; Stemma will not merge silently |
 | `STEMMA1302_NO_SOURCES_DETECTED` | info | Nothing supported was found |
 | `STEMMA1303_DISCOVERY_INCOMPLETE` | error/warning | Import refused: a scan limit or an unreadable directory truncated discovery, so configuration may be missing. A warning when `--allow-incomplete-scan` accepts the subset |
@@ -68,6 +71,11 @@ human and JSON output use this order.
 | `STEMMA1401_MIXED_LINE_ENDINGS` | info | The file mixes LF and CRLF; generated output uses LF |
 | `STEMMA1501_INVALID_AGENT_JSON` | error | An agent definition is not valid JSON, or has wrong field types |
 | `STEMMA1502_DUPLICATE_JSON_KEY` | error | A JSON object repeats a key; Stemma will not guess which wins |
+
+`STEMMA1204`–`STEMMA1206` describe which instruction files a provider actually
+loads (Codex override precedence and its load limit). `STEMMA1204` is reported
+at import; `STEMMA1205` and `STEMMA1206` are reported when compiling for Codex.
+See [Codex](provider-compatibility.md#codex--agentsmd).
 
 A scan is **incomplete** when a walk limit truncated it — `max-depth` (a
 directory deeper than 32 levels), `max-files` (more than 20 000 registered

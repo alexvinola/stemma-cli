@@ -431,7 +431,7 @@ func (b *Builder) ReemitOpaque(sourcePath string) string {
 	sort.Slice(blocks, func(i, j int) bool { return blocks[i].Span.ByteStart < blocks[j].Span.ByteStart })
 	var out strings.Builder
 	for _, blk := range blocks {
-		if blk.Provider != string(b.target) || !blk.ReemitForRoundTrip {
+		if blk.Provider != string(b.target) || !blk.ReemitForRoundTrip || b.emitted[blk.ID] {
 			continue
 		}
 		b.emitted[blk.ID] = true
@@ -462,6 +462,58 @@ func (b *Builder) EmitOpaqueFile(blk canonical.OpaqueBlock) {
 		Explanation: "Preserved provider content was written back to its own file verbatim.",
 		Activation:  canonical.Always(),
 	})
+}
+
+// EmitInactiveOpaqueFile writes a preserved block back verbatim as its own
+// file, for content the provider does not read (for example a file shadowed
+// by a higher-precedence file in the same directory). Its mapping is
+// documentation-only, because the content never reaches an agent, and uses
+// the given outcome, explanation and diagnostics. It returns false when the
+// block does not belong to this target or must not be re-emitted.
+func (b *Builder) EmitInactiveOpaqueFile(
+	blk canonical.OpaqueBlock, outcome Outcome, explanation string, diagIDs []string,
+) bool {
+	if blk.Provider != string(b.target) || !blk.ReemitForRoundTrip || blk.SourcePath == "" || b.emitted[blk.ID] {
+		return false
+	}
+	b.emitted[blk.ID] = true
+	b.Emit(blk.SourcePath, blk.Content, []string{blk.ID})
+	b.recordOpaque(blk, outcome, []string{blk.SourcePath}, explanation, diagIDs)
+	return true
+}
+
+// SupersedeOpaque records a preserved block whose role is carried by a
+// generated file rather than by its own bytes, such as an empty override file
+// that is replaced by generated instructions at the same path. Nothing is
+// written for the block itself.
+func (b *Builder) SupersedeOpaque(blk canonical.OpaqueBlock, dest, explanation string) {
+	if b.emitted[blk.ID] {
+		return
+	}
+	b.emitted[blk.ID] = true
+	b.recordOpaque(blk, OutcomeAdapted, []string{dest}, explanation, nil)
+}
+
+func (b *Builder) recordOpaque(
+	blk canonical.OpaqueBlock, outcome Outcome, files []string, explanation string, diagIDs []string,
+) {
+	dg := append([]string{}, diagIDs...)
+	sort.Strings(dg)
+	b.mappings = append(b.mappings, ProjectionMapping{
+		EntityID: blk.ID, EntityType: canonical.EntityOpaque, Target: b.target,
+		Outcome: outcome, Files: files, Diagnostics: dedupeStrings(dg),
+		Explanation: explanation,
+		Activation:  canonical.DocumentationOnly(),
+	})
+}
+
+// FileContent returns the bytes emitted for a destination, if any.
+func (b *Builder) FileContent(dest string) ([]byte, bool) {
+	f, ok := b.files[dest]
+	if !ok {
+		return nil, false
+	}
+	return f.Content, true
 }
 
 // OpaqueBlocksFor returns the preserved blocks belonging to this target,

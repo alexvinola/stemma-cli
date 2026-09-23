@@ -47,7 +47,19 @@ func GlobErrorCode(err error) diagnostics.Code {
 }
 
 // AddOpaque preserves content Stemma refuses to interpret.
-func (c *ImportCtx) AddOpaque(file SourceFile, content, reason string, span provenance.Span, reemit bool) {
+// It returns the block's ID.
+func (c *ImportCtx) AddOpaque(file SourceFile, content, reason string, span provenance.Span, reemit bool) string {
+	id := c.PreserveOpaque(file, content, reason, span, reemit)
+	c.Bag.Add(diagnostics.New(diagnostics.OpaqueBlockKept, diagnostics.SeverityInfo,
+		fmt.Sprintf("content preserved without interpretation: %s", reason)).
+		WithPath(file.Path).WithEntity(id))
+	return id
+}
+
+// PreserveOpaque records an opaque block like AddOpaque and returns its ID,
+// but reports nothing: the caller must report its own, more specific
+// diagnostic for the block, so that preserved input is never silent.
+func (c *ImportCtx) PreserveOpaque(file SourceFile, content, reason string, span provenance.Span, reemit bool) string {
 	id := c.IDs.Allocate(canonical.EntityOpaque, canonical.Slug(file.Path), file.Path)
 	c.Opaque = append(c.Opaque, canonical.OpaqueBlock{
 		ID:                 id,
@@ -59,9 +71,7 @@ func (c *ImportCtx) AddOpaque(file SourceFile, content, reason string, span prov
 		Hash:               provenance.HashString(content),
 		ReemitForRoundTrip: reemit,
 	})
-	c.Bag.Add(diagnostics.New(diagnostics.OpaqueBlockKept, diagnostics.SeverityInfo,
-		fmt.Sprintf("content preserved without interpretation: %s", reason)).
-		WithPath(file.Path).WithEntity(id))
+	return id
 }
 
 // ParseDocument parses a Markdown source file.

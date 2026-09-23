@@ -1,0 +1,64 @@
+[
+  {
+    "entityId": "context.services-payments-payments-service-rules",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/context-services-payments-payments-service-rules.md"
+    ],
+    "activation": "paths services/payments/**",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  },
+  {
+    "entityId": "context.services-search-search-service",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".claude/rules/context-services-search-search-service.md"
+    ],
+    "activation": "paths services/search/**",
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+  },
+  {
+    "entityId": "context.testing",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
+  },
+  {
+    "entityId": "opaque.agents-md",
+    "entityType": "opaque",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Preserved codex content has no representation in claude; it stays in the canonical project."
+  },
+  {
+    "entityId": "opaque.docs-agents-md",
+    "entityType": "opaque",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Preserved codex content has no representation in claude; it stays in the canonical project."
+  },
+  {
+    "entityId": "opaque.docs-agents-override-md",
+    "entityType": "opaque",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Preserved codex content has no representation in claude; it stays in the canonical project."
+  },
+  {
+    "entityId": "opaque.services-payments-agents-md",
+    "entityType": "opaque",
+    "outcome": "skipped-explicitly",
+    "files": [],
+    "activation": "documentation only",
+    "explanation": "Preserved codex content has no representation in claude; it stays in the canonical project."
+  }
+]
