@@ -42,16 +42,33 @@ func KnownExtensionKind(k ExtensionKind) bool {
 	}
 }
 
-// ExtensionField is the classification of one provider extension key.
+// Invocation says who can load on-demand content once a target delivers it.
+type Invocation string
+
+const (
+	// InvocationUserOnly: only a person loads it, by invoking it explicitly.
+	InvocationUserOnly Invocation = "user-only"
+	// InvocationAutomatic: the agent loads it by itself when the request
+	// matches its description (a person may also invoke it).
+	InvocationAutomatic Invocation = "automatic"
+)
+
+// ExtensionField is the classification of one provider extension key, or of
+// one value of it.
 //
-// Keys are matched exactly, per provider, whatever entity carries them. Every
-// row either cites the official documentation that defines the key (Source),
-// or names the canonical field it mirrors (Mirrors) when the key is a copy
-// that Stemma's importer keeps for same-provider round trips.
+// Keys are matched exactly, per provider, whatever entity carries them. A row
+// with a Value applies only when the stored value is that exact string, and
+// takes precedence over the key's row without a Value; a key whose meaning
+// depends on its value lists each documented value instead. Every row either
+// cites the official documentation that defines the key (Source), or names
+// the canonical field it mirrors (Mirrors) when the key is a copy that
+// Stemma's importer keeps for same-provider round trips.
 type ExtensionField struct {
 	Provider canonical.TargetFormat `json:"provider"`
 	Key      string                 `json:"key"`
-	Kind     ExtensionKind          `json:"kind"`
+	// Value restricts the row to one string value; empty matches any value.
+	Value string        `json:"value,omitempty"`
+	Kind  ExtensionKind `json:"kind"`
 	// Meaning is a short description of what the key does.
 	Meaning string `json:"meaning"`
 	// Mirrors names the canonical field this key duplicates, if any.
@@ -59,6 +76,11 @@ type ExtensionField struct {
 	// Source is the documentation defining the key; zero for mirrors that
 	// the provider does not document.
 	Source Source `json:"source,omitzero"`
+	// PreservedOnDemandBy, when set, names the invocation that carries this
+	// value's meaning: a target whose on-demand delivery has that invocation
+	// preserves it for an entity projected on demand, even though the key
+	// itself is not written.
+	PreservedOnDemandBy Invocation `json:"preservedOnDemandBy,omitempty"`
 }
 
 // Documentation pages cited by the extension classification. Titles and URLs
@@ -103,11 +125,11 @@ var (
 	}
 )
 
-// extensionTable lists every classified key, indexed by provider and key.
+// extensionTable lists every classified row, indexed by provider, key and value.
 // ExtensionFields returns the rows sorted; their order here is for readers.
 var extensionTable = buildExtensionTable()
 
-func buildExtensionTable() map[canonical.TargetFormat]map[string]ExtensionField {
+func buildExtensionTable() map[canonical.TargetFormat]map[string]map[string]ExtensionField {
 	copilot, claude, codex, kiro := canonical.TargetCopilot, canonical.TargetClaude, canonical.TargetCodex, canonical.TargetKiro
 	rows := []ExtensionField{
 		// GitHub Copilot.
@@ -189,9 +211,21 @@ func buildExtensionTable() map[canonical.TargetFormat]map[string]ExtensionField 
 		{Provider: claude, Key: "experimental", Kind: ExtensionBehaviour,
 			Meaning: "experimental subagent options", Source: srcClaudeAgents},
 
-		// Kiro.
-		{Provider: kiro, Key: "inclusion", Kind: ExtensionPresentation,
-			Meaning: "steering inclusion mode", Mirrors: "activation", Source: srcKiroSteering},
+		// Kiro. The importer maps always and fileMatch to their own canonical
+		// activations, but both manual and auto to on-demand: the difference
+		// between them survives only in this key, so those values are
+		// behaviour unless the target's on-demand delivery keeps it.
+		{Provider: kiro, Key: "inclusion", Value: "always", Kind: ExtensionPresentation,
+			Meaning: "loaded into every interaction", Mirrors: "activation", Source: srcKiroSteering},
+		{Provider: kiro, Key: "inclusion", Value: "fileMatch", Kind: ExtensionPresentation,
+			Meaning: "loaded when working with files matching fileMatchPattern", Mirrors: "activation",
+			Source: srcKiroSteering},
+		{Provider: kiro, Key: "inclusion", Value: "manual", Kind: ExtensionBehaviour,
+			Meaning: "loaded only when a person references the steering file by name", Source: srcKiroSteering,
+			PreservedOnDemandBy: InvocationUserOnly},
+		{Provider: kiro, Key: "inclusion", Value: "auto", Kind: ExtensionBehaviour,
+			Meaning: "loaded automatically when a request matches the description", Source: srcKiroSteering,
+			PreservedOnDemandBy: InvocationAutomatic},
 		{Provider: kiro, Key: "name", Kind: ExtensionPresentation,
 			Meaning: "steering identifier", Mirrors: "activation.invocationName", Source: srcKiroSteering},
 		{Provider: kiro, Key: "description", Kind: ExtensionPresentation,
@@ -228,37 +262,69 @@ func buildExtensionTable() map[canonical.TargetFormat]map[string]ExtensionField 
 				Meaning: "free-form key-value annotations", Source: srcAgentSkills},
 		)
 	}
-	out := map[canonical.TargetFormat]map[string]ExtensionField{}
+	out := map[canonical.TargetFormat]map[string]map[string]ExtensionField{}
 	for _, r := range rows {
 		if out[r.Provider] == nil {
-			out[r.Provider] = map[string]ExtensionField{}
+			out[r.Provider] = map[string]map[string]ExtensionField{}
 		}
-		out[r.Provider][r.Key] = r
+		if out[r.Provider][r.Key] == nil {
+			out[r.Provider][r.Key] = map[string]ExtensionField{}
+		}
+		out[r.Provider][r.Key][r.Value] = r
 	}
 	return out
 }
 
-// ClassifyExtension returns the classification of a provider extension key.
-// ok is false when the key is not classified; callers must then treat it as
-// UnclassifiedExtensionKind.
-func ClassifyExtension(provider canonical.TargetFormat, key string) (ExtensionField, bool) {
-	f, ok := extensionTable[provider][key]
+// ClassifyExtension returns the classification of a provider extension key
+// holding value. A row for the exact string value wins over the key's row
+// without a value. ok is false when nothing matches; callers must then treat
+// the field as UnclassifiedExtensionKind.
+func ClassifyExtension(provider canonical.TargetFormat, key string, value any) (ExtensionField, bool) {
+	rows := extensionTable[provider][key]
+	if s, isString := value.(string); isString && s != "" {
+		if f, ok := rows[s]; ok {
+			return f, true
+		}
+	}
+	f, ok := rows[""]
 	return f, ok
 }
 
-// ExtensionFields returns every classified key, sorted by provider then key.
+// ExtensionPreserved reports whether a target carries the meaning of a
+// classified field without writing the key itself. That is only the case for
+// a value whose meaning is an on-demand invocation mode, when the entity is
+// projected on demand by a target whose delivery has that invocation.
+func ExtensionPreserved(f ExtensionField, target Capabilities, activation canonical.ActivationType) bool {
+	if f.PreservedOnDemandBy == "" || activation != canonical.ActivationOnDemand {
+		return false
+	}
+	for _, inv := range target.OnDemandInvocation {
+		if inv == f.PreservedOnDemandBy {
+			return true
+		}
+	}
+	return false
+}
+
+// ExtensionFields returns every classified row, sorted by provider, key and
+// value.
 func ExtensionFields() []ExtensionField {
 	var out []ExtensionField
 	for _, keys := range extensionTable {
-		for _, f := range keys {
-			out = append(out, f)
+		for _, values := range keys {
+			for _, f := range values {
+				out = append(out, f)
+			}
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Provider != out[j].Provider {
 			return out[i].Provider < out[j].Provider
 		}
-		return out[i].Key < out[j].Key
+		if out[i].Key != out[j].Key {
+			return out[i].Key < out[j].Key
+		}
+		return out[i].Value < out[j].Value
 	})
 	return out
 }

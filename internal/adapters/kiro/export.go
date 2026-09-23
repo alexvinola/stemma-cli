@@ -218,6 +218,13 @@ func exportSteering(
 		res.Activation.Type != canonical.ActivationOnDemand && desc != "" {
 		entries = append(entries, adapters.KV{Key: "description", Value: desc})
 	}
+	// inclusion is rendered from the resolved activation above. When that
+	// reproduces the stored mode, the preserved value was written back; when
+	// a profile changed the activation, the stored mode stays visible as lost.
+	if stored, ok := ext.GetString(string(canonical.TargetKiro), "inclusion"); ok && len(entries) > 0 &&
+		entries[0].Key == "inclusion" && entries[0].Value == stored {
+		b.MarkExtensionProjected(id, "inclusion")
+	}
 	entries = append(entries, b.ExtensionEntries(id, ext,
 		"inclusion", "fileMatchPattern", "description", "name")...)
 

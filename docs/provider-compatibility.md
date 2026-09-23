@@ -242,6 +242,22 @@ field does, so every known key is classified here and in
 A key that is not listed is treated as **behaviour**, so the loss of a field
 Stemma does not know is never silent. Keys are matched per provider, whatever
 entity carries them: Kiro's `allowedTools` classifies nothing about Claude.
+A row written `key: value` applies only to that value, and a value the table
+does not list is unclassified. Kiro's `inclusion` is classified per value
+because `manual` and `auto` both import as the same on-demand activation. Such
+a value is kept, and not reported, when the entity is projected on demand by a
+target whose on-demand delivery has the matching invocation mode:
+
+| Target | On-demand context and rules are delivered as | Invocation | Source |
+| --- | --- | --- | --- |
+| Copilot | prompt files | `user-only` | [Prompt files in VS Code](https://code.visualstudio.com/docs/copilot/customization/prompt-files): "you invoke prompt files manually in chat" |
+| Claude Code | skills | `automatic` | [Extend Claude with skills](https://code.claude.com/docs/en/skills#control-who-invokes-a-skill): both you and Claude can invoke any skill by default |
+| Codex | skills | `automatic` | [Build skills](https://learn.chatgpt.com/docs/build-skills): Codex can choose a skill when the task matches its description |
+| Kiro | steering with `inclusion: manual` or `auto` | both | [Kiro steering documents](https://kiro.dev/docs/steering/) |
+
+Stemma does not write Claude's `disable-model-invocation` or Codex's
+`allow_implicit_invocation` for a manual document, so those targets report the
+lost mode instead of approximating it (checked 2026-09-23).
 Copilot prompt `mode` is deliberately unlisted: the current prompt-file
 reference documents `agent` instead, so `mode` falls back to behaviour. Stemma's
 own `stemma.*` keys are bookkeeping and are never reported. Front matter kept
@@ -301,7 +317,10 @@ at the project level (on `CLAUDE.md`, `.github/copilot-instructions.md` or
 | `kiro` | `description` | presentation | when a steering document applies | [Kiro steering documents](https://kiro.dev/docs/steering/); mirrors canonical `activation.trigger` |
 | `kiro` | `hooks` | security | commands run at agent lifecycle trigger points | [Kiro custom agent configuration reference](https://kiro.dev/docs/custom-agents/configuration-reference/) |
 | `kiro` | `includeMcpJson` | security | grants the MCP servers from workspace and global configuration | [Kiro custom agent configuration reference](https://kiro.dev/docs/custom-agents/configuration-reference/) |
-| `kiro` | `inclusion` | presentation | steering inclusion mode | [Kiro steering documents](https://kiro.dev/docs/steering/); mirrors canonical `activation` |
+| `kiro` | `inclusion: always` | presentation | loaded into every interaction | [Kiro steering documents](https://kiro.dev/docs/steering/); mirrors canonical `activation` |
+| `kiro` | `inclusion: auto` | behaviour | loaded automatically when a request matches the description | [Kiro steering documents](https://kiro.dev/docs/steering/); kept by targets whose on-demand delivery is `automatic` |
+| `kiro` | `inclusion: fileMatch` | presentation | loaded when working with files matching fileMatchPattern | [Kiro steering documents](https://kiro.dev/docs/steering/); mirrors canonical `activation` |
+| `kiro` | `inclusion: manual` | behaviour | loaded only when a person references the steering file by name | [Kiro steering documents](https://kiro.dev/docs/steering/); kept by targets whose on-demand delivery is `user-only` |
 | `kiro` | `keyboardShortcut` | presentation | shortcut for switching to the agent | [Kiro custom agent configuration reference](https://kiro.dev/docs/custom-agents/configuration-reference/) |
 | `kiro` | `license` | presentation | license covering the skill | [Agent Skills specification (frontmatter fields)](https://agentskills.io/specification) |
 | `kiro` | `mcpServers` | security | MCP servers the agent has access to | [Kiro custom agent configuration reference](https://kiro.dev/docs/custom-agents/configuration-reference/) |

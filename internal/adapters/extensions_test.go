@@ -25,7 +25,7 @@ func TestUnprojectedExtensionsClassifiesAndSorts(t *testing.T) {
 	}
 	got := UnprojectedExtensions(ext, func(provider, key string) bool {
 		return provider == "claude" && key == "permissionMode"
-	})
+	}, nil)
 	var keys []string
 	for _, l := range got {
 		keys = append(keys, l.Provider+"."+l.Key+"="+string(l.Kind))
@@ -45,8 +45,41 @@ func TestUnprojectedExtensionsClassifiesAndSorts(t *testing.T) {
 	if got[0].Field() != "extensions.kiro.allowedTools" {
 		t.Fatalf("field = %q", got[0].Field())
 	}
-	if len(UnprojectedExtensions(nil, nil)) != 0 {
+	if len(UnprojectedExtensions(nil, nil, nil)) != 0 {
 		t.Fatal("an entity without extensions loses nothing")
+	}
+}
+
+func TestUnprojectedExtensionsClassifiesByValueAndPreservation(t *testing.T) {
+	for _, tc := range []struct {
+		value     any
+		preserved bool
+		want      string // "" means not listed
+	}{
+		{"always", false, "presentation"},
+		{"fileMatch", false, "presentation"},
+		{"manual", false, "behaviour"},
+		{"auto", false, "behaviour"},
+		{"manual", true, ""},
+		{"sometimes", false, "behaviour unclassified"},
+	} {
+		ext := canonical.Extensions{"kiro": {"inclusion": tc.value}}
+		got := UnprojectedExtensions(ext, nil, func(f capabilities.ExtensionField) bool {
+			return tc.preserved && f.PreservedOnDemandBy != ""
+		})
+		desc := ""
+		if len(got) == 1 {
+			desc = string(got[0].Kind)
+			if !got[0].Classified {
+				desc += " unclassified"
+			}
+			if got[0].Value != tc.value {
+				t.Errorf("%v: loss does not carry its value: %+v", tc.value, got[0])
+			}
+		}
+		if desc != tc.want {
+			t.Errorf("inclusion=%v preserved=%v: got %q, want %q", tc.value, tc.preserved, desc, tc.want)
+		}
 	}
 }
 

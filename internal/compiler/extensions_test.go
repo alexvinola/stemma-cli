@@ -323,3 +323,112 @@ func TestScopedFilesKeepSameProviderExtensionsWhenRegenerated(t *testing.T) {
 		}
 	}
 }
+
+// TestKiroInclusionModesAcrossTargets checks every documented inclusion value
+// against every target. always and fileMatch are canonical activations; manual
+// and auto both import as on-demand, so each is lost exactly where the target's
+// on-demand delivery has the other invocation mode.
+func TestKiroInclusionModesAcrossTargets(t *testing.T) {
+	const lost = "STEMMA3801_EXTENSION_NOT_PROJECTED extensions.kiro.inclusion warning non-blocking"
+	claude, copilot, codex, kiro := canonical.TargetClaude, canonical.TargetCopilot, canonical.TargetCodex, canonical.TargetKiro
+	cases := []struct {
+		inclusion string
+		extra     string
+		lostFor   []canonical.TargetFormat
+	}{
+		{"always", "", nil},
+		{"fileMatch", "fileMatchPattern: \"src/**\"\n", nil},
+		// Claude skills and Codex skills may be loaded by the agent itself.
+		{"manual", "", []canonical.TargetFormat{claude, codex}},
+		// Copilot prompt files only run when a person invokes them.
+		{"auto", "", []canonical.TargetFormat{copilot}},
+	}
+	for _, tc := range cases {
+		steering := "---\ninclusion: " + tc.inclusion + "\n" + tc.extra +
+			"name: deploy\ndescription: Deploy production\n---\n\n# Deploy\n\nRun the deployment steps.\n"
+		_, res := importWorkspace(t, kiro, map[string]string{".kiro/steering/deploy.md": steering})
+		for _, target := range []canonical.TargetFormat{claude, copilot, codex, kiro} {
+			out, err := compiler.Compile(context.Background(), res.Project, compiler.CompileOptions{
+				Target: target, Profile: profiles.Default(target),
+			})
+			if err != nil {
+				t.Fatalf("%s -> %s: %v", tc.inclusion, target, err)
+			}
+			m := mappingFor(t, out.Mappings, "context.deploy")
+			var want []string
+			for _, l := range tc.lostFor {
+				if l == target {
+					want = []string{lost}
+				}
+			}
+			got := extensionDiags(t, out, m)
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("inclusion %s -> %s: extension diagnostics = %v, want %v", tc.inclusion, target, got, want)
+			}
+			if want != nil && (m.Outcome != adapters.OutcomeLossy || !strings.Contains(m.Explanation, "kiro.inclusion")) {
+				t.Errorf("inclusion %s -> %s: mapping = %s %q", tc.inclusion, target, m.Outcome, m.Explanation)
+			}
+			if want == nil && m.Outcome == adapters.OutcomeLossy {
+				t.Errorf("inclusion %s -> %s: unexpected lossy mapping %q", tc.inclusion, target, m.Explanation)
+			}
+			if target == kiro && !strings.Contains(out.Files[0].Text, "inclusion: "+tc.inclusion+"\n") {
+				t.Errorf("kiro output must write inclusion %s back:\n%s", tc.inclusion, out.Files[0].Text)
+			}
+		}
+	}
+
+	// A profile that makes the manual document always-on drops the mode on
+	// every target, including Kiro, which then writes inclusion: always.
+	_, res := importWorkspace(t, kiro, map[string]string{
+		".kiro/steering/deploy.md": "---\ninclusion: manual\nname: deploy\n---\n\n# Deploy\n\nRun it.\n",
+	})
+	for _, target := range []canonical.TargetFormat{copilot, kiro} {
+		profile := profiles.Default(target)
+		always := canonical.Always()
+		profile.Overrides["context.deploy"] = profiles.Override{Activation: &always}
+		out, err := compiler.Compile(context.Background(), res.Project, compiler.CompileOptions{
+			Target: target, Profile: profile,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := extensionDiags(t, out, mappingFor(t, out.Mappings, "context.deploy")); !reflect.DeepEqual(got, []string{lost}) {
+			t.Errorf("always-on override -> %s: extension diagnostics = %v", target, got)
+		}
+	}
+}
+
+// Reproduction from the independent audit of #9: a manual Kiro deployment
+// document exported to Claude becomes a skill Claude may invoke by itself.
+// Stemma does not write disable-model-invocation, so the loss must be named.
+func TestManualSteeringToClaudeReportsLostInvocationMode(t *testing.T) {
+	_, res := importWorkspace(t, canonical.TargetKiro, map[string]string{
+		".kiro/steering/deploy.md": "---\ninclusion: manual\nname: deploy\ndescription: Deploy production\n---\n\n" +
+			"Run the deployment steps.\n",
+	})
+	out, err := compiler.Compile(context.Background(), res.Project, compiler.CompileOptions{
+		Target: canonical.TargetClaude, Profile: profiles.Default(canonical.TargetClaude),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Mappings) != 1 || len(out.Files) != 1 {
+		t.Fatalf("mappings = %+v files = %+v", out.Mappings, out.Files)
+	}
+	m := out.Mappings[0]
+	if strings.Contains(out.Files[0].Text, "disable-model-invocation") {
+		t.Fatalf("this test documents the unrepresented mode; update it if the exporter learns it:\n%s", out.Files[0].Text)
+	}
+	if m.Outcome != adapters.OutcomeLossy {
+		t.Fatalf("manual-only invocation was lost without a lossy mapping: %+v", m)
+	}
+	var found bool
+	for _, d := range out.Diagnostics {
+		if d.Code == diagnostics.ExtensionNotProjected && d.Field == "extensions.kiro.inclusion" {
+			found = strings.Contains(d.Detail, `"manual"`) && strings.Contains(d.Detail, "references the steering file by name")
+		}
+	}
+	if !found {
+		t.Fatalf("no STEMMA3801 names the lost manual inclusion: %+v", out.Diagnostics)
+	}
+}

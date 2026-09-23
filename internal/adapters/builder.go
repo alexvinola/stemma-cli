@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/capabilities"
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
@@ -337,6 +338,8 @@ func (b *Builder) reportExtensionLoss(m *ProjectionMapping) {
 	}
 	losses := UnprojectedExtensions(ext, func(provider, key string) bool {
 		return b.projectedExt[m.EntityID][extensionKey(provider, key)]
+	}, func(f capabilities.ExtensionField) bool {
+		return capabilities.ExtensionPreserved(f, b.in.Capabilities, m.Activation.Type)
 	})
 	note := extensionLossNote(b.target, losses)
 	if note == "" {

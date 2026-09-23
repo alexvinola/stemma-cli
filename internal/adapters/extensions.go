@@ -17,6 +17,9 @@ type ExtensionLoss struct {
 	Provider string
 	// Key is the field name within that namespace.
 	Key string
+	// Value is the stored value when it is a string, which some
+	// classifications depend on; empty otherwise.
+	Value string
 	// Kind is the field's classification, or the conservative default.
 	Kind capabilities.ExtensionKind
 	// Classified is false when the key is not in the capability table and
@@ -45,10 +48,16 @@ func (l ExtensionLoss) label() string {
 }
 
 // UnprojectedExtensions lists every extension field of an entity that
-// projected does not report as written, classified and sorted by provider
-// then key. Keys in Stemma's reserved namespace are bookkeeping, not user
-// data, and are never listed.
-func UnprojectedExtensions(ext canonical.Extensions, projected func(provider, key string) bool) []ExtensionLoss {
+// projected does not report as written, classified by key and value and
+// sorted by provider then key. A classified field that preserved reports as
+// carried by the target's own representation is not a loss and is omitted.
+// Keys in Stemma's reserved namespace are bookkeeping, not user data, and are
+// never listed.
+func UnprojectedExtensions(
+	ext canonical.Extensions,
+	projected func(provider, key string) bool,
+	preserved func(capabilities.ExtensionField) bool,
+) []ExtensionLoss {
 	providers := make([]string, 0, len(ext))
 	for p := range ext {
 		providers = append(providers, p)
@@ -64,7 +73,13 @@ func UnprojectedExtensions(ext canonical.Extensions, projected func(provider, ke
 				continue
 			}
 			loss := ExtensionLoss{Provider: p, Key: k, Kind: capabilities.UnclassifiedExtensionKind}
-			if f, ok := capabilities.ClassifyExtension(canonical.TargetFormat(p), k); ok {
+			if s, ok := ext[p][k].(string); ok {
+				loss.Value = s
+			}
+			if f, ok := capabilities.ClassifyExtension(canonical.TargetFormat(p), k, ext[p][k]); ok {
+				if preserved != nil && preserved(f) {
+					continue
+				}
 				loss.Kind, loss.Classified, loss.Meaning = f.Kind, true, f.Meaning
 			}
 			out = append(out, loss)
@@ -110,9 +125,13 @@ func ExtensionLossDiagnostic(
 	if source.SourcePath != "" {
 		origin = fmt.Sprintf(" It was imported from %s.", source.SourcePath)
 	}
+	declared := l.Field()
+	if l.Value != "" {
+		declared += fmt.Sprintf(": %q", l.Value)
+	}
 	detail := fmt.Sprintf("%s declares %s (%s).%s The %s output has no place for it, so the field stays in "+
 		"the canonical project but does not reach the generated files.",
-		entityID, l.Field(), what, origin, target)
+		entityID, declared, what, origin, target)
 	var d diagnostics.Diagnostic
 	if l.Kind == capabilities.ExtensionSecurity {
 		d = diagnostics.New(diagnostics.SecurityExtensionNotProjected, diagnostics.SeverityError,

@@ -257,14 +257,26 @@ official documentation it was checked against:
 
 | Kind | Examples | Losing it |
 | --- | --- | --- |
-| `presentation` | Kiro `welcomeMessage`, Claude `color`, skill `license`; keys that mirror a canonical field, such as Kiro steering `inclusion` | Silent; the mapping outcome is unchanged |
+| `presentation` | Kiro `welcomeMessage`, Claude `color`, skill `license`; keys that mirror a canonical field, such as Kiro steering `inclusion: always` or `inclusion: fileMatch` | Silent; the mapping outcome is unchanged |
 | `context` | Kiro agent `resources`, Claude subagent `skills` | `lossy`, warning `STEMMA3801` naming the field |
-| `behaviour` | Copilot `excludeAgent`, prompt `model`, Kiro `toolAliases` | `lossy`, warning `STEMMA3801` naming the field |
+| `behaviour` | Copilot `excludeAgent`, prompt `model`, Kiro `toolAliases`, Kiro steering `inclusion: manual` or `inclusion: auto` | `lossy`, warning `STEMMA3801` naming the field |
 | `security` | Kiro `allowedTools`/`permissions`/`hooks`/`mcpServers`, Claude `permissionMode`/`disallowedTools` | `lossy`, blocking error `STEMMA3802` until its fingerprint is accepted in the target profile |
 
 A key the table does not list is treated as `behaviour`: Stemma cannot tell
 whether an unknown field changes what the agent does, so its loss is never
 silent. The explanation of the mapping lists every reported field.
+
+Some keys mean different things depending on their value, and are classified
+per value. Kiro's steering `inclusion` is the case today: `always` and
+`fileMatch` become their own canonical activations, but `manual` (loaded only
+when a person references the file) and `auto` (loaded when a request matches
+the description) both become `on-demand`, so the difference survives only in
+the extension. Such a value is not lost where the target's on-demand delivery
+has the same invocation mode (`onDemandInvocation` in the capability row):
+Copilot's prompt files keep `manual`, Claude's and Codex's skills keep `auto`,
+and Kiro writes either back. Elsewhere, or when a profile makes the entity
+always-on, the mapping is `lossy` with `STEMMA3801` for
+`extensions.kiro.inclusion`.
 
 A field is promoted into the canonical model only when it is genuinely
 interoperable across providers; tool lists and model preferences already are
