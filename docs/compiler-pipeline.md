@@ -94,6 +94,12 @@ preamble and subheadings stay inside their parent unit.
 Everything that is not modelled is preserved: unknown front matter keys become
 provider extensions, unparseable or unmodelled files become opaque blocks.
 
+An adapter imports only what its provider actually reads. Discovery registers
+both `AGENTS.md` and `AGENTS.override.md`, because it never opens files; the
+Codex importer then resolves one effective file per directory. When an override
+exists, it is the directory's instructions and the sibling `AGENTS.md` is kept
+as an inactive opaque block (`STEMMA1204`) that is never projected.
+
 ## 5. Validate
 
 `canonical.Validate` checks schema version, required fields, id shape and

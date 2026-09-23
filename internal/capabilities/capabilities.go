@@ -219,7 +219,14 @@ var table = map[canonical.TargetFormat]Capabilities{
 		Notes: "Fallback paths use the complete canonical ID; conflicting hints or profile destinations block export. " +
 			"Regenerated skill names match the directory and name changes are reported as adapted. " +
 			"Scoping is expressed only by file location: a nested AGENTS.md applies to its " +
-			"directory subtree. Glob patterns have no representation, so a path-scoped rule is " +
+			"directory subtree. Codex includes at most one instructions file per directory and checks " +
+			"AGENTS.override.md before AGENTS.md: when an override exists, it is imported as the " +
+			"directory's instructions and the sibling AGENTS.md is preserved verbatim as inactive " +
+			"content (STEMMA1204), never projected; an empty override is preserved and loads nothing. " +
+			"Codex stops adding instruction files once their combined size reaches project_doc_max_bytes " +
+			"(32 KiB by default); generated chains above that default are reported (STEMMA1206). " +
+			"project_doc_fallback_filenames, Codex home files and symlinked instruction files are not " +
+			"modelled. Glob patterns have no representation, so a path-scoped rule is " +
 			"only projected natively when its patterns resolve to a single concrete directory. " +
 			"There is no native specialist-agent format. Recognized skill metadata is type-checked; " +
 			"wrong types block import and preserve the SKILL.md file verbatim.",
@@ -227,6 +234,14 @@ var table = map[canonical.TargetFormat]Capabilities{
 			Title:        "AGENTS.md open format (nested files, nearest file wins)",
 			URL:          "https://agents.md/",
 			LastVerified: "2026-09-02",
+		}, {
+			Title:        "Custom instructions with AGENTS.md (override precedence, empty files, size limit)",
+			URL:          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+			LastVerified: "2026-09-23",
+		}, {
+			Title:        "Codex advanced configuration (project instructions discovery)",
+			URL:          "https://learn.chatgpt.com/docs/config-file/config-advanced#project-instructions-discovery",
+			LastVerified: "2026-09-23",
 		}, {
 			Title:        "Build skills (Codex SKILL.md metadata)",
 			URL:          "https://learn.chatgpt.com/docs/build-skills",
@@ -268,7 +283,8 @@ var table = map[canonical.TargetFormat]Capabilities{
 			"Kiro also reads AGENTS.md (workspace root and subdirectories, always included). This " +
 			"adapter neither imports nor writes AGENTS.md: the Codex adapter owns it, so two targets " +
 			"never own one file. Scan reports the overlap and import --from kiro names each AGENTS.md " +
-			"it leaves out (STEMMA1304).",
+			"it leaves out (STEMMA1304). Kiro's steering documentation does not mention " +
+			"AGENTS.override.md, so Stemma claims nothing about it for Kiro.",
 		Sources: []Source{{Title: "Agent Skills specification (directory and name constraints)", URL: "https://agentskills.io/specification", LastVerified: "2026-09-06"}, {
 			Title:        "Kiro steering documents (including AGENTS.md support)",
 			URL:          "https://kiro.dev/docs/steering/",

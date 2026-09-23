@@ -120,7 +120,8 @@ func TestCodesAreUnique(t *testing.T) {
 	codes := []Code{
 		UnrecognizedFormat, FileLimitReached, FileUnreadable, InvalidEncoding,
 		InvalidFrontMatter, FrontMatterTooLarge, UnsafeYAMLConstruct, UnknownSectionKept,
-		UnknownKeysKept, OpaqueBlockKept, MultipleSources, NoSourcesDetected, DiscoveryIncomplete, SharedFileNotImported, DirectoryUnreadable, MixedLineEndings,
+		UnknownKeysKept, OpaqueBlockKept, ShadowedFilePreserved, ShadowingFileNotGenerated,
+		InstructionChainTooLarge, MultipleSources, NoSourcesDetected, DiscoveryIncomplete, SharedFileNotImported, DirectoryUnreadable, MixedLineEndings,
 		InvalidAgentJSON, DuplicateJSONKey, DuplicateEntityID, InvalidEntityID, MissingRequired,
 		UnknownSchema, InvalidActivation, InvalidGlob, GlobExpansionLimit, DanglingProvenance, ProfileInvalid,
 		ProfileUnknownID, ManifestInvalid, TargetUnavailable, TargetNotEnabled, ExcludeNotRepresent,

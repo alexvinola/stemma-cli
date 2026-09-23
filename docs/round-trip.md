@@ -86,6 +86,23 @@ because regenerating after a real change is the normal path and CI running
 `check --warnings-as-errors` should not fail on it — but it is always present in
 `--json` output and in `plan --explain`.
 
+### Codex override files
+
+Codex reads at most one instructions file per directory, and
+`AGENTS.override.md` wins over `AGENTS.md`. A directory whose effective file at
+import was an override keeps it: unchanged, both files come back byte for byte;
+after an edit, the override is regenerated at its own path and the shadowed
+`AGENTS.md` is written back verbatim, so it stays inactive. Content added to
+such a directory later also goes to the override, replacing an empty one. A
+project that was not imported from Codex has no overrides, so only `AGENTS.md`
+files are written. The shadowed file is never projected to another target. See
+[Codex](provider-compatibility.md#codex--agentsmd).
+
+A project imported by an earlier Stemma version, which kept the whole override
+verbatim and imported the sibling `AGENTS.md` as active guidance, is exported
+exactly as before. Import the repository again to adopt override precedence;
+re-import replaces the canonical project, so preserve canonical edits first.
+
 ## Different format
 
 The goal is optimized semantic equivalence, not textual identity. Content is

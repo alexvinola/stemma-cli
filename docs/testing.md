@@ -58,6 +58,7 @@ contracts; the broader semantic and round-trip tests still run separately.
 | `copilot/character-class-globs` | Claude | No |
 | `claude/duplicate-titles` | Copilot, Codex | No |
 | `claude/nested` | Claude, Codex | No |
+| `codex/override` | Claude, Codex | No |
 
 Copilot's format identifier is `github-copilot` in the registry and filenames.
 
@@ -67,6 +68,17 @@ canonical storage is asserted semantically by
 `TestNestedClaudeMDImportsAsDirectoryScope`, its byte-identical same-format
 round trip by `TestSameFormatRoundTripIsByteIdentical`, and the fallback to
 `.claude/rules` by `TestClaudeNestedDirectoryHintFallsBackToRules`.
+
+`codex/override` pins Codex override precedence: effective root, nested and
+override-only `AGENTS.override.md` files written back to their own paths, and
+shadowed `AGENTS.md` files (including one behind an empty override) written back
+verbatim for Codex and absent from Claude. It replaced the override file that
+`codex/nested` used to carry, which encoded the old behaviour of treating both
+files as active. The resolution rules are table-tested in
+`TestImportResolvesOneEffectiveFilePerDirectory`; absence from every other
+target in `TestShadowedAgentsMDIsNeverActiveGuidance`; the round trip through
+the CLI in `TestCodexOverrideRoundTripThroughTheCLI`; and the size limit in
+`TestChainSizeFollowsCodexBudget`.
 
 Discovery budgets are tested without committed bulk fixtures: the tests generate
 thousands of irrelevant files in `t.TempDir()` and use small test-only
