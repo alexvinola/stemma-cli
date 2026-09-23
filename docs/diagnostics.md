@@ -7,12 +7,19 @@ improve; codes do not change after release.
 
 Every diagnostic carries a code, a severity (`info`, `warning`, `error`), a
 one-line summary, and optionally a detailed explanation, a source path, a line
-and column, a canonical entity id, a target format and a suggested resolution.
-It also carries `blocking` and a stable `fingerprint`.
+and column, a canonical entity id, a target format, a `field` and a suggested
+resolution. It also carries `blocking` and a stable `fingerprint`.
 
-The fingerprint is derived from code, severity, path, entity id and target —
-deliberately **not** from prose — so improving a message does not invalidate an
-acceptance recorded in a target profile.
+`field` names the specific field a diagnostic is about when one entity can
+produce several diagnostics with the same code for one target — for example
+`extensions.kiro.allowedTools` on `STEMMA3802`.
+
+The fingerprint is derived from code, severity, path, entity id, target and,
+when present, field — deliberately **not** from prose — so improving a message
+does not invalidate an acceptance recorded in a target profile. A diagnostic
+without a field has exactly the fingerprint it had before `field` existed, and
+two fields of one entity never share a fingerprint, so accepting one loss
+never accepts another.
 
 ## Acceptance
 
@@ -34,7 +41,7 @@ visible: acceptance is not suppression. Get fingerprints from
 ## Ordering
 
 Diagnostics are sorted by severity, then code, then path, then line, then
-column, then entity, then target, then summary. Duplicates are removed. Both
+column, then entity, then target, then field, then summary. Duplicates are removed. Both
 human and JSON output use this order.
 
 ## Codes
@@ -91,6 +98,22 @@ human and JSON output use this order.
 | `STEMMA3501_OPAQUE_BLOCK_NOT_REEMITTED` | warning | Preserved content could not be written back |
 | `STEMMA3601_TARGET_CONTENT_OVERRIDDEN` | warning | A profile replaced the canonical wording for this target |
 | `STEMMA3701_FILE_REGENERATED` | info | A file was regenerated rather than minimally patched |
+| `STEMMA3801_EXTENSION_NOT_PROJECTED` | warning | A context, behaviour or unclassified provider extension field was not written for the target |
+| `STEMMA3802_SECURITY_EXTENSION_NOT_PROJECTED` | error | A security provider extension field (permissions, tool allowlists, hooks, MCP servers) was not written for the target; blocks apply until its fingerprint is accepted |
+
+`STEMMA3801` and `STEMMA3802` are reported once per entity, target and
+extension field, and make the mapping `lossy`. Provider extensions are
+classified in `internal/capabilities` (see
+[provider extension classification](provider-compatibility.md#provider-extension-classification)):
+losing a `presentation` field is silent, losing a `context` or `behaviour`
+field — or any field Stemma has not classified — is `STEMMA3801`, and losing a
+`security` field is `STEMMA3802`. A dropped permission policy or tool allowlist
+must not disappear unnoticed, so `STEMMA3802` is an error: configure an
+equivalent policy in the target by hand where one exists, then add the
+diagnostic's fingerprint to `acceptedDiagnostics` in that target's profile.
+Setting `acceptLossy` on the entity only annotates the mapping; it does not
+accept the security loss. Stemma's own `stemma.*` bookkeeping keys are never
+reported.
 
 ### 4xxx — filesystem and transactions
 

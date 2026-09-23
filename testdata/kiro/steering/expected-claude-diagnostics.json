@@ -21,6 +21,30 @@
     "fingerprint": "dg_5a90385fe07c5a99"
   },
   {
+    "code": "STEMMA3801_EXTENSION_NOT_PROJECTED",
+    "severity": "warning",
+    "summary": "kiro field \"resources\" is not written for claude",
+    "detail": "agent.reviewer declares extensions.kiro.resources (context: files, skills and knowledge bases loaded for the agent). It was imported from .kiro/agents/reviewer.json. The claude output has no place for it, so the field stays in the canonical project but does not reach the generated files.",
+    "entityId": "agent.reviewer",
+    "target": "claude",
+    "field": "extensions.kiro.resources",
+    "suggestion": "Check whether claude needs an equivalent setting; once reviewed, accept this diagnostic in the claude profile.",
+    "blocking": false,
+    "fingerprint": "dg_d7c83fb4e95e179b"
+  },
+  {
+    "code": "STEMMA3801_EXTENSION_NOT_PROJECTED",
+    "severity": "warning",
+    "summary": "kiro field \"inclusion\" is not written for claude",
+    "detail": "context.incident-response declares extensions.kiro.inclusion: \"manual\" (behaviour: loaded only when a person references the steering file by name). It was imported from .kiro/steering/incident.md. The claude output has no place for it, so the field stays in the canonical project but does not reach the generated files.",
+    "entityId": "context.incident-response",
+    "target": "claude",
+    "field": "extensions.kiro.inclusion",
+    "suggestion": "Check whether claude needs an equivalent setting; once reviewed, accept this diagnostic in the claude profile.",
+    "blocking": false,
+    "fingerprint": "dg_1215b234b706784a"
+  },
+  {
     "code": "STEMMA3402_ON_DEMAND_ADAPTED",
     "severity": "info",
     "summary": "on-demand content is delivered as a Claude skill",

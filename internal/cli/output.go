@@ -129,7 +129,7 @@ func PrintDiagnostics(w io.Writer, diags []diagnostics.Diagnostic, verbose bool)
 		for _, d := range items {
 			fmt.Fprintf(w, "  %s  %s\n", d.Code, SanitizeLine(d.Summary))
 			if loc := location(d); loc != "" {
-				fmt.Fprintf(w, "      at %s\n", loc)
+				fmt.Fprintf(w, "      at %s\n", SanitizeLine(loc))
 			}
 			if verbose && d.Detail != "" {
 				fmt.Fprintf(w, "      %s\n", SanitizeLine(d.Detail))
@@ -165,6 +165,9 @@ func location(d diagnostics.Diagnostic) string {
 	}
 	if d.Target != "" {
 		parts = append(parts, "target "+d.Target)
+	}
+	if d.Field != "" {
+		parts = append(parts, "field "+d.Field)
 	}
 	return strings.Join(parts, ", ")
 }

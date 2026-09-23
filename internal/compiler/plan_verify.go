@@ -167,7 +167,7 @@ func verifyDiagnostics(saved, rebuilt []diagnostics.Diagnostic) error {
 		// which are not part of the fingerprint. Prose may evolve freely.
 		if a.Code != b.Code || a.Severity != b.Severity ||
 			a.Path != b.Path || a.Position != b.Position ||
-			a.EntityID != b.EntityID || a.Target != b.Target ||
+			a.EntityID != b.EntityID || a.Target != b.Target || a.Field != b.Field ||
 			a.Blocking != b.Blocking || a.Fingerprint != b.Fingerprint {
 			return fmt.Errorf("%w: diagnostics differ from the current project at entry %d",
 				ErrPlanRejected, i+1)

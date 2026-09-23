@@ -27,7 +27,7 @@
       "AGENTS.md"
     ],
     "activation": "paths src/api/**, src/handlers/**",
-    "explanation": "No single directory could be derived from src/api/**, src/handlers/**, so the content stays in the root AGENTS.md and is no longer scoped."
+    "explanation": "No single directory could be derived from src/api/**, src/handlers/**, so the content stays in the root AGENTS.md and is no longer scoped. Provider-specific fields not written for codex: github-copilot.excludeAgent (behaviour)."
   },
   {
     "entityId": "context.architecture",
@@ -60,12 +60,12 @@
   {
     "entityId": "procedure.release",
     "entityType": "procedure",
-    "outcome": "adapted",
+    "outcome": "lossy",
     "files": [
       ".agents/skills/procedure-release/SKILL.md"
     ],
     "activation": "on demand (release)",
-    "explanation": "There is no dedicated procedure format; the procedure is delivered as a skill. The skill invocation name is \"procedure-release\" to match its destination directory."
+    "explanation": "There is no dedicated procedure format; the procedure is delivered as a skill. The skill invocation name is \"procedure-release\" to match its destination directory. Provider-specific fields not written for codex: github-copilot.mode (unclassified, treated as behaviour), github-copilot.model (behaviour)."
   },
   {
     "entityId": "skill.release-checklist",

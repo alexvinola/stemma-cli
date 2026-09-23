@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
+	"github.com/alexvinola/stemma-cli/internal/capabilities"
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
@@ -28,6 +29,11 @@ type Builder struct {
 	bag        diagnostics.Bag
 	opaque     map[string][]canonical.OpaqueBlock
 	emitted    map[string]bool
+	// extensions indexes every entity's provider extensions by entity ID.
+	extensions map[string]canonical.Extensions
+	// projectedExt records, per entity ID, the target extension keys an
+	// exporter actually wrote. Anything else is reported by Result.
+	projectedExt map[string]map[string]bool
 }
 
 // NewBuilder starts an export run.
@@ -40,12 +46,74 @@ func NewBuilder(target canonical.TargetFormat, in ExportInput) *Builder {
 		skillNames: map[string]string{},
 		opaque:     map[string][]canonical.OpaqueBlock{},
 		emitted:    map[string]bool{},
+
+		extensions:   map[string]canonical.Extensions{},
+		projectedExt: map[string]map[string]bool{},
 	}
 	for _, blk := range in.Project.OpaqueBlocks {
 		b.opaque[blk.SourcePath] = append(b.opaque[blk.SourcePath], blk)
 	}
+	p := in.Project
+	for _, e := range p.ContextDocuments {
+		b.indexExtensions(e.ID, e.Extensions)
+	}
+	for _, e := range p.Rules {
+		b.indexExtensions(e.ID, e.Extensions)
+	}
+	for _, e := range p.Procedures {
+		b.indexExtensions(e.ID, e.Extensions)
+	}
+	for _, e := range p.Skills {
+		b.indexExtensions(e.ID, e.Extensions)
+	}
+	for _, e := range p.Agents {
+		b.indexExtensions(e.ID, e.Extensions)
+	}
+	for _, e := range p.Decisions {
+		b.indexExtensions(e.ID, e.Extensions)
+	}
 	return b
 }
+
+func (b *Builder) indexExtensions(id string, ext canonical.Extensions) {
+	if len(ext) > 0 {
+		b.extensions[id] = ext
+	}
+}
+
+// ExtensionEntries returns the target's own extensions of an entity as front
+// matter entries, like the package-level ExtensionEntries, and records every
+// returned key as written. Skipped keys are not recorded: the exporter
+// renders those itself, and any it does not render stays visible to the
+// extension-loss check in Result.
+func (b *Builder) ExtensionEntries(id string, ext canonical.Extensions, skip ...string) []KV {
+	entries := ExtensionEntries(ext, string(b.target), skip...)
+	for _, e := range entries {
+		b.MarkExtensionProjected(id, e.Key)
+	}
+	return entries
+}
+
+// MarkExtensionProjected records that the exporter wrote one of the target's
+// own extension keys for an entity by some other route.
+func (b *Builder) MarkExtensionProjected(id, key string) {
+	if b.projectedExt[id] == nil {
+		b.projectedExt[id] = map[string]bool{}
+	}
+	b.projectedExt[id][extensionKey(string(b.target), key)] = true
+}
+
+// markSourceExtensions records that re-emitted source bytes carry every one of
+// the target's own extension keys for the given entities.
+func (b *Builder) markSourceExtensions(ids []string) {
+	for _, id := range ids {
+		for key := range b.extensions[id][string(b.target)] {
+			b.MarkExtensionProjected(id, key)
+		}
+	}
+}
+
+func extensionKey(provider, key string) string { return provider + "\x00" + key }
 
 // Resolve applies the target profile to an entity.
 func (b *Builder) Resolve(id string, enabled bool, activation canonical.Activation, content string) Resolution {
@@ -103,6 +171,7 @@ func (b *Builder) Emit(dest, content string, entities []string) {
 		return
 	}
 	if original, ok := ReuseOriginal(b.in, dest, ids); ok {
+		b.markSourceExtensions(ids)
 		b.files[dest] = GeneratedFile{
 			Path: dest, Content: original, Text: string(original), Mode: 0o644,
 			ReusedSource: true, Entities: ids,
@@ -131,6 +200,7 @@ func (b *Builder) EmitReused(dest string, content []byte, entities []string) {
 	if !ok {
 		return
 	}
+	b.markSourceExtensions(ids)
 	b.files[dest] = GeneratedFile{
 		Path: dest, Content: content, Text: string(content), Mode: 0o644,
 		ReusedSource: true, Entities: ids,
@@ -213,7 +283,7 @@ func (b *Builder) RecordWithDiagnostics(
 		}
 	}
 	if res.AcceptLossy && outcome == OutcomeLossy {
-		explanation += " The lossy mapping is explicitly accepted in the target profile."
+		explanation += " " + acceptedLossyNote
 	}
 	sorted := make([]string, 0, len(files))
 	for _, f := range files {
@@ -247,6 +317,50 @@ func (b *Builder) RecordWithDiagnostics(
 		Override:    res.Applied,
 		Tokens:      tokenestimate.Default().Estimate(res.Content),
 	})
+}
+
+// acceptedLossyNote closes the explanation of a lossy mapping that the target
+// profile accepts with acceptLossy.
+const acceptedLossyNote = "The lossy mapping is explicitly accepted in the target profile."
+
+// reportExtensionLoss gives every provider extension field the export did not
+// write a classification-driven outcome: presentation fields are dropped
+// silently, anything else makes the mapping lossy and adds one diagnostic per
+// field. It runs once all files are emitted, because an aggregate file may be
+// emitted after the mappings of the entities it contains are recorded.
+func (b *Builder) reportExtensionLoss(m *ProjectionMapping) {
+	if m.Outcome == OutcomeSkipped || m.Outcome == OutcomeBlocked {
+		return
+	}
+	ext, ok := b.extensions[m.EntityID]
+	if !ok {
+		return
+	}
+	losses := UnprojectedExtensions(ext, func(provider, key string) bool {
+		return b.projectedExt[m.EntityID][extensionKey(provider, key)]
+	}, func(f capabilities.ExtensionField) bool {
+		return capabilities.ExtensionPreserved(f, b.in.Capabilities, m.Activation.Type)
+	})
+	note := extensionLossNote(b.target, losses)
+	if note == "" {
+		return
+	}
+	for _, l := range losses {
+		if d, report := ExtensionLossDiagnostic(m.EntityID, b.target, m.Source, l); report {
+			m.Diagnostics = append(append([]string{}, m.Diagnostics...), b.Diag(d))
+		}
+	}
+	wasLossy := m.Outcome == OutcomeLossy
+	m.Outcome = ExtensionLossOutcome(m.Outcome, losses)
+	accepted := m.Override != nil && m.Override.AcceptLossy
+	base := strings.TrimSpace(m.Explanation)
+	if wasLossy && accepted && strings.HasSuffix(base, acceptedLossyNote) {
+		base = strings.TrimSpace(strings.TrimSuffix(base, acceptedLossyNote))
+	}
+	m.Explanation = strings.TrimSpace(base + " " + note)
+	if accepted && m.Outcome == OutcomeLossy {
+		m.Explanation += " " + acceptedLossyNote
+	}
 }
 
 // Exact records a faithful projection.
@@ -428,6 +542,7 @@ func (b *Builder) Result() ExportResult {
 				m.Explanation = "The destination conflicts with another generated file; no content was written to the conflicting paths."
 			}
 		}
+		b.reportExtensionLoss(m)
 		sort.Strings(m.Diagnostics)
 		m.Diagnostics = dedupeStrings(m.Diagnostics)
 		if mappings[i].Files == nil {

@@ -20,6 +20,41 @@ func TestFingerprintIsStableAcrossMessageChanges(t *testing.T) {
 	}
 }
 
+func TestFieldIsPartOfTheFingerprintOnlyWhenSet(t *testing.T) {
+	// Pinned from testdata/canonical/exclude-and-disabled/expected-codex-diagnostics.json
+	// (and docs/diagnostics.md): adding the field component must not change an
+	// existing fingerprint, or acceptances recorded in profiles would stop matching.
+	legacy := New(ExcludeNotRepresent, SeverityWarning, "x").
+		WithPath("src/api/AGENTS.md").WithEntity("rule.controller-repository").WithTarget("codex")
+	if legacy.Fingerprint != "dg_184cf4cbcf883cfa" {
+		t.Fatalf("fingerprint without a field changed: %s", legacy.Fingerprint)
+	}
+	a := New(ExtensionNotProjected, SeverityWarning, "x").
+		WithEntity("agent.reviewer").WithTarget("claude").WithField("extensions.kiro.resources")
+	b := a.WithField("extensions.kiro.toolAliases")
+	if a.Fingerprint == b.Fingerprint {
+		t.Fatal("different fields must produce different fingerprints")
+	}
+	if a.Fingerprint == a.WithField("").Fingerprint {
+		t.Fatal("a field must contribute to the fingerprint")
+	}
+	if a.WithDetail("better wording").Fingerprint != a.Fingerprint {
+		t.Fatal("prose must not change a fingerprint that carries a field")
+	}
+	items := []Diagnostic{b, a}
+	Sort(items)
+	if items[0].Field != "extensions.kiro.resources" {
+		t.Fatalf("field must order otherwise equal diagnostics: %+v", items)
+	}
+	var bag Bag
+	bag.Add(a)
+	bag.Add(New(ExtensionNotProjected, SeverityWarning, "x").
+		WithEntity("agent.reviewer").WithTarget("claude").WithField("extensions.kiro.toolAliases"))
+	if got := len(bag.Items()); got != 2 {
+		t.Fatalf("diagnostics for different fields must not be deduplicated, got %d", got)
+	}
+}
+
 func TestSeverityDrivesBlocking(t *testing.T) {
 	if !New(InvalidGlob, SeverityError, "x").Blocking {
 		t.Error("errors must block by default")
@@ -92,7 +127,7 @@ func TestCodesAreUnique(t *testing.T) {
 		PatternNotRepresent,
 		DirectoryScopeAmbig, DirectoryScopeBroader, AgentToolsNeedReview, AgentNotNative,
 		OnDemandAdapted, OpaqueNotReemitted, TargetOverridesContent,
-		RegeneratedFile, PathEscape, SymlinkRejected, StalePlan, WriteRolledBack,
+		RegeneratedFile, ExtensionNotProjected, SecurityExtensionNotProjected, PathEscape, SymlinkRejected, StalePlan, WriteRolledBack,
 		RecoveryDataWritten, UntrackedDestConfl, ImportRoundTripUnverified, ImportOwnershipRevoked, DeleteProposed, OutputStale,
 		TokenBudgetExceeded, AlwaysOnContextLarge, InternalInvariant,
 	}

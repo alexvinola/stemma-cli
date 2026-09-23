@@ -7,7 +7,7 @@
       "AGENTS.md"
     ],
     "activation": "always-on",
-    "explanation": "Flattened into always-on guidance because this target has no specialist-agent format."
+    "explanation": "Flattened into always-on guidance because this target has no specialist-agent format. Provider-specific fields not written for codex: kiro.resources (context)."
   },
   {
     "entityId": "context.api-conventions",
@@ -22,12 +22,12 @@
   {
     "entityId": "context.incident-response",
     "entityType": "context",
-    "outcome": "adapted",
+    "outcome": "lossy",
     "files": [
       ".agents/skills/context-incident-response/SKILL.md"
     ],
     "activation": "on demand (incident-response)",
-    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill. The skill invocation name is \"context-incident-response\" to match its destination directory."
+    "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill. The skill invocation name is \"context-incident-response\" to match its destination directory. Provider-specific fields not written for codex: kiro.inclusion (behaviour)."
   },
   {
     "entityId": "context.product",

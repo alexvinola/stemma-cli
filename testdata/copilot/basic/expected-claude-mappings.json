@@ -22,12 +22,12 @@
   {
     "entityId": "context.api-layer-conventions",
     "entityType": "context",
-    "outcome": "exact",
+    "outcome": "lossy",
     "files": [
       ".claude/rules/context-api-layer-conventions.md"
     ],
     "activation": "paths src/api/**, src/handlers/**",
-    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter. Provider-specific fields not written for claude: github-copilot.excludeAgent (behaviour)."
   },
   {
     "entityId": "context.architecture",
@@ -60,12 +60,12 @@
   {
     "entityId": "procedure.release",
     "entityType": "procedure",
-    "outcome": "adapted",
+    "outcome": "lossy",
     "files": [
       ".claude/skills/procedure-release/SKILL.md"
     ],
     "activation": "on demand (release)",
-    "explanation": "Claude Code has no dedicated procedure format; the procedure is delivered as a skill. The skill invocation name is \"procedure-release\" to match its destination directory."
+    "explanation": "Claude Code has no dedicated procedure format; the procedure is delivered as a skill. The skill invocation name is \"procedure-release\" to match its destination directory. Provider-specific fields not written for claude: github-copilot.mode (unclassified, treated as behaviour), github-copilot.model (behaviour)."
   },
   {
     "entityId": "skill.release-checklist",
