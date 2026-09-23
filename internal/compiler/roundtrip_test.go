@@ -28,6 +28,9 @@ var fixtureFormats = map[string]canonical.TargetFormat{
 	// still written back exactly as the author wrote it.
 	"copilot/brace-globs": canonical.TargetCopilot,
 	"claude/brace-globs":  canonical.TargetClaude,
+	// Source names: nested instructions with duplicate base names must come
+	// back to their own subdirectories.
+	"copilot/source-names": canonical.TargetCopilot,
 }
 
 func fixtureNames() []string {

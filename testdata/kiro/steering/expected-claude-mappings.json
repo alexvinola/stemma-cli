@@ -4,30 +4,30 @@
     "entityType": "agent",
     "outcome": "lossy",
     "files": [
-      ".claude/agents/agent-reviewer.md"
+      ".claude/agents/reviewer.md"
     ],
     "activation": "on demand (reviewer)",
-    "explanation": "claude supports specialist agents, but the declared tool names come from kiro and are not verified against this provider. Provider-specific fields not written for claude: kiro.resources (context)."
+    "explanation": "claude supports specialist agents, but the declared tool names come from kiro and are not verified against this provider. The destination keeps the name \"reviewer\" of its kiro source. Provider-specific fields not written for claude: kiro.resources (context)."
   },
   {
     "entityId": "context.api-conventions",
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".claude/rules/context-api-conventions.md"
+      ".claude/rules/api.md"
     ],
     "activation": "paths src/api/**, src/handlers/**",
-    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter. The destination keeps the name \"api\" of its kiro source."
   },
   {
     "entityId": "context.incident-response",
     "entityType": "context",
     "outcome": "lossy",
     "files": [
-      ".claude/skills/context-incident-response/SKILL.md"
+      ".claude/skills/incident/SKILL.md"
     ],
     "activation": "on demand (incident-response)",
-    "explanation": "Claude Code has no on-demand context format other than skills, so the document is delivered as a skill that loads when invoked. The skill invocation name is \"context-incident-response\" to match its destination directory. Provider-specific fields not written for claude: kiro.inclusion (behaviour)."
+    "explanation": "Claude Code has no on-demand context format other than skills, so the document is delivered as a skill that loads when invoked. The destination keeps the name \"incident\" of its kiro source. The skill invocation name is \"incident\" to match its destination directory. Provider-specific fields not written for claude: kiro.inclusion (behaviour)."
   },
   {
     "entityId": "context.product",
@@ -42,11 +42,11 @@
   {
     "entityId": "skill.audit",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".claude/skills/skill-audit/SKILL.md"
+      ".claude/skills/audit/SKILL.md"
     ],
     "activation": "on demand (audit)",
-    "explanation": "Claude Code supports skills natively. The skill invocation name is \"skill-audit\" to match its destination directory."
+    "explanation": "Claude Code supports skills natively. The destination keeps the name \"audit\" of its kiro source."
   }
 ]

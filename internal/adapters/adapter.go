@@ -134,6 +134,11 @@ type ExportInput struct {
 	Originals map[string]SourceFile
 	// SourceIndex maps a source path to every entity imported from it.
 	SourceIndex map[string][]string
+
+	// naming carries the shared naming decisions; RunExport sets it. An
+	// exporter called directly reuses every eligible source name, and the
+	// builder still blocks any destination collision that results.
+	naming *namingState
 }
 
 // ExportResult is the outcome of compiling one target.

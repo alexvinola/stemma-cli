@@ -118,6 +118,7 @@ never make a scan incomplete.
 | `STEMMA3501_OPAQUE_BLOCK_NOT_REEMITTED` | warning | Preserved content could not be written back |
 | `STEMMA3601_TARGET_CONTENT_OVERRIDDEN` | warning | A profile replaced the canonical wording for this target |
 | `STEMMA3701_FILE_REGENERATED` | info | A file was regenerated rather than minimally patched |
+| `STEMMA3702_SOURCE_NAME_NOT_PRESERVED` | info | A file or skill directory name recorded from another provider was not reused for this target — it is unsafe, ambiguous, invalid for the target's name rule, would change how the file is discovered, or collides with another destination — so the destination uses the complete canonical ID; the detail names the reason |
 | `STEMMA3801_EXTENSION_NOT_PROJECTED` | warning | A context, behaviour or unclassified provider extension field was not written for the target |
 | `STEMMA3802_SECURITY_EXTENSION_NOT_PROJECTED` | error | A security provider extension field (permissions, tool allowlists, hooks, MCP servers) was not written for the target; blocks apply until its fingerprint is accepted |
 

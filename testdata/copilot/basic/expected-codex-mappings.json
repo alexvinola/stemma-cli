@@ -62,19 +62,19 @@
     "entityType": "procedure",
     "outcome": "lossy",
     "files": [
-      ".agents/skills/procedure-release/SKILL.md"
+      ".agents/skills/release/SKILL.md"
     ],
     "activation": "on demand (release)",
-    "explanation": "There is no dedicated procedure format; the procedure is delivered as a skill. The skill invocation name is \"procedure-release\" to match its destination directory. Provider-specific fields not written for codex: github-copilot.mode (unclassified, treated as behaviour), github-copilot.model (behaviour)."
+    "explanation": "There is no dedicated procedure format; the procedure is delivered as a skill. The destination keeps the name \"release\" of its github-copilot source. Provider-specific fields not written for codex: github-copilot.mode (unclassified, treated as behaviour), github-copilot.model (behaviour)."
   },
   {
     "entityId": "skill.release-checklist",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".agents/skills/skill-release-checklist/SKILL.md"
+      ".agents/skills/release-checklist/SKILL.md"
     ],
     "activation": "on demand (release-checklist)",
-    "explanation": "Skills are supported natively. The skill invocation name is \"skill-release-checklist\" to match its destination directory."
+    "explanation": "Skills are supported natively. The destination keeps the name \"release-checklist\" of its github-copilot source."
   }
 ]

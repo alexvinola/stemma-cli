@@ -56,10 +56,24 @@ contracts; the broader semantic and round-trip tests still run separately.
 | `copilot/brace-globs` | Claude, Codex | No |
 | `claude/character-class-globs` | Copilot | No |
 | `copilot/character-class-globs` | Claude | No |
+| `copilot/source-names` | Claude | No |
 | `claude/duplicate-titles` | Copilot, Codex | No |
 | `claude/nested` | Claude, Codex | No |
 
 Copilot's format identifier is `github-copilot` in the registry and filenames.
+
+`copilot/source-names` pins the source-name policy of issue #61 for Claude: a
+clean instruction file and skill keep their names; duplicate base names from
+different directories, case-only variants (`Style`/`style`), and a prompt and a
+skill that both want `.claude/skills/review/` all fall back to canonical-ID
+names; and `Release_Notes` is not a valid skill name. Each fallback carries
+`STEMMA3702` and an explanation, and changed skill invocation names are
+`adapted`. It is also a same-format round-trip fixture, so its nested Copilot
+instructions must come back byte-for-byte to their own subdirectories.
+Validation, precedence, every-target layouts and order independence are
+covered by the table and property tests in `internal/compiler/naming_test.go`;
+the upgrade from the previous naming policy by
+`TestUpgradeFromCanonicalIDNamesProposesDeletion`.
 
 `claude/nested` pins where nested `CLAUDE.md` content is written: back to its
 own directory for Claude, and to the matching nested `AGENTS.md` for Codex. Its

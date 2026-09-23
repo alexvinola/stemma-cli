@@ -127,7 +127,7 @@ func TestCodesAreUnique(t *testing.T) {
 		PatternNotRepresent,
 		DirectoryScopeAmbig, DirectoryScopeBroader, AgentToolsNeedReview, AgentNotNative,
 		OnDemandAdapted, OpaqueNotReemitted, TargetOverridesContent,
-		RegeneratedFile, ExtensionNotProjected, SecurityExtensionNotProjected, PathEscape, SymlinkRejected, StalePlan, WriteRolledBack,
+		RegeneratedFile, SourceNameNotKept, ExtensionNotProjected, SecurityExtensionNotProjected, PathEscape, SymlinkRejected, StalePlan, WriteRolledBack,
 		RecoveryDataWritten, UntrackedDestConfl, ImportRoundTripUnverified, ImportOwnershipRevoked, DeleteProposed, OutputStale,
 		TokenBudgetExceeded, AlwaysOnContextLarge, InternalInvariant,
 	}

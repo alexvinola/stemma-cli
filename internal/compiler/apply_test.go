@@ -246,7 +246,7 @@ func TestApplyNeverDeletes(t *testing.T) {
 	m = res.Manifest
 	// A retired generated file may have been edited before the user decides
 	// whether to remove it. Retaining the tombstone must not adopt those bytes.
-	editedPath, _ := ws.Native(".claude/rules/context-api-layer-conventions.md")
+	editedPath, _ := ws.Native(".claude/rules/api.md")
 	if err := os.WriteFile(editedPath, []byte("user edit to retired output\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -355,7 +355,7 @@ func TestDeleteProposalsAreNeverExecuted(t *testing.T) {
 		t.Errorf("expected a delete proposal:\n%s", res.stdout)
 	}
 	h.run("apply", "--target", "claude", "--yes")
-	if !h.exists(".claude/rules/context-api-layer-conventions.md") {
+	if !h.exists(".claude/rules/api.md") {
 		t.Fatal("apply deleted a file; deletions must never be executed")
 	}
 }
@@ -561,7 +561,7 @@ func TestCheckKeepsProposedDeletionVisibleUntilManualDelete(t *testing.T) {
 	if err := os.Remove(canonicalPath); err != nil {
 		t.Fatal(err)
 	}
-	const stalePath = ".claude/rules/context-api-layer-conventions.md"
+	const stalePath = ".claude/rules/api.md"
 
 	assertOutOfDate := func(stage string) {
 		t.Helper()
@@ -676,7 +676,7 @@ func TestApplyAllAppliesEveryTarget(t *testing.T) {
 	if res.code != cli.ExitOK {
 		t.Fatalf("exit = %d, stderr = %s", res.code, res.stderr)
 	}
-	for _, path := range []string{"CLAUDE.md", "AGENTS.md", ".claude/rules/context-api-layer-conventions.md"} {
+	for _, path := range []string{"CLAUDE.md", "AGENTS.md", ".claude/rules/api.md"} {
 		if !h.exists(path) {
 			t.Errorf("%s was not written", path)
 		}

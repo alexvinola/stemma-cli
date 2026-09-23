@@ -24,19 +24,19 @@
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".github/instructions/rule-asset-conventions.instructions.md"
+      ".github/instructions/assets.instructions.md"
     ],
     "activation": "paths app/**/*.css, app/**/*.scss, packages/**/*.css, packages/**/*.scss",
-    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+    "explanation": "Copilot applyTo represents the canonical include patterns directly. The destination keeps the name \"assets\" of its claude source."
   },
   {
     "entityId": "rule.strict-typing",
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".github/instructions/rule-strict-typing.instructions.md"
+      ".github/instructions/api.instructions.md"
     ],
     "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go",
-    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+    "explanation": "Copilot applyTo represents the canonical include patterns directly. The destination keeps the name \"api\" of its claude source."
   }
 ]

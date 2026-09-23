@@ -8,5 +8,29 @@
     "suggestion": "Add \"github-copilot\" to \"targets\" in .stemma/project.json.",
     "blocking": false,
     "fingerprint": "dg_178726ca77de4a98"
+  },
+  {
+    "code": "STEMMA3702_SOURCE_NAME_NOT_PRESERVED",
+    "severity": "info",
+    "summary": "a source file or directory name was not reused for this target",
+    "detail": "The claude source name \"testing\" (extensions.claude.stemma.ruleFile=\"frontend/testing.md\") was not used because it collides with rule.testing at .github/instructions/testing.instructions.md. The destination uses the complete canonical ID instead.",
+    "path": ".github/instructions/rule-testing-2.instructions.md",
+    "entityId": "rule.testing-2",
+    "target": "github-copilot",
+    "suggestion": "Rename the source, or pin a directory or filename for this entity in the target profile.",
+    "blocking": false,
+    "fingerprint": "dg_a01a8348cb01d7db"
+  },
+  {
+    "code": "STEMMA3702_SOURCE_NAME_NOT_PRESERVED",
+    "severity": "info",
+    "summary": "a source file or directory name was not reused for this target",
+    "detail": "The claude source name \"testing\" (extensions.claude.stemma.ruleFile=\"backend/testing.md\") was not used because it collides with rule.testing-2 at .github/instructions/testing.instructions.md. The destination uses the complete canonical ID instead.",
+    "path": ".github/instructions/rule-testing.instructions.md",
+    "entityId": "rule.testing",
+    "target": "github-copilot",
+    "suggestion": "Rename the source, or pin a directory or filename for this entity in the target profile.",
+    "blocking": false,
+    "fingerprint": "dg_dd2e113c24e396f6"
   }
 ]

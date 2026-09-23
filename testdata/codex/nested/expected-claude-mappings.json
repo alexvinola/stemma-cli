@@ -40,11 +40,11 @@
   {
     "entityId": "skill.deploy",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".claude/skills/skill-deploy/SKILL.md"
+      ".claude/skills/deploy/SKILL.md"
     ],
     "activation": "on demand (deploy)",
-    "explanation": "Claude Code supports skills natively. The skill invocation name is \"skill-deploy\" to match its destination directory."
+    "explanation": "Claude Code supports skills natively. The destination keeps the name \"deploy\" of its codex source."
   }
 ]

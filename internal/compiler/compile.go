@@ -143,7 +143,7 @@ func Compile(ctx context.Context, project canonical.Project, opts CompileOptions
 		Originals:    opts.Originals,
 		SourceIndex:  SourceIndex(opt.Project),
 	}
-	out, err := exporter.Export(ctx, in)
+	out, err := adapters.RunExport(ctx, exporter, in)
 	if err != nil {
 		return CompileResult{}, fmt.Errorf("export %s: %w", opts.Target, err)
 	}
