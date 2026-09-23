@@ -83,7 +83,12 @@ without content, with or without front matter, at the root or nested, with or
 without a shadowed sibling) are covered by
 `TestUnmodelledInstructionsRoundTripAsWholeFiles` through import, save/load,
 plan, apply and re-plan, and `TestOpaqueFragmentIsNeverWrittenAsAWholeFile`
-keeps a heading fragment from being written as a file.
+keeps a heading fragment from being written as a file. Projects imported
+before override precedence was modelled are built by hand in
+`TestLegacyOverrideProjectsPlanAsBefore` (override only, root and nested, with
+an empty base or a base with entities) through plan, save/load, apply and
+re-plan; `TestNonLegacyOverrideBlocksAreNotWholeFiles` rejects near-miss
+shapes.
 
 Discovery budgets are tested without committed bulk fixtures: the tests generate
 thousands of irrelevant files in `t.TempDir()` and use small test-only

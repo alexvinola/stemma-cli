@@ -98,9 +98,13 @@ project that was not imported from Codex has no overrides, so only `AGENTS.md`
 files are written. The shadowed file is never projected to another target. See
 [Codex](provider-compatibility.md#codex--agentsmd).
 
-A project imported by an earlier Stemma version, which kept the whole override
-verbatim and imported the sibling `AGENTS.md` as active guidance, is exported
-exactly as before. Import the repository again to adopt override precedence;
+A project imported by an earlier Stemma version, which kept each whole
+override verbatim as one opaque block and imported any sibling `AGENTS.md` as
+active guidance, is exported exactly as before: overrides written back
+verbatim (also where there is no `AGENTS.md`), instructions in `AGENTS.md`.
+Such a block is recognized only by its exact historical shape: the recorded
+reason those versions wrote, a span covering the whole content, and
+re-emission enabled. Any other block is never taken for a whole file. Import the repository again to adopt override precedence;
 re-import replaces the canonical project, so preserve canonical edits first.
 
 ## Different format

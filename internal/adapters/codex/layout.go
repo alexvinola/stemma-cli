@@ -36,10 +36,6 @@ type layout struct {
 	// preservedFiles maps an instructions file preserved as a whole, because
 	// it had nothing to model, to the ID of the opaque block holding its bytes.
 	preservedFiles map[string]string
-	// legacyOverrides holds override paths of a project imported before
-	// override precedence was modelled; each one's only opaque block is the
-	// complete file.
-	legacyOverrides map[string]bool
 	// written records the instruction files this export generated, so that a
 	// preserved file is never mistaken for one and an unrelated file (a skill
 	// pinned to the same path) still collides visibly.
@@ -49,7 +45,7 @@ type layout struct {
 func newLayout(p canonical.Project) layout {
 	l := layout{
 		overrideDirs: map[string]bool{}, shadowed: map[string]string{}, written: map[string]bool{},
-		preservedFiles: map[string]string{}, legacyOverrides: map[string]bool{},
+		preservedFiles: map[string]string{},
 	}
 	// Reading a map only builds sets here; nothing is emitted in map order.
 	for key, value := range p.Extensions[string(canonical.TargetCodex)] {
@@ -69,18 +65,10 @@ func newLayout(p canonical.Project) layout {
 		l.overrideDirs[dir] = true
 	}
 	// Entities imported from an override keep their directory on the
-	// override. Entities imported from an AGENTS.md mean that file was the
-	// effective one when the project was imported.
-	baseSourced := map[string]bool{}
+	// override.
 	mark := func(pv provenance.Provenance) {
-		if pv.SourceFormat != string(canonical.TargetCodex) {
-			return
-		}
-		switch {
-		case isInstructionsPath(pv.SourcePath, OverrideFile):
+		if pv.SourceFormat == string(canonical.TargetCodex) && isInstructionsPath(pv.SourcePath, OverrideFile) {
 			l.overrideDirs[instructionsDir(pv.SourcePath)] = true
-		case isInstructionsPath(pv.SourcePath, RootFile):
-			baseSourced[instructionsDir(pv.SourcePath)] = true
 		}
 	}
 	for _, e := range p.ContextDocuments {
@@ -96,22 +84,39 @@ func newLayout(p canonical.Project) layout {
 		mark(e.Provenance)
 	}
 	// A preserved override (an empty one, or one with nothing to model) also
-	// keeps its directory on the override. The exception is a directory whose
-	// AGENTS.md was imported as active guidance: that is a project imported
-	// before override precedence was modelled, where the whole override was
-	// kept verbatim. Its layout is left exactly as it was, both files
-	// included, until the repository is imported again.
+	// keeps its directory on the override. A legacy override does not: the
+	// project was imported before override precedence was modelled, and its
+	// layout is left exactly as it was (instructions in AGENTS.md, the
+	// override written back verbatim) until the repository is imported again.
 	for _, blk := range p.OpaqueBlocks {
-		if blk.Provider != string(canonical.TargetCodex) || !isInstructionsPath(blk.SourcePath, OverrideFile) {
+		if blk.Provider != string(canonical.TargetCodex) || !isInstructionsPath(blk.SourcePath, OverrideFile) ||
+			isLegacyOverride(blk) {
 			continue
 		}
-		if dir := instructionsDir(blk.SourcePath); !baseSourced[dir] {
-			l.overrideDirs[dir] = true
-		} else {
-			l.legacyOverrides[blk.SourcePath] = true
-		}
+		l.overrideDirs[instructionsDir(blk.SourcePath)] = true
 	}
 	return l
+}
+
+// legacyOverrideReason is the exact reason every Codex importer before
+// override precedence was modelled (up to commit 840b031) recorded on the one
+// opaque block holding a whole AGENTS.override.md. It is historical data read
+// from existing .stemma/provenance.json files: never edit or reuse it.
+const legacyOverrideReason = "AGENTS.override.md semantics are not modelled by Stemma; the file is preserved verbatim"
+
+// isLegacyOverride reports whether a block is the verbatim override of a
+// project imported before override precedence was modelled. Those importers
+// kept the complete file, with the legacy reason and a span covering all of
+// it; the current importer never writes that reason. A zero span is accepted
+// as "not recorded" (spans are omitted when zero); a span that covers only
+// part of the content is not a whole file and is rejected.
+func isLegacyOverride(blk canonical.OpaqueBlock) bool {
+	if blk.Provider != string(canonical.TargetCodex) || path.Base(blk.SourcePath) != OverrideFile ||
+		blk.Reason != legacyOverrideReason || !blk.ReemitForRoundTrip {
+		return false
+	}
+	return blk.Span == (provenance.Span{}) ||
+		(blk.Span.ByteStart == 0 && blk.Span.ByteEnd == len(blk.Content))
 }
 
 // isInstructionsPath reports whether rel is a normalized repository path whose
@@ -181,7 +186,7 @@ func (l layout) emitPreserved(b *adapters.Builder) {
 		if !blk.ReemitForRoundTrip || l.written[p] || !l.wholeFile(blk) {
 			continue
 		}
-		if path.Base(p) == OverrideFile && isEmptyInstructions([]byte(blk.Content)) {
+		if path.Base(p) == OverrideFile && isEmptyInstructions([]byte(blk.Content)) && !isLegacyOverride(blk) {
 			b.EmitInactiveOpaqueFile(blk, adapters.OutcomeExact,
 				"The preserved empty override was written back verbatim. Codex skips it as empty, "+
 					"and it still keeps the AGENTS.md in its directory from being read.", nil)
@@ -222,7 +227,8 @@ func (l layout) emitPreserved(b *adapters.Builder) {
 // wholeFile reports whether a preserved block is a complete instructions file
 // rather than a fragment of one: a file marked as preserved whole, an empty
 // override (whose content is always the whole file), or the verbatim override
-// of a project imported before override precedence was modelled.
+// of a project imported before override precedence was modelled
+// (isLegacyOverride).
 func (l layout) wholeFile(blk canonical.OpaqueBlock) bool {
 	p := blk.SourcePath
 	if id, ok := l.preservedFiles[p]; ok && id == blk.ID {
@@ -231,7 +237,7 @@ func (l layout) wholeFile(blk canonical.OpaqueBlock) bool {
 	if path.Base(p) != OverrideFile {
 		return false
 	}
-	return isEmptyInstructions([]byte(blk.Content)) || l.legacyOverrides[p]
+	return isEmptyInstructions([]byte(blk.Content)) || isLegacyOverride(blk)
 }
 
 // checkChainSize reports where the instruction files Stemma generates would
