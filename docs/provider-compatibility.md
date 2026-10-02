@@ -175,7 +175,12 @@ Skill and agent metadata sources, last verified 2026-09-06:
 | --- | --- | --- |
 | Root `AGENTS.md` | Implemented | Always-on context |
 | Nested `<dir>/AGENTS.md` | Implemented | Imported as path-scoped context for `<dir>/**`; the nearest file wins. Glob characters in the directory name are quoted as single-character classes (`app/[id]` becomes `app/[[]id]/**`), so the scope is exactly that directory |
-| `AGENTS.override.md` | Partial | Override semantics are **not modelled**. The file is preserved verbatim as an opaque block and written back unchanged |
+| `AGENTS.override.md` (root or `<dir>/`) | Implemented | Codex reads at most one instructions file per directory and checks `AGENTS.override.md` first. A non-empty override is imported exactly like the `AGENTS.md` it replaces (root: always-on; nested: scoped to `<dir>/**`) and written back to the override, not to `AGENTS.md` |
+| `AGENTS.md` next to an `AGENTS.override.md` | Implemented (inactive) | Codex never reads it. It is not parsed into entities and never projected to any target; it is kept verbatim as an opaque block, marked by the project extension `codex` → `stemma.shadowed.<path>`, reported with `STEMMA1204` (warning), and written back unchanged for Codex. If an export no longer generates the override for that directory, the file is still written back, but the mapping is `lossy` with `STEMMA1205`: removing the override would make Codex read it |
+| `AGENTS.md` or `AGENTS.override.md` with nothing to model | Implemented | A non-empty file with no body text (only headings without content, optionally with front matter) produces no entity. Codex still reads it, so the complete original bytes are kept as one opaque block (`STEMMA1203`), marked by `codex` → `stemma.preservedFile.<path>`, and written back as the file itself: front matter, H1, spacing and line endings included. Its front matter is not also stored as an extension. Only a block marked this way is ever written as a file; a heading without content inside a file that has guidance stays a fragment of that file |
+| Empty `AGENTS.override.md` | Implemented | Empty after trimming whitespace. Codex selects the first instructions file that exists in a directory and skips it if it is empty, so an empty override still hides the sibling `AGENTS.md` and the directory contributes nothing. It is preserved verbatim (`STEMMA1203`); generated content for that directory replaces it at the same path. A byte order mark is not whitespace |
+| Instruction size limit | Partial | Codex stops adding instruction files once their combined size reaches `project_doc_max_bytes`, 32 KiB by default. `STEMMA1206` (warning) marks the generated file where a root-to-directory chain first exceeds 32 768 bytes. Only files Stemma generates are counted, and a configured limit is not read: accept the fingerprint if you raised it |
+| `project_doc_fallback_filenames`, `~/.codex/AGENTS*.md` | Unsupported | Configured fallback names and Codex home files are outside what Stemma discovers. Only the exact names `AGENTS.md` and `AGENTS.override.md` are recognized. Symbolic links are never followed: a symlinked override is not discovered, so Stemma treats its sibling `AGENTS.md` as effective, although Codex follows the link |
 | `.agents/skills/*/SKILL.md` | Implemented | Skills round-trip natively |
 | Glob-based scoping | Unsupported | Scoping is file location only. A path-scoped rule is projected natively only when its patterns resolve to a single concrete directory |
 | Ambiguous scopes | Lossy | If no single directory can be derived, Stemma refuses to invent one: the content stays in the root file with `STEMMA3201`, and a profile can pin a directory or skip the entity |
@@ -186,7 +191,30 @@ Skill and agent metadata sources, last verified 2026-09-06:
 Source, last verified 2026-09-02:
 [agents.md](https://agents.md/) — confirms the root file, nested files per
 package, that the nearest file in the tree takes precedence, and that the format
-is plain Markdown with no front matter or glob scoping.
+is plain Markdown with no front matter or glob scoping. It does not describe
+`AGENTS.override.md`.
+
+Override and size-limit source, last verified 2026-09-23:
+[Custom instructions with AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
+(where `developers.openai.com/codex/guides/agents-md` redirects) — in each directory
+Codex "checks for `AGENTS.override.md`, then `AGENTS.md`", and "includes at most
+one file per directory"; it "skips empty files", and to use the regular file
+again you "rename or remove the override". Files are concatenated from the
+project root down, and Codex stops once "the combined size reaches" the
+`project_doc_max_bytes` limit, 32 KiB by default. The page's sentence "Codex
+uses only the first non-empty file at this level" describes the global
+`~/.codex` scope, not project directories. The guide does not say whether an
+empty override falls back to the sibling `AGENTS.md`; Stemma models the
+reference implementation
+([`codex-rs/core/src/agents_md.rs`](https://github.com/openai/codex/blob/main/codex-rs/core/src/agents_md.rs),
+read 2026-09-23), which picks the first existing file per directory and only
+then skips it when its trimmed text is empty. The
+[advanced configuration](https://learn.chatgpt.com/docs/config-file/config-advanced#project-instructions-discovery)
+page summarizes `project_doc_max_bytes` as "how much to read from each
+AGENTS.md file". Stemma follows the guide and the implementation, which apply
+one budget to the combined files. Under a per-file reading only a single file
+above 32 KiB would be truncated, so review a `STEMMA1206` caused by several
+smaller files against your Codex version.
 
 Skill metadata source, last verified 2026-09-06:
 [Build skills](https://learn.chatgpt.com/docs/build-skills) — confirms the
@@ -197,7 +225,7 @@ Skill metadata source, last verified 2026-09-06:
 | Item | Status | Notes |
 | --- | --- | --- |
 | `.kiro/steering/*.md` | Implemented | `inclusion: always` (documented default when absent) |
-| `AGENTS.md` (root and subdirectories) | Not handled by the Kiro adapter | Kiro reads `AGENTS.md` and always includes it. Stemma models `AGENTS.md` with the **Codex** adapter only, so two targets never own one file: import it with `--from codex`, and enable the `codex` target to write it. A Kiro repository whose only file is `AGENTS.md` is detected as Codex; `scan` marks the file `(also read by kiro)` and `import --from kiro` names every `AGENTS.md` it leaves out with `STEMMA1304`. If you keep an `AGENTS.md` and also export the same content to Kiro steering, Kiro loads both |
+| `AGENTS.md` (root and subdirectories) | Not handled by the Kiro adapter | Kiro reads `AGENTS.md` and always includes it. Kiro's steering documentation does not mention `AGENTS.override.md`, so Stemma claims nothing about it for Kiro; an `AGENTS.md` that Codex ignores because of an override is still imported only as inactive Codex content, never as Kiro steering. Stemma models `AGENTS.md` with the **Codex** adapter only, so two targets never own one file: import it with `--from codex`, and enable the `codex` target to write it. A Kiro repository whose only file is `AGENTS.md` is detected as Codex; `scan` marks the file `(also read by kiro)` and `import --from kiro` names every `AGENTS.md` it leaves out with `STEMMA1304`. If you keep an `AGENTS.md` and also export the same content to Kiro steering, Kiro loads both |
 | `inclusion: fileMatch` | Implemented | `fileMatchPattern` accepts one pattern or an array |
 | `inclusion: manual` | Implemented | Imported as on-demand with an invocation name |
 | `inclusion: auto` | Implemented | Imported as on-demand with a trigger description; the mode is preserved and written back |

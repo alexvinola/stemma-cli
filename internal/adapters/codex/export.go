@@ -13,7 +13,6 @@ import (
 	"github.com/alexvinola/stemma-cli/internal/globs"
 	"github.com/alexvinola/stemma-cli/internal/provenance"
 	"github.com/alexvinola/stemma-cli/internal/tokenestimate"
-	"github.com/alexvinola/stemma-cli/internal/workspace"
 )
 
 // Exporter renders canonical entities as AGENTS.md files and skills.
@@ -25,6 +24,9 @@ func (Exporter) Format() canonical.TargetFormat { return canonical.TargetCodex }
 // Export implements adapters.Exporter.
 func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.ExportResult, error) {
 	b := adapters.NewBuilder(canonical.TargetCodex, in)
+	l := newLayout(in.Project)
+	rootDest := l.file("")
+	rootNote := fmt.Sprintf("the root %s", l.name(""))
 	root := adapters.NewAlwaysBucket()
 	nested := map[string]*adapters.AlwaysBucket{}
 
@@ -50,11 +52,11 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		switch res.Activation.Type {
 		case canonical.ActivationAlways:
 			root.AddSection(doc.ID, doc.Title, res.Content)
-			b.Exact(doc.ID, canonical.EntityContext, res, doc.Provenance, []string{RootFile},
-				"Always-on context is written into the root AGENTS.md.")
+			b.Exact(doc.ID, canonical.EntityContext, res, doc.Provenance, []string{rootDest},
+				"Always-on context is written into "+rootNote+".")
 			b.CountAlwaysOn(res.Content)
 		case canonical.ActivationPathScoped:
-			placeScoped(b, root, bucketFor, doc.ID, canonical.EntityContext, doc.Title, res, doc.Provenance)
+			placeScoped(b, l, root, bucketFor, doc.ID, canonical.EntityContext, doc.Title, res, doc.Provenance)
 		case canonical.ActivationOnDemand:
 			exportSkillLike(b, doc.ID, canonical.EntityContext, doc.Title, descriptionOf(doc.Extensions),
 				res, doc.Provenance,
@@ -75,11 +77,11 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		switch res.Activation.Type {
 		case canonical.ActivationAlways:
 			root.AddRule(rule.ID, rule.Priority, res.Content)
-			b.Exact(rule.ID, canonical.EntityRule, res, rule.Provenance, []string{RootFile},
-				"The rule is written as a bullet in the root AGENTS.md.")
+			b.Exact(rule.ID, canonical.EntityRule, res, rule.Provenance, []string{rootDest},
+				"The rule is written as a bullet in "+rootNote+".")
 			b.CountAlwaysOn(res.Content)
 		case canonical.ActivationPathScoped:
-			placeScopedRule(b, root, bucketFor, rule, res)
+			placeScopedRule(b, l, root, bucketFor, rule, res)
 		case canonical.ActivationOnDemand:
 			exportSkillLike(b, rule.ID, canonical.EntityRule, rule.Title, "", res, rule.Provenance,
 				"On-demand rules are delivered as skills.")
@@ -99,7 +101,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			continue
 		}
 		root.AddDecision(dec.ID, dec.Title, dec.AgentConstraints)
-		b.Adapted(dec.ID, canonical.EntityDecision, res, dec.Provenance, []string{RootFile},
+		b.Adapted(dec.ID, canonical.EntityDecision, res, dec.Provenance, []string{rootDest},
 			"Only the decision's agent constraints are projected; the rest stays human documentation.")
 		b.CountAlwaysOn(strings.Join(dec.AgentConstraints, "\n"))
 	}
@@ -156,30 +158,25 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		root.AddSection(agent.ID, "Specialist guidance: "+agent.Name, strings.TrimSpace(body.String()))
 		fp := b.Diag(diagnostics.New(diagnostics.AgentNotNative, diagnostics.SeverityWarning,
 			"there is no native specialist-agent format for this target").
-			WithEntity(agent.ID).WithPath(RootFile).
+			WithEntity(agent.ID).WithPath(rootDest).
 			WithDetail("The definition of %q was flattened into ordinary always-on guidance in %s. "+
 				"It is no longer a separate agent, and any declared tools are only mentioned as text.",
-				agent.Name, RootFile).
+				agent.Name, rootDest).
 			WithSuggestion("Set include:false for this entity in .stemma/profiles/codex.json if the " +
 				"flattened guidance is not wanted."))
 		b.RecordWithDiagnostics(agent.ID, canonical.EntityAgent, adapters.OutcomeLossy, res,
-			agent.Provenance, []string{RootFile},
+			agent.Provenance, []string{rootDest},
 			"Flattened into always-on guidance because this target has no specialist-agent format.",
 			[]string{fp})
 		b.CountAlwaysOn(body.String())
 	}
 
-	// Preserved override files are written back verbatim.
-	for _, blk := range b.OpaqueBlocksFor() {
-		if strings.HasSuffix(blk.SourcePath, "AGENTS.override.md") {
-			b.EmitOpaqueFile(blk)
-		}
-	}
-
 	if !root.Empty() {
 		content := root.Render(in.Project.Name, nil)
-		content += b.ReemitOpaque(RootFile)
-		b.Emit(RootFile, content, root.EntityIDs())
+		supersedeEmpty(b, rootDest)
+		content += b.ReemitOpaque(rootDest)
+		b.Emit(rootDest, content, root.EntityIDs())
+		l.written[rootDest] = true
 	}
 	dirs := make([]string, 0, len(nested))
 	for d := range nested {
@@ -191,14 +188,23 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 		if bk.Empty() {
 			continue
 		}
-		dest, err := workspace.JoinRel(d, RootFile)
-		if err != nil {
+		dest := l.file(d)
+		if dest == "" {
 			continue
 		}
 		content := bk.Render("Instructions for "+d, nil)
+		supersedeEmpty(b, dest)
 		content += b.ReemitOpaque(dest)
 		b.Emit(dest, content, bk.EntityIDs())
+		l.written[dest] = true
 	}
+	l.emitPreserved(b)
+
+	chainDirs := append([]string{""}, dirs...)
+	for _, blk := range b.OpaqueBlocksFor() {
+		chainDirs = append(chainDirs, instructionsDir(blk.SourcePath))
+	}
+	l.checkChainSize(b, chainDirs)
 	b.ReportUnemittedOpaque()
 	return b.Result(), nil
 }
@@ -206,6 +212,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 // placeScoped decides where a path-scoped context document goes.
 func placeScoped(
 	b *adapters.Builder,
+	l layout,
 	root *adapters.AlwaysBucket,
 	bucketFor func(string) *adapters.AlwaysBucket,
 	id string,
@@ -214,16 +221,16 @@ func placeScoped(
 	res adapters.Resolution,
 	prov provenance.Provenance,
 ) {
-	dir, outcome, explanation, diagIDs := resolveDirectory(b, id, res)
+	dir, outcome, explanation, diagIDs := resolveDirectory(b, l, id, res)
 	scope := tokenestimate.ScopeName(res.Activation.Include)
 	if dir == "" {
 		root.AddSection(id, title, scopeNote(res)+res.Content)
-		b.RecordWithDiagnostics(id, kind, outcome, res, prov, []string{RootFile}, explanation, diagIDs)
+		b.RecordWithDiagnostics(id, kind, outcome, res, prov, []string{l.file("")}, explanation, diagIDs)
 		b.CountAlwaysOn(res.Content)
 		return
 	}
-	dest, err := workspace.JoinRel(dir, RootFile)
-	if err != nil {
+	dest := l.file(dir)
+	if dest == "" {
 		b.Diag(diagnostics.New(diagnostics.PathEscape, diagnostics.SeverityError,
 			fmt.Sprintf("unsafe directory %q for entity %s", dir, id)).WithEntity(id))
 		return
@@ -235,22 +242,23 @@ func placeScoped(
 
 func placeScopedRule(
 	b *adapters.Builder,
+	l layout,
 	root *adapters.AlwaysBucket,
 	bucketFor func(string) *adapters.AlwaysBucket,
 	rule canonical.Rule,
 	res adapters.Resolution,
 ) {
-	dir, outcome, explanation, diagIDs := resolveDirectory(b, rule.ID, res)
+	dir, outcome, explanation, diagIDs := resolveDirectory(b, l, rule.ID, res)
 	scope := tokenestimate.ScopeName(res.Activation.Include)
 	if dir == "" {
 		root.AddSection(rule.ID, rule.Title, scopeNote(res)+res.Content)
 		b.RecordWithDiagnostics(rule.ID, canonical.EntityRule, outcome, res, rule.Provenance,
-			[]string{RootFile}, explanation, diagIDs)
+			[]string{l.file("")}, explanation, diagIDs)
 		b.CountAlwaysOn(res.Content)
 		return
 	}
-	dest, err := workspace.JoinRel(dir, RootFile)
-	if err != nil {
+	dest := l.file(dir)
+	if dest == "" {
 		return
 	}
 	bucketFor(dir).AddRule(rule.ID, rule.Priority, res.Content)
@@ -266,7 +274,7 @@ func placeScopedRule(
 // exact only when the canonical pattern is precisely a directory subtree and
 // nothing is excluded.
 func resolveDirectory(
-	b *adapters.Builder, id string, res adapters.Resolution,
+	b *adapters.Builder, l layout, id string, res adapters.Resolution,
 ) (dir string, outcome adapters.Outcome, explanation string, diagIDs []string) {
 	pinned := res.Directory != ""
 	literal := ""
@@ -285,17 +293,17 @@ func resolveDirectory(
 		if !ok {
 			fp := b.Diag(diagnostics.New(diagnostics.DirectoryScopeAmbig, diagnostics.SeverityWarning,
 				"the include patterns do not resolve to a single directory").
-				WithEntity(id).WithPath(RootFile).
+				WithEntity(id).WithPath(l.file("")).
 				WithDetail("Scoping here is expressed only by file location. The patterns %s do not "+
 					"share one concrete directory, and Stemma will not invent one, so the content "+
 					"stays in the root %s and applies everywhere.",
-					strings.Join(res.Activation.Include, ", "), RootFile).
+					strings.Join(res.Activation.Include, ", "), l.name("")).
 				WithSuggestion("Set a directory for this entity in .stemma/profiles/codex.json, or " +
 					"set include:false to skip it for this target."))
 			return "", adapters.OutcomeLossy,
 				fmt.Sprintf("No single directory could be derived from %s, so the content stays in "+
 					"the root %s and is no longer scoped.",
-					strings.Join(res.Activation.Include, ", "), RootFile),
+					strings.Join(res.Activation.Include, ", "), l.name("")),
 				[]string{fp}
 		}
 		dir = derived
@@ -304,15 +312,15 @@ func resolveDirectory(
 	origin := fmt.Sprintf("The patterns %s were mapped to the directory %s",
 		strings.Join(res.Activation.Include, ", "), dir)
 	if pinned {
-		origin = fmt.Sprintf("The target profile pins this entity to %s/%s", dir, RootFile)
+		origin = fmt.Sprintf("The target profile pins this entity to %s/%s", dir, l.name(dir))
 	}
 
 	if len(res.Activation.Exclude) > 0 {
 		fp := b.Diag(diagnostics.New(diagnostics.ExcludeNotRepresent, diagnostics.SeverityWarning,
 			"exclude patterns cannot be represented by directory scoping").
-			WithEntity(id).WithPath(path.Join(dir, RootFile)).
+			WithEntity(id).WithPath(path.Join(dir, l.name(dir))).
 			WithDetail("The canonical entity excludes %s, but a nested %s applies to everything "+
-				"under %s.", strings.Join(res.Activation.Exclude, ", "), RootFile, dir).
+				"under %s.", strings.Join(res.Activation.Exclude, ", "), l.name(dir), dir).
 			WithSuggestion("Narrow the include patterns, move the excluded files elsewhere, or " +
 				"accept this diagnostic in the profile."))
 		return dir, adapters.OutcomeLossy,
@@ -322,12 +330,12 @@ func resolveDirectory(
 	if len(res.Activation.Include) == 1 && res.Activation.Include[0] == globs.LiteralSubtree(dir) {
 		return dir, adapters.OutcomeExact,
 			fmt.Sprintf("The pattern %s is exactly the subtree of %s, which a nested %s expresses "+
-				"directly.", res.Activation.Include[0], dir, RootFile), nil
+				"directly.", res.Activation.Include[0], dir, l.name(dir)), nil
 	}
 
 	fp := b.Diag(diagnostics.New(diagnostics.DirectoryScopeBroader, diagnostics.SeverityWarning,
 		"directory scoping is broader than the canonical patterns").
-		WithEntity(id).WithPath(path.Join(dir, RootFile)).
+		WithEntity(id).WithPath(path.Join(dir, l.name(dir))).
 		WithDetail("%s. Everything under that directory now matches, including files the canonical "+
 			"patterns did not select.", origin).
 		WithSuggestion("Accept this diagnostic in the profile if the wider scope is acceptable."))

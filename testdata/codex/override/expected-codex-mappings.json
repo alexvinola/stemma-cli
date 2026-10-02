@@ -1,0 +1,72 @@
+[
+  {
+    "entityId": "context.services-payments-payments-service-rules",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "services/payments/AGENTS.override.md"
+    ],
+    "activation": "paths services/payments/**",
+    "explanation": "The pattern services/payments/** is exactly the subtree of services/payments, which a nested AGENTS.override.md expresses directly."
+  },
+  {
+    "entityId": "context.services-search-search-service",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "services/search/AGENTS.override.md"
+    ],
+    "activation": "paths services/search/**",
+    "explanation": "The pattern services/search/** is exactly the subtree of services/search, which a nested AGENTS.override.md expresses directly."
+  },
+  {
+    "entityId": "context.testing",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.override.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context is written into the root AGENTS.override.md."
+  },
+  {
+    "entityId": "opaque.agents-md",
+    "entityType": "opaque",
+    "outcome": "exact",
+    "files": [
+      "AGENTS.md"
+    ],
+    "activation": "documentation only",
+    "explanation": "Preserved inactive content was written back to its own file verbatim. AGENTS.override.md takes precedence in the same directory, so Codex does not read it."
+  },
+  {
+    "entityId": "opaque.docs-agents-md",
+    "entityType": "opaque",
+    "outcome": "exact",
+    "files": [
+      "docs/AGENTS.md"
+    ],
+    "activation": "documentation only",
+    "explanation": "Preserved inactive content was written back to its own file verbatim. docs/AGENTS.override.md takes precedence in the same directory, so Codex does not read it."
+  },
+  {
+    "entityId": "opaque.docs-agents-override-md",
+    "entityType": "opaque",
+    "outcome": "exact",
+    "files": [
+      "docs/AGENTS.override.md"
+    ],
+    "activation": "documentation only",
+    "explanation": "The preserved empty override was written back verbatim. Codex skips it as empty, and it still keeps the AGENTS.md in its directory from being read."
+  },
+  {
+    "entityId": "opaque.services-payments-agents-md",
+    "entityType": "opaque",
+    "outcome": "exact",
+    "files": [
+      "services/payments/AGENTS.md"
+    ],
+    "activation": "documentation only",
+    "explanation": "Preserved inactive content was written back to its own file verbatim. services/payments/AGENTS.override.md takes precedence in the same directory, so Codex does not read it."
+  }
+]

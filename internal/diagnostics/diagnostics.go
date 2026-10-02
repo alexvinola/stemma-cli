@@ -60,6 +60,22 @@ const (
 	InvalidAgentJSON      Code = "STEMMA1501_INVALID_AGENT_JSON"
 	DuplicateJSONKey      Code = "STEMMA1502_DUPLICATE_JSON_KEY"
 
+	// ShadowedFilePreserved: an instructions file the provider never reads,
+	// because a higher-precedence file in the same directory shadows it
+	// (Codex AGENTS.md next to AGENTS.override.md), was preserved verbatim as
+	// inactive content and is not projected to any target (warning).
+	ShadowedFilePreserved Code = "STEMMA1204_SHADOWED_FILE_PRESERVED"
+	// ShadowingFileNotGenerated: a preserved shadowed file is written back,
+	// but the export no longer produces the file that shadowed it, so the
+	// preserved content would become active if that file were removed
+	// (warning).
+	ShadowingFileNotGenerated Code = "STEMMA1205_SHADOWING_FILE_NOT_GENERATED"
+	// InstructionChainTooLarge: the generated instruction files along one
+	// directory chain exceed the provider's documented default load limit, so
+	// the provider would truncate or drop them under its default
+	// configuration (warning).
+	InstructionChainTooLarge Code = "STEMMA1206_INSTRUCTION_CHAIN_TOO_LARGE"
+
 	// 2xxx: canonical validation.
 	DuplicateEntityID  Code = "STEMMA2001_DUPLICATE_ENTITY_ID"
 	InvalidEntityID    Code = "STEMMA2002_INVALID_ENTITY_ID"

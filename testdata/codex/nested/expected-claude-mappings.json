@@ -30,14 +30,6 @@
     "explanation": "Always-on context is written into the project memory file, which Claude Code loads every session."
   },
   {
-    "entityId": "opaque.agents-override-md",
-    "entityType": "opaque",
-    "outcome": "skipped-explicitly",
-    "files": [],
-    "activation": "documentation only",
-    "explanation": "Preserved codex content has no representation in claude; it stays in the canonical project."
-  },
-  {
     "entityId": "skill.deploy",
     "entityType": "skill",
     "outcome": "adapted",
