@@ -20,7 +20,10 @@ var fixtureFormats = map[string]canonical.TargetFormat{
 	"copilot/basic": canonical.TargetCopilot,
 	"claude/basic":  canonical.TargetClaude,
 	"codex/nested":  canonical.TargetCodex,
-	"kiro/steering": canonical.TargetKiro,
+	// AGENTS.override.md takes precedence over AGENTS.md: the effective
+	// override comes back to its own path and the shadowed file is untouched.
+	"codex/override": canonical.TargetCodex,
+	"kiro/steering":  canonical.TargetKiro,
 	// Nested CLAUDE.md files must come back to their own directories.
 	"claude/nested": canonical.TargetClaude,
 	// Brace groups are expanded into the canonical model, so these two cases

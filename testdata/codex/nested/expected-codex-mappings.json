@@ -30,16 +30,6 @@
     "explanation": "Always-on context is written into the root AGENTS.md."
   },
   {
-    "entityId": "opaque.agents-override-md",
-    "entityType": "opaque",
-    "outcome": "exact",
-    "files": [
-      "AGENTS.override.md"
-    ],
-    "activation": "always-on",
-    "explanation": "Preserved provider content was written back to its own file verbatim."
-  },
-  {
     "entityId": "skill.deploy",
     "entityType": "skill",
     "outcome": "exact",

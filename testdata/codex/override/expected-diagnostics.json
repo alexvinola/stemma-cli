@@ -1,0 +1,44 @@
+[
+  {
+    "code": "STEMMA1204_SHADOWED_FILE_PRESERVED",
+    "severity": "warning",
+    "summary": "this AGENTS.md is inactive because an AGENTS.override.md in the same directory takes precedence",
+    "detail": "Codex reads at most one instructions file per directory and checks AGENTS.override.md before AGENTS.md, so it never reads this file. Stemma preserves it verbatim as an inactive opaque block, writes it back unchanged for Codex, and does not project its content to any target.",
+    "path": "AGENTS.md",
+    "entityId": "opaque.agents-md",
+    "suggestion": "If this guidance should apply, move it into AGENTS.override.md or remove the override, then re-import.",
+    "blocking": false,
+    "fingerprint": "dg_de4be7b4d35d5d8a"
+  },
+  {
+    "code": "STEMMA1204_SHADOWED_FILE_PRESERVED",
+    "severity": "warning",
+    "summary": "this AGENTS.md is inactive because an AGENTS.override.md in the same directory takes precedence",
+    "detail": "Codex reads at most one instructions file per directory and checks docs/AGENTS.override.md before docs/AGENTS.md, so it never reads this file. Stemma preserves it verbatim as an inactive opaque block, writes it back unchanged for Codex, and does not project its content to any target. The override is empty, so Codex loads no project instructions from this directory at all.",
+    "path": "docs/AGENTS.md",
+    "entityId": "opaque.docs-agents-md",
+    "suggestion": "If this guidance should apply, move it into docs/AGENTS.override.md or remove the override, then re-import.",
+    "blocking": false,
+    "fingerprint": "dg_5e26dde80be37ff6"
+  },
+  {
+    "code": "STEMMA1204_SHADOWED_FILE_PRESERVED",
+    "severity": "warning",
+    "summary": "this AGENTS.md is inactive because an AGENTS.override.md in the same directory takes precedence",
+    "detail": "Codex reads at most one instructions file per directory and checks services/payments/AGENTS.override.md before services/payments/AGENTS.md, so it never reads this file. Stemma preserves it verbatim as an inactive opaque block, writes it back unchanged for Codex, and does not project its content to any target.",
+    "path": "services/payments/AGENTS.md",
+    "entityId": "opaque.services-payments-agents-md",
+    "suggestion": "If this guidance should apply, move it into services/payments/AGENTS.override.md or remove the override, then re-import.",
+    "blocking": false,
+    "fingerprint": "dg_5c8a1d600e012f4f"
+  },
+  {
+    "code": "STEMMA1203_OPAQUE_BLOCK_PRESERVED",
+    "severity": "info",
+    "summary": "content preserved without interpretation: the override file is empty, so Codex loads no instructions from this directory; it is preserved verbatim because it still takes precedence over AGENTS.md",
+    "path": "docs/AGENTS.override.md",
+    "entityId": "opaque.docs-agents-override-md",
+    "blocking": false,
+    "fingerprint": "dg_bb9787c30b150394"
+  }
+]
