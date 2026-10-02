@@ -48,10 +48,10 @@
     "code": "STEMMA3402_ON_DEMAND_ADAPTED",
     "severity": "info",
     "summary": "on-demand content is delivered as a Claude skill",
-    "path": ".claude/skills/context-incident-response/SKILL.md",
+    "path": ".claude/skills/incident/SKILL.md",
     "entityId": "context.incident-response",
     "target": "claude",
     "blocking": false,
-    "fingerprint": "dg_24afad32e6661d78"
+    "fingerprint": "dg_7f867975f8f82688"
   }
 ]

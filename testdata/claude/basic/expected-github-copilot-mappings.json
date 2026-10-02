@@ -4,10 +4,10 @@
     "entityType": "agent",
     "outcome": "lossy",
     "files": [
-      ".github/agents/agent-reviewer.md"
+      ".github/agents/reviewer.md"
     ],
     "activation": "on demand (reviewer)",
-    "explanation": "github-copilot supports specialist agents, but the declared tool names come from claude and are not verified against this provider."
+    "explanation": "github-copilot supports specialist agents, but the declared tool names come from claude and are not verified against this provider. The destination keeps the name \"reviewer\" of its claude source."
   },
   {
     "entityId": "context.architecture",
@@ -34,10 +34,10 @@
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".github/instructions/rule-api-request-validation.instructions.md"
+      ".github/instructions/api.instructions.md"
     ],
     "activation": "paths src/api/**/*.go, src/handlers/**/*.go",
-    "explanation": "Copilot applyTo represents the canonical include patterns directly."
+    "explanation": "Copilot applyTo represents the canonical include patterns directly. The destination keeps the name \"api\" of its claude source."
   },
   {
     "entityId": "rule.formatting",
@@ -52,11 +52,11 @@
   {
     "entityId": "skill.migration",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".github/skills/skill-migration/SKILL.md"
+      ".github/skills/migration/SKILL.md"
     ],
     "activation": "on demand (migration)",
-    "explanation": "Copilot supports agent skills natively. The skill invocation name is \"skill-migration\" to match its destination directory."
+    "explanation": "Copilot supports agent skills natively. The destination keeps the name \"migration\" of its claude source."
   }
 ]

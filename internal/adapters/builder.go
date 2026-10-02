@@ -25,6 +25,7 @@ type Builder struct {
 	files      map[string]GeneratedFile
 	duplicates map[string]bool
 	skillNames map[string]string
+	names      map[string]nameNote
 	mappings   []ProjectionMapping
 	bag        diagnostics.Bag
 	opaque     map[string][]canonical.OpaqueBlock
@@ -44,6 +45,7 @@ func NewBuilder(target canonical.TargetFormat, in ExportInput) *Builder {
 		files:      map[string]GeneratedFile{},
 		duplicates: map[string]bool{},
 		skillNames: map[string]string{},
+		names:      map[string]nameNote{},
 		opaque:     map[string][]canonical.OpaqueBlock{},
 		emitted:    map[string]bool{},
 
@@ -224,6 +226,9 @@ func (b *Builder) prepareEmission(dest string, entities []string) (string, []str
 	ids := append([]string{}, entities...)
 	sort.Strings(ids)
 	ids = dedupeStrings(ids)
+	if n := b.in.naming; n != nil && n.probe {
+		n.emissions = append(n.emissions, emission{path: clean, entities: ids})
+	}
 	if existing, ok := b.files[clean]; ok {
 		b.duplicates[clean] = true
 		existing.Entities = append(existing.Entities, ids...)
@@ -265,6 +270,10 @@ func (b *Builder) RecordWithDiagnostics(
 	id string, kind canonical.EntityType, outcome Outcome,
 	res Resolution, prov provenance.Provenance, files []string, explanation string, diagIDs []string,
 ) {
+	if note, notes := b.nameExplanation(id); note != "" {
+		explanation += note
+		diagIDs = append(append([]string{}, diagIDs...), notes...)
+	}
 	if name, changed := b.skillNames[id]; changed {
 		explanation += fmt.Sprintf(" The skill invocation name is %q to match its destination directory.", name)
 		if outcome == OutcomeExact {

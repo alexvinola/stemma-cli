@@ -178,7 +178,10 @@ func importScopedInstructions(c *adapters.ImportCtx, project *canonical.Project,
 	if strings.TrimSpace(desc) != "" {
 		entity.Extensions.Set(string(canonical.TargetCopilot), "description", strings.TrimSpace(desc))
 	}
-	entity.Extensions.Set(string(canonical.TargetCopilot), "stemma.instructionsFile", path.Base(file.Path))
+	// The path below .github/instructions keeps nested files in their own
+	// subdirectory on a round trip; other targets reuse only its last segment.
+	entity.Extensions.Set(string(canonical.TargetCopilot), "stemma.instructionsFile",
+		strings.TrimPrefix(file.Path, instructionsDir+"/"))
 	c.PreserveUnknownKeys(&entity.Extensions, doc, file, id, "applyTo", "description")
 	project.ContextDocuments = append(project.ContextDocuments, entity)
 }
@@ -211,7 +214,8 @@ func importPrompt(c *adapters.ImportCtx, project *canonical.Project, file adapte
 		Content:     content,
 		Provenance:  c.Provenance(file, adapters.FullSpan(file, doc), provenance.DispositionParsed),
 	}
-	proc.Extensions.Set(string(canonical.TargetCopilot), "stemma.promptFile", path.Base(file.Path))
+	proc.Extensions.Set(string(canonical.TargetCopilot), "stemma.promptFile",
+		strings.TrimPrefix(file.Path, promptsDir+"/"))
 	c.PreserveUnknownKeys(&proc.Extensions, doc, file, id, "name", "description")
 	project.Procedures = append(project.Procedures, proc)
 }

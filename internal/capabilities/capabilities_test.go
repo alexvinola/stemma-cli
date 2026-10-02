@@ -1,6 +1,7 @@
 package capabilities
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
@@ -78,5 +79,64 @@ func TestUnknownTargetHasNoRow(t *testing.T) {
 	}
 	if c := MustFor(canonical.TargetFormat("made-up")); c.Available {
 		t.Fatal("an unknown target must never be reported as available")
+	}
+}
+
+func TestNameRules(t *testing.T) {
+	for _, tc := range []struct {
+		rule  NameRule
+		name  string
+		allow bool
+	}{
+		{AgentSkillNames, "review", true},
+		{AgentSkillNames, "release-checklist", true},
+		{AgentSkillNames, strings.Repeat("a", 64), true},
+		{AgentSkillNames, strings.Repeat("a", 65), false},
+		{AgentSkillNames, "Review", false},
+		{AgentSkillNames, "re--view", false},
+		{AgentSkillNames, "-review", false},
+		{AgentSkillNames, "review-", false},
+		{AgentSkillNames, "re_view", false},
+		{AgentSkillNames, "nul", false},
+		{AgentSkillNames, "", false},
+		{PortableFileNames, "python", true},
+		{PortableFileNames, "API.v2_notes-x", true},
+		{PortableFileNames, ".hidden", false},
+		{PortableFileNames, "-dash", false},
+		{PortableFileNames, "trailing.", false},
+		{PortableFileNames, "a b", false},
+		{PortableFileNames, "a/b", false},
+		{PortableFileNames, `a\b`, false},
+		{PortableFileNames, "a:b", false},
+		{PortableFileNames, "~a", false},
+		{PortableFileNames, "café", false},
+		{PortableFileNames, "COM1", false},
+		{PortableFileNames, "con.backup", false},
+		{PortableFileNames, "Agents", false},
+		{PortableFileNames, "CLAUDE", false},
+		{PortableFileNames, "claude.local", false},
+		{PortableFileNames, strings.Repeat("A", 65), false},
+		{NameRule{}, "python", false},
+	} {
+		if got := tc.rule.Allows(tc.name); got != tc.allow {
+			t.Errorf("%s.Allows(%q) = %v, want %v", tc.rule.Charset, tc.name, got, tc.allow)
+		}
+	}
+}
+
+func TestAvailableTargetsDeclareNaming(t *testing.T) {
+	for _, c := range All() {
+		if !c.Available {
+			continue
+		}
+		if c.Naming.FileNames.MaxLength == 0 || c.Naming.SkillDirectories != AgentSkillNames ||
+			len(c.Naming.SourceNames) == 0 {
+			t.Errorf("%s: incomplete naming row %+v", c.Target, c.Naming)
+		}
+		for _, h := range c.Naming.SourceNames {
+			if !strings.HasPrefix(h.Key, "stemma.") {
+				t.Errorf("%s: source name %q is not an internal bookkeeping key", c.Target, h.Key)
+			}
+		}
 	}
 }

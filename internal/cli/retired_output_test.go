@@ -32,7 +32,7 @@ func retiredOutputHarness(t *testing.T) *harness {
 	return h
 }
 
-const retiredAPIPath = ".claude/rules/context-api.md"
+const retiredAPIPath = ".claude/rules/api.md"
 
 func TestRetiredOutputInspectionErrorsBlockCheckAndApply(t *testing.T) {
 	for _, tc := range []struct {

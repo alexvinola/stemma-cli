@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"path"
 	"sort"
 	"strings"
 
@@ -62,7 +61,7 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(dec.ID, canonical.EntityDecision, res, dec.Provenance)
 			continue
 		}
-		dest := b.Path(res, SteeringDir, adapters.FileSlug(dec.ID)+".md")
+		dest := b.Destination(res, adapters.NameRequest{ID: dec.ID, Dir: SteeringDir, Suffix: ".md", Ext: dec.Extensions})
 		entries := []adapters.KV{{Key: "inclusion", Value: InclusionAlways}}
 		var md adapters.Markdown
 		md.Heading(1, dec.Title)
@@ -112,11 +111,10 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(agent.ID, canonical.EntityAgent, res, agent.Provenance)
 			continue
 		}
-		fileName := adapters.FileSlug(agent.ID) + ".json"
-		if v, ok := agent.Extensions.GetString(string(canonical.TargetKiro), "stemma.sourceFile"); ok && safeName(v) {
-			fileName = v
-		}
-		dest := b.Path(res, AgentsDir, fileName)
+		hint, _ := agent.Extensions.GetString(string(canonical.TargetKiro), "stemma.sourceFile")
+		dest := b.Destination(res, adapters.NameRequest{
+			ID: agent.ID, Dir: AgentsDir, Suffix: ".json", Hint: hint, Ext: agent.Extensions,
+		})
 		content, written, err := renderAgent(agent, res.Content)
 		if err != nil {
 			b.Diag(diagnostics.New(diagnostics.InternalInvariant, diagnostics.SeverityError,
@@ -150,11 +148,10 @@ func exportSteering(
 	res adapters.Resolution,
 	prov provenance.Provenance,
 ) {
-	file := adapters.FileSlug(id) + ".md"
-	if v, ok := ext.GetString(string(canonical.TargetKiro), "stemma.steeringFile"); ok && safeName(v) {
-		file = v
-	}
-	dest := b.Path(res, SteeringDir, file)
+	hint, _ := ext.GetString(string(canonical.TargetKiro), "stemma.steeringFile")
+	dest := b.Destination(res, adapters.NameRequest{
+		ID: id, Dir: SteeringDir, Suffix: ".md", Hint: hint, NestedHint: true, Ext: ext,
+	})
 
 	var entries []adapters.KV
 	outcome := adapters.OutcomeExact
@@ -248,11 +245,8 @@ func writeSkill(
 	content string,
 	ext canonical.Extensions,
 ) string {
-	dirName := adapters.SkillSlug(id)
-	if v, ok := ext.GetString(string(canonical.TargetKiro), "stemma.sourceDir"); ok && safeName(v) {
-		dirName = v
-	}
-	dest := b.Path(res, path.Join(SkillsDir, dirName), "SKILL.md")
+	hint, _ := ext.GetString(string(canonical.TargetKiro), "stemma.sourceDir")
+	dest := b.Destination(res, adapters.NameRequest{ID: id, Dir: SkillsDir, Skill: true, Hint: hint, Ext: ext})
 	entries := []adapters.KV{{Key: "name", Value: b.SkillName(id, name, dest)}}
 	if description != "" {
 		entries = append(entries, adapters.KV{Key: "description", Value: description})
@@ -316,11 +310,4 @@ func renderAgent(agent canonical.Agent, instructions string) (string, []string, 
 		return "", nil, err
 	}
 	return buf.String(), written, nil
-}
-
-func safeName(name string) bool {
-	if name == "" || name == "." || name == ".." {
-		return false
-	}
-	return !strings.ContainsAny(name, "/\\\x00")
 }

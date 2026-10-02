@@ -162,7 +162,10 @@ func importSteering(c *adapters.ImportCtx, project *canonical.Project, file adap
 		Activation: activation,
 		Provenance: c.Provenance(file, adapters.FullSpan(file, doc), provenance.DispositionParsed),
 	}
-	entity.Extensions.Set(string(canonical.TargetKiro), "stemma.steeringFile", path.Base(file.Path))
+	// The path below .kiro/steering keeps a nested file in its subdirectory on
+	// a round trip; other targets reuse only its last segment.
+	entity.Extensions.Set(string(canonical.TargetKiro), "stemma.steeringFile",
+		strings.TrimPrefix(file.Path, SteeringDir+"/"))
 	entity.Extensions.Set(string(canonical.TargetKiro), "inclusion", inclusion)
 	if desc, has := doc.FrontMatter.String("description"); has && strings.TrimSpace(desc) != "" {
 		entity.Extensions.Set(string(canonical.TargetKiro), "description", strings.TrimSpace(desc))

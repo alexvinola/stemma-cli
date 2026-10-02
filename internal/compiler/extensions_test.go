@@ -188,7 +188,7 @@ func TestSecurityExtensionLossRequiresAcceptedFingerprint(t *testing.T) {
 	if _, err := compiler.Apply(ctx, ws, blocked, compiler.ApplyOptions{Manifest: manifest.New()}); !errors.Is(err, compiler.ErrBlocked) {
 		t.Fatalf("apply must be blocked, got %v", err)
 	}
-	if _, exists, err := ws.HashFile(".claude/agents/agent-reviewer.md"); err != nil || exists {
+	if _, exists, err := ws.HashFile(".claude/agents/reviewer.md"); err != nil || exists {
 		t.Fatalf("a blocked apply wrote the agent (exists=%v, err=%v)", exists, err)
 	}
 

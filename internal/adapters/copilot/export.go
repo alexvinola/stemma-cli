@@ -2,7 +2,6 @@ package copilot
 
 import (
 	"context"
-	"path"
 	"sort"
 	"strings"
 
@@ -20,6 +19,9 @@ const (
 	promptsDir           = ".github/prompts"
 	skillsDir            = ".github/skills"
 	agentsDir            = ".github/agents"
+
+	instructionsSuffix = ".instructions.md"
+	promptSuffix       = ".prompt.md"
 )
 
 // Exporter renders canonical entities as Copilot configuration.
@@ -51,10 +53,10 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 				"Always-on context is written into the repository-wide instructions file.")
 			b.CountAlwaysOn(res.Content)
 		case canonical.ActivationPathScoped:
-			exportScoped(b, in, doc.ID, canonical.EntityContext, doc.Title, res, doc.Provenance,
+			exportScoped(b, doc.ID, canonical.EntityContext, doc.Title, res, doc.Provenance,
 				docDescription(doc), instructionsFileName(doc), doc.Extensions)
 		case canonical.ActivationOnDemand:
-			exportOnDemand(b, doc.ID, canonical.EntityContext, doc.Title, res, doc.Provenance)
+			exportOnDemand(b, doc.ID, canonical.EntityContext, doc.Title, res, doc.Provenance, doc.Extensions)
 		default:
 			b.Invariant(doc.ID, canonical.EntityContext, res, doc.Provenance)
 		}
@@ -77,10 +79,10 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 				"The rule is written as a bullet in the repository-wide instructions file.")
 			b.CountAlwaysOn(res.Content)
 		case canonical.ActivationPathScoped:
-			exportScoped(b, in, rule.ID, canonical.EntityRule, rule.Title, res, rule.Provenance, "", "",
+			exportScoped(b, rule.ID, canonical.EntityRule, rule.Title, res, rule.Provenance, "", "",
 				rule.Extensions)
 		case canonical.ActivationOnDemand:
-			exportOnDemand(b, rule.ID, canonical.EntityRule, rule.Title, res, rule.Provenance)
+			exportOnDemand(b, rule.ID, canonical.EntityRule, rule.Title, res, rule.Provenance, rule.Extensions)
 		default:
 			b.Invariant(rule.ID, canonical.EntityRule, res, rule.Provenance)
 		}
@@ -109,12 +111,10 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(proc.ID, canonical.EntityProcedure, res, proc.Provenance)
 			continue
 		}
-		name := adapters.FileSlug(proc.ID)
-		file := name + ".prompt.md"
-		if v, ok := proc.Extensions.GetString(string(canonical.TargetCopilot), "stemma.promptFile"); ok && safeName(v) {
-			file = v
-		}
-		dest := b.Path(res, promptsDir, file)
+		hint, _ := proc.Extensions.GetString(string(canonical.TargetCopilot), "stemma.promptFile")
+		dest := b.Destination(res, adapters.NameRequest{
+			ID: proc.ID, Dir: promptsDir, Suffix: promptSuffix, Hint: hint, NestedHint: true, Ext: proc.Extensions,
+		})
 		entries := []adapters.KV{}
 		if proc.Description != "" {
 			entries = append(entries, adapters.KV{Key: "description", Value: proc.Description})
@@ -140,11 +140,10 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(skill.ID, canonical.EntitySkill, res, skill.Provenance)
 			continue
 		}
-		name := adapters.SkillSlug(skill.ID)
-		if v, ok := skill.Extensions.GetString(string(canonical.TargetCopilot), "stemma.sourceDir"); ok && safeName(v) {
-			name = v
-		}
-		dest := b.Path(res, path.Join(skillsDir, name), "SKILL.md")
+		hint, _ := skill.Extensions.GetString(string(canonical.TargetCopilot), "stemma.sourceDir")
+		dest := b.Destination(res, adapters.NameRequest{
+			ID: skill.ID, Dir: skillsDir, Skill: true, Hint: hint, Ext: skill.Extensions,
+		})
 		entries := []adapters.KV{{Key: "name", Value: b.SkillName(skill.ID, skill.Name, dest)}}
 		if skill.Description != "" {
 			entries = append(entries, adapters.KV{Key: "description", Value: skill.Description})
@@ -169,11 +168,10 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 			b.Skip(agent.ID, canonical.EntityAgent, res, agent.Provenance)
 			continue
 		}
-		fileName := adapters.FileSlug(agent.ID) + ".md"
-		if v, ok := agent.Extensions.GetString(string(canonical.TargetCopilot), "stemma.sourceFile"); ok && safeName(v) {
-			fileName = v
-		}
-		dest := b.Path(res, agentsDir, fileName)
+		hint, _ := agent.Extensions.GetString(string(canonical.TargetCopilot), "stemma.sourceFile")
+		dest := b.Destination(res, adapters.NameRequest{
+			ID: agent.ID, Dir: agentsDir, Suffix: ".md", Hint: hint, Ext: agent.Extensions,
+		})
 		entries := []adapters.KV{{Key: "name", Value: agent.Name}}
 		if agent.Description != "" {
 			entries = append(entries, adapters.KV{Key: "description", Value: agent.Description})
@@ -211,22 +209,18 @@ func (Exporter) Export(ctx context.Context, in adapters.ExportInput) (adapters.E
 // exportScoped writes a path-scoped entity as a .instructions.md file.
 func exportScoped(
 	b *adapters.Builder,
-	in adapters.ExportInput,
 	id string,
 	kind canonical.EntityType,
 	title string,
 	res adapters.Resolution,
 	prov provenance.Provenance,
 	description string,
-	pinnedFile string,
+	hintFile string,
 	ext canonical.Extensions,
 ) {
-	name := adapters.FileSlug(id)
-	file := name + ".instructions.md"
-	if pinnedFile != "" && safeName(pinnedFile) {
-		file = pinnedFile
-	}
-	dest := b.Path(res, instructionsDir, file)
+	dest := b.Destination(res, adapters.NameRequest{
+		ID: id, Dir: instructionsDir, Suffix: instructionsSuffix, Hint: hintFile, NestedHint: true, Ext: ext,
+	})
 
 	entries := []adapters.KV{{Key: "applyTo", Value: strings.Join(res.Activation.Include, ",")}}
 	if description != "" {
@@ -299,9 +293,9 @@ func exportOnDemand(
 	title string,
 	res adapters.Resolution,
 	prov provenance.Provenance,
+	ext canonical.Extensions,
 ) {
-	name := adapters.FileSlug(id)
-	dest := b.Path(res, promptsDir, name+".prompt.md")
+	dest := b.Destination(res, adapters.NameRequest{ID: id, Dir: promptsDir, Suffix: promptSuffix, Ext: ext})
 	entries := []adapters.KV{}
 	if res.Activation.Trigger != "" {
 		entries = append(entries, adapters.KV{Key: "description", Value: res.Activation.Trigger})
@@ -362,15 +356,4 @@ func commaBearing(patterns []string) []string {
 		}
 	}
 	return out
-}
-
-// safeName rejects file names that could escape a directory.
-func safeName(name string) bool {
-	if name == "" || name == "." || name == ".." {
-		return false
-	}
-	if strings.ContainsAny(name, "/\\\x00") {
-		return false
-	}
-	return true
 }

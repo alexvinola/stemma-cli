@@ -36,10 +36,10 @@
     "code": "STEMMA3402_ON_DEMAND_ADAPTED",
     "severity": "info",
     "summary": "on-demand content is delivered as a Copilot prompt file",
-    "path": ".github/prompts/context-incident-response.prompt.md",
+    "path": ".github/prompts/incident.prompt.md",
     "entityId": "context.incident-response",
     "target": "github-copilot",
     "blocking": false,
-    "fingerprint": "dg_3a842e42e40e3718"
+    "fingerprint": "dg_9c8d2ee890dbee00"
   }
 ]

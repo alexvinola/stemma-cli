@@ -1,0 +1,105 @@
+[
+  {
+    "code": "STEMMA3002_TARGET_NOT_ENABLED",
+    "severity": "warning",
+    "summary": "target \"claude\" is not listed in the canonical project",
+    "detail": "Compilation proceeds, but `stemma check --all` will not verify this target.",
+    "target": "claude",
+    "suggestion": "Add \"claude\" to \"targets\" in .stemma/project.json.",
+    "blocking": false,
+    "fingerprint": "dg_44ca6dbcd2ab6595"
+  },
+  {
+    "code": "STEMMA3402_ON_DEMAND_ADAPTED",
+    "severity": "info",
+    "summary": "procedure delivered as a Claude skill",
+    "entityId": "procedure.review",
+    "target": "claude",
+    "blocking": false,
+    "fingerprint": "dg_4349a67390a2c3d9"
+  },
+  {
+    "code": "STEMMA3702_SOURCE_NAME_NOT_PRESERVED",
+    "severity": "info",
+    "summary": "a source file or directory name was not reused for this target",
+    "detail": "The github-copilot source name \"Style\" (extensions.github-copilot.stemma.instructionsFile=\"api/Style.instructions.md\") was not used because it collides with context.web-style at .claude/rules/style.md. The destination uses the complete canonical ID instead.",
+    "path": ".claude/rules/context-api-style.md",
+    "entityId": "context.api-style",
+    "target": "claude",
+    "suggestion": "Rename the source, or pin a directory or filename for this entity in the target profile.",
+    "blocking": false,
+    "fingerprint": "dg_696fa81b42c9c655"
+  },
+  {
+    "code": "STEMMA3702_SOURCE_NAME_NOT_PRESERVED",
+    "severity": "info",
+    "summary": "a source file or directory name was not reused for this target",
+    "detail": "The github-copilot source name \"testing\" (extensions.github-copilot.stemma.instructionsFile=\"backend/testing.instructions.md\") was not used because it collides with context.frontend-testing at .claude/rules/testing.md. The destination uses the complete canonical ID instead.",
+    "path": ".claude/rules/context-backend-testing.md",
+    "entityId": "context.backend-testing",
+    "target": "claude",
+    "suggestion": "Rename the source, or pin a directory or filename for this entity in the target profile.",
+    "blocking": false,
+    "fingerprint": "dg_a646c1cb86a1299d"
+  },
+  {
+    "code": "STEMMA3702_SOURCE_NAME_NOT_PRESERVED",
+    "severity": "info",
+    "summary": "a source file or directory name was not reused for this target",
+    "detail": "The github-copilot source name \"testing\" (extensions.github-copilot.stemma.instructionsFile=\"frontend/testing.instructions.md\") was not used because it collides with context.backend-testing at .claude/rules/testing.md. The destination uses the complete canonical ID instead.",
+    "path": ".claude/rules/context-frontend-testing.md",
+    "entityId": "context.frontend-testing",
+    "target": "claude",
+    "suggestion": "Rename the source, or pin a directory or filename for this entity in the target profile.",
+    "blocking": false,
+    "fingerprint": "dg_8c9d30f044f290eb"
+  },
+  {
+    "code": "STEMMA3702_SOURCE_NAME_NOT_PRESERVED",
+    "severity": "info",
+    "summary": "a source file or directory name was not reused for this target",
+    "detail": "The github-copilot source name \"style\" (extensions.github-copilot.stemma.instructionsFile=\"web/style.instructions.md\") was not used because it collides with context.api-style at .claude/rules/Style.md. The destination uses the complete canonical ID instead.",
+    "path": ".claude/rules/context-web-style.md",
+    "entityId": "context.web-style",
+    "target": "claude",
+    "suggestion": "Rename the source, or pin a directory or filename for this entity in the target profile.",
+    "blocking": false,
+    "fingerprint": "dg_0090681a3cff4ddd"
+  },
+  {
+    "code": "STEMMA3702_SOURCE_NAME_NOT_PRESERVED",
+    "severity": "info",
+    "summary": "a source file or directory name was not reused for this target",
+    "detail": "The github-copilot source name \"review\" (extensions.github-copilot.stemma.promptFile=\"review.prompt.md\") was not used because it collides with skill.review at .claude/skills/review/SKILL.md. The destination uses the complete canonical ID instead.",
+    "path": ".claude/skills/procedure-review/SKILL.md",
+    "entityId": "procedure.review",
+    "target": "claude",
+    "suggestion": "Rename the source, or pin a directory or filename for this entity in the target profile.",
+    "blocking": false,
+    "fingerprint": "dg_2f7ad5fd125e91f2"
+  },
+  {
+    "code": "STEMMA3702_SOURCE_NAME_NOT_PRESERVED",
+    "severity": "info",
+    "summary": "a source file or directory name was not reused for this target",
+    "detail": "The github-copilot source name \"Release_Notes\" (extensions.github-copilot.stemma.sourceDir=\"Release_Notes\") was not used because it does not satisfy this target's agent-skill-name rule (at most 64 bytes). The destination uses the complete canonical ID instead.",
+    "path": ".claude/skills/skill-release-notes/SKILL.md",
+    "entityId": "skill.release-notes",
+    "target": "claude",
+    "suggestion": "Rename the source, or pin a directory or filename for this entity in the target profile.",
+    "blocking": false,
+    "fingerprint": "dg_df5d3b6c5d20e5fa"
+  },
+  {
+    "code": "STEMMA3702_SOURCE_NAME_NOT_PRESERVED",
+    "severity": "info",
+    "summary": "a source file or directory name was not reused for this target",
+    "detail": "The github-copilot source name \"review\" (extensions.github-copilot.stemma.sourceDir=\"review\") was not used because it collides with procedure.review at .claude/skills/review/SKILL.md. The destination uses the complete canonical ID instead.",
+    "path": ".claude/skills/skill-review/SKILL.md",
+    "entityId": "skill.review",
+    "target": "claude",
+    "suggestion": "Rename the source, or pin a directory or filename for this entity in the target profile.",
+    "blocking": false,
+    "fingerprint": "dg_7c7077585efd2648"
+  }
+]

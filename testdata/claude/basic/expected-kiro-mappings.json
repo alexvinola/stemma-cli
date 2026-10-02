@@ -4,10 +4,10 @@
     "entityType": "agent",
     "outcome": "lossy",
     "files": [
-      ".kiro/agents/agent-reviewer.json"
+      ".kiro/agents/reviewer.json"
     ],
     "activation": "on demand (reviewer)",
-    "explanation": "kiro supports specialist agents, but the declared tool names come from claude and are not verified against this provider."
+    "explanation": "kiro supports specialist agents, but the declared tool names come from claude and are not verified against this provider. The destination keeps the name \"reviewer\" of its claude source."
   },
   {
     "entityId": "context.architecture",
@@ -34,29 +34,29 @@
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/rule-api-request-validation.md"
+      ".kiro/steering/api.md"
     ],
     "activation": "paths src/api/**/*.go, src/handlers/**/*.go",
-    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns."
+    "explanation": "Path-scoped context maps to inclusion: fileMatch with the canonical patterns. The destination keeps the name \"api\" of its claude source."
   },
   {
     "entityId": "rule.formatting",
     "entityType": "rule",
     "outcome": "exact",
     "files": [
-      ".kiro/steering/rule-formatting.md"
+      ".kiro/steering/style.md"
     ],
     "activation": "always-on",
-    "explanation": "Always-on context maps to a steering document with inclusion: always."
+    "explanation": "Always-on context maps to a steering document with inclusion: always. The destination keeps the name \"style\" of its claude source."
   },
   {
     "entityId": "skill.migration",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".kiro/skills/skill-migration/SKILL.md"
+      ".kiro/skills/migration/SKILL.md"
     ],
     "activation": "on demand (migration)",
-    "explanation": "Kiro supports skills natively. The skill invocation name is \"skill-migration\" to match its destination directory."
+    "explanation": "Kiro supports skills natively. The destination keeps the name \"migration\" of its claude source."
   }
 ]

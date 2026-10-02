@@ -4,10 +4,10 @@
     "entityType": "agent",
     "outcome": "lossy",
     "files": [
-      ".claude/agents/agent-reviewer.md"
+      ".claude/agents/reviewer.md"
     ],
     "activation": "on demand (reviewer)",
-    "explanation": "claude supports specialist agents, but the declared tool names come from github-copilot and are not verified against this provider."
+    "explanation": "claude supports specialist agents, but the declared tool names come from github-copilot and are not verified against this provider. The destination keeps the name \"reviewer\" of its github-copilot source."
   },
   {
     "entityId": "context.acme-ledger",
@@ -24,10 +24,10 @@
     "entityType": "context",
     "outcome": "lossy",
     "files": [
-      ".claude/rules/context-api-layer-conventions.md"
+      ".claude/rules/api.md"
     ],
     "activation": "paths src/api/**, src/handlers/**",
-    "explanation": "Claude rules accept the canonical include patterns in their paths front matter. Provider-specific fields not written for claude: github-copilot.excludeAgent (behaviour)."
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter. The destination keeps the name \"api\" of its github-copilot source. Provider-specific fields not written for claude: github-copilot.excludeAgent (behaviour)."
   },
   {
     "entityId": "context.architecture",
@@ -62,19 +62,19 @@
     "entityType": "procedure",
     "outcome": "lossy",
     "files": [
-      ".claude/skills/procedure-release/SKILL.md"
+      ".claude/skills/release/SKILL.md"
     ],
     "activation": "on demand (release)",
-    "explanation": "Claude Code has no dedicated procedure format; the procedure is delivered as a skill. The skill invocation name is \"procedure-release\" to match its destination directory. Provider-specific fields not written for claude: github-copilot.mode (unclassified, treated as behaviour), github-copilot.model (behaviour)."
+    "explanation": "Claude Code has no dedicated procedure format; the procedure is delivered as a skill. The destination keeps the name \"release\" of its github-copilot source. Provider-specific fields not written for claude: github-copilot.mode (unclassified, treated as behaviour), github-copilot.model (behaviour)."
   },
   {
     "entityId": "skill.release-checklist",
     "entityType": "skill",
-    "outcome": "adapted",
+    "outcome": "exact",
     "files": [
-      ".claude/skills/skill-release-checklist/SKILL.md"
+      ".claude/skills/release-checklist/SKILL.md"
     ],
     "activation": "on demand (release-checklist)",
-    "explanation": "Claude Code supports skills natively. The skill invocation name is \"skill-release-checklist\" to match its destination directory."
+    "explanation": "Claude Code supports skills natively. The destination keeps the name \"release-checklist\" of its github-copilot source."
   }
 ]

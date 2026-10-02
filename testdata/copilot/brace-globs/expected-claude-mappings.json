@@ -14,19 +14,19 @@
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".claude/rules/context-strict-typing.md"
+      ".claude/rules/mixed.md"
     ],
     "activation": "paths src/**/*.ts, src/**/*.tsx, lib/**/*.go, app/**/*.css, packages/**/*.css",
-    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter. The destination keeps the name \"mixed\" of its github-copilot source."
   },
   {
     "entityId": "context.ui-conventions",
     "entityType": "context",
     "outcome": "exact",
     "files": [
-      ".claude/rules/context-ui-conventions.md"
+      ".claude/rules/ui.md"
     ],
     "activation": "paths ui/**/*.js, ui/**/*.css, ui/**/*.html",
-    "explanation": "Claude rules accept the canonical include patterns in their paths front matter."
+    "explanation": "Claude rules accept the canonical include patterns in their paths front matter. The destination keeps the name \"ui\" of its github-copilot source."
   }
 ]
