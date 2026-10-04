@@ -109,6 +109,15 @@ re-import replaces the canonical project, so preserve canonical edits first.
 
 ## Different format
 
+Embedded links and path text in imported bodies remain unchanged. Stemma does
+not rebase them when an entity moves or rewrite references to migrated files.
+Supporting documents, templates and scripts beside a `SKILL.md` are not imported
+or copied unless they independently match a registered configuration path.
+An `exact` mapping accounts for modelled entity fields; it does not certify that
+referenced dependencies exist in the output. Review those dependencies before
+using the generated configuration. See the
+[investigation and scheduled follow-up for #63](embedded-references.md).
+
 The goal is optimized semantic equivalence, not textual identity. Content is
 re-packaged into the target's native mechanisms, which is exactly the point of
 the tool: the always-on set, the scoping mechanism and the file layout are all
