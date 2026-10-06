@@ -264,7 +264,7 @@ func runImport(ctx context.Context, env Env, args []string) int {
 	fmt.Fprintf(env.Stdout, "\nWrote %s and %s entity file(s) under .stemma/\n",
 		outPath, fmt.Sprint(len(encoded.Files)-3))
 	for _, rel := range stale {
-		fmt.Fprintf(env.Stdout, "  removed  %s (no longer part of the project)\n", rel)
+		fmt.Fprintf(env.Stdout, "  removed  %s (no longer part of the project)\n", SanitizeLine(rel))
 	}
 	fmt.Fprintf(env.Stdout, "Targets enabled: %v\n", result.Project.Targets)
 	PrintDiagnostics(env.Stdout, result.Diagnostics, false)

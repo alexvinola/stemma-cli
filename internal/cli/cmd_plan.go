@@ -167,16 +167,16 @@ func printPlan(env Env, plan compiler.Plan, showUnchanged, explain bool) {
 		switch c.Kind {
 		case compiler.ChangeUnchanged:
 			if showUnchanged {
-				fmt.Fprintf(env.Stdout, "  unchanged  %s\n", c.Path)
+				fmt.Fprintf(env.Stdout, "  unchanged  %s\n", SanitizeLine(c.Path))
 			}
 		case compiler.ChangeCreate:
-			fmt.Fprintf(env.Stdout, "  create     %s\n", c.Path)
+			fmt.Fprintf(env.Stdout, "  create     %s\n", SanitizeLine(c.Path))
 		case compiler.ChangeUpdate:
-			fmt.Fprintf(env.Stdout, "  update     %s\n", c.Path)
+			fmt.Fprintf(env.Stdout, "  update     %s\n", SanitizeLine(c.Path))
 		case compiler.ChangeDeleteProposed:
-			fmt.Fprintf(env.Stdout, "  stale      %s  (delete proposed; Stemma will not remove it)\n", c.Path)
+			fmt.Fprintf(env.Stdout, "  stale      %s  (delete proposed; Stemma will not remove it)\n", SanitizeLine(c.Path))
 		case compiler.ChangeConflict:
-			fmt.Fprintf(env.Stdout, "  conflict   %s  (%s)\n", c.Path, SanitizeLine(c.Reason))
+			fmt.Fprintf(env.Stdout, "  conflict   %s  (%s)\n", SanitizeLine(c.Path), SanitizeLine(c.Reason))
 		}
 	}
 	if counts[compiler.ChangeUnchanged] > 0 && !showUnchanged {
@@ -194,9 +194,9 @@ func printPlan(env Env, plan compiler.Plan, showUnchanged, explain bool) {
 	if explain {
 		fmt.Fprintf(env.Stdout, "\nEntities\n")
 		for _, m := range plan.Mappings {
-			fmt.Fprintf(env.Stdout, "  %-10s %-34s %s\n", m.Outcome, m.EntityID, adapters.ScopeLabel(m.Activation))
+			fmt.Fprintf(env.Stdout, "  %-10s %-34s %s\n", m.Outcome, SanitizeLine(m.EntityID), SanitizeLine(adapters.ScopeLabel(m.Activation)))
 			if len(m.Files) > 0 {
-				fmt.Fprintf(env.Stdout, "             -> %s\n", strings.Join(m.Files, ", "))
+				fmt.Fprintf(env.Stdout, "             -> %s\n", SanitizeLine(strings.Join(m.Files, ", ")))
 			}
 			fmt.Fprintf(env.Stdout, "             %s\n", SanitizeLine(m.Explanation))
 		}

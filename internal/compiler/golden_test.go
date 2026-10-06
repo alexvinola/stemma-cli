@@ -214,6 +214,7 @@ func goldenCases() []goldenCase {
 		{"copilot/basic", all, true},
 		{"copilot/brace-globs", []canonical.TargetFormat{claude, codex}, false},
 		{"copilot/character-class-globs", []canonical.TargetFormat{claude}, false},
+		{"copilot/literal-whitespace", all, false},
 		{"copilot/source-names", []canonical.TargetFormat{claude}, false},
 		{"kiro/steering", all, true},
 	}

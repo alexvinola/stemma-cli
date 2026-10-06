@@ -156,16 +156,16 @@ func runCheck(ctx context.Context, env Env, args []string) int {
 		}
 		fmt.Fprintf(env.Stdout, "%-16s %s\n", ct.Target, status)
 		for _, p := range ct.Missing {
-			fmt.Fprintf(env.Stdout, "  missing    %s\n", p)
+			fmt.Fprintf(env.Stdout, "  missing    %s\n", SanitizeLine(p))
 		}
 		for _, p := range ct.Stale {
-			fmt.Fprintf(env.Stdout, "  stale      %s\n", p)
+			fmt.Fprintf(env.Stdout, "  stale      %s\n", SanitizeLine(p))
 		}
 		for _, p := range ct.DeleteProposed {
-			fmt.Fprintf(env.Stdout, "  delete     %s  (proposed; remove manually)\n", p)
+			fmt.Fprintf(env.Stdout, "  delete     %s  (proposed; remove manually)\n", SanitizeLine(p))
 		}
 		for _, p := range ct.Conflicts {
-			fmt.Fprintf(env.Stdout, "  conflict   %s\n", p)
+			fmt.Fprintf(env.Stdout, "  conflict   %s\n", SanitizeLine(p))
 		}
 	}
 	PrintDiagnostics(env.Stdout, diags, false)

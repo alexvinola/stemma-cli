@@ -1,0 +1,22 @@
+[
+  {
+    "entityId": "context.literal-a",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/context-literal-a.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context maps to a steering document with inclusion: always."
+  },
+  {
+    "entityId": "context.literal-b",
+    "entityType": "context",
+    "outcome": "exact",
+    "files": [
+      ".kiro/steering/context-literal-b.md"
+    ],
+    "activation": "always-on",
+    "explanation": "Always-on context maps to a steering document with inclusion: always."
+  }
+]

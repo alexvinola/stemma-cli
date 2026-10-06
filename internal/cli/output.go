@@ -87,7 +87,7 @@ func Sanitize(s string) string {
 			b.WriteRune(r)
 		case r == 0x1b:
 			b.WriteString("\\e")
-		case r < 0x20 || r == 0x7f:
+		case unicode.IsControl(r):
 			fmt.Fprintf(&b, "\\x%02x", r)
 		case unicode.In(r, unicode.Cf) && r != 0x200d:
 			fmt.Fprintf(&b, "\\u%04x", r)

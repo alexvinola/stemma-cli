@@ -143,7 +143,7 @@ func applyOne(
 		diagnosticsShown = true
 		fmt.Fprintf(env.Stdout, "The following files will be written:\n")
 		for _, c := range writable {
-			fmt.Fprintf(env.Stdout, "  %-10s %s\n", c.Kind, c.Path)
+			fmt.Fprintf(env.Stdout, "  %-10s %s\n", c.Kind, SanitizeLine(c.Path))
 		}
 		ok, cerr := confirm(env, "Apply these changes?")
 		if cerr != nil {
@@ -195,13 +195,13 @@ func applyOne(
 	fmt.Fprintf(env.Stdout, "Applied %s for target %s\n",
 		Plural(len(result.Written), "file", "files"), plan.Target)
 	for _, p := range result.Written {
-		fmt.Fprintf(env.Stdout, "  wrote      %s\n", p)
+		fmt.Fprintf(env.Stdout, "  wrote      %s\n", SanitizeLine(p))
 	}
 	for _, p := range result.Unchanged {
-		fmt.Fprintf(env.Stdout, "  unchanged  %s\n", p)
+		fmt.Fprintf(env.Stdout, "  unchanged  %s\n", SanitizeLine(p))
 	}
 	for _, p := range result.Skipped {
-		fmt.Fprintf(env.Stdout, "  skipped    %s\n", p)
+		fmt.Fprintf(env.Stdout, "  skipped    %s\n", SanitizeLine(p))
 	}
 	if !diagnosticsShown {
 		PrintDiagnostics(env.Stdout, result.Diagnostics, true)

@@ -343,12 +343,40 @@ func assertSkillNamesMatchDirectories(t *testing.T, out compiler.CompileResult) 
 		}
 	}
 	for _, m := range out.Mappings {
+		for _, f := range m.Files {
+			if path.Base(f) == "SKILL.md" && m.Activation.InvocationName != path.Base(path.Dir(f)) {
+				t.Fatalf("%s reports invocation %q for %s", m.EntityID, m.Activation.InvocationName, f)
+			}
+		}
 		if m.EntityType != canonical.EntitySkill || m.Outcome != adapters.OutcomeExact {
 			continue
 		}
 		if strings.Contains(m.Explanation, "not reused") {
 			t.Fatalf("a skill whose source name changed is reported exact: %+v", m)
 		}
+	}
+}
+
+// A profile may request an invocation alias without moving the file. The
+// rendered skill still uses its effective name, which the mapping must report.
+func TestSkillMappingUsesRenderedNameWithActivationOverride(t *testing.T) {
+	for _, target := range capabilities.AvailableTargets() {
+		t.Run(string(target), func(t *testing.T) {
+			p := namingProject([]namedEntity{{id: "skill.review",
+				hint: [3]string{string(canonical.TargetCopilot), "stemma.sourceDir", "review"}}})
+			profile := profiles.Default(target)
+			activation := canonical.OnDemand("when reviewing", "requested-alias")
+			profile.Overrides["skill.review"] = profiles.Override{Activation: &activation}
+			out := compileBothOrders(t, p, compiler.CompileOptions{Target: target, Profile: profile})
+			assertSkillNamesMatchDirectories(t, out)
+			if len(out.Mappings) != 1 || out.Mappings[0].Activation.InvocationName != "review" ||
+				out.Mappings[0].Outcome != adapters.OutcomeAdapted {
+				t.Fatalf("mapping disagrees with rendered review skill: %+v", out.Mappings)
+			}
+			if activation.InvocationName != "requested-alias" || p.Skills[0].Name != "review" {
+				t.Fatal("projection changed the profile or canonical input")
+			}
+		})
 	}
 }
 

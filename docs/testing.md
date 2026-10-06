@@ -57,11 +57,18 @@ contracts; the broader semantic and round-trip tests still run separately.
 | `claude/character-class-globs` | Copilot | No |
 | `copilot/character-class-globs` | Claude | No |
 | `copilot/source-names` | Claude | No |
+| `copilot/literal-whitespace` | All four | No |
 | `claude/duplicate-titles` | Copilot, Codex | No |
 | `claude/nested` | Claude, Codex | No |
 | `codex/override` | Claude, Codex | No |
 
 Copilot's format identifier is `github-copilot` in the registry and filenames.
+
+`copilot/literal-whitespace` imports two instructions whose fenced literals
+differ only by a space. Both remain in every target's output and mappings;
+deduplication compares text byte-for-byte, without normalizing whitespace.
+Table tests also cover indented code, inline literals, quoted text, hard breaks
+and blank lines. Exact duplicates still collapse deterministically.
 
 `copilot/source-names` pins the source-name policy of issue #61 for Claude: a
 clean instruction file and skill keep their names; duplicate base names from

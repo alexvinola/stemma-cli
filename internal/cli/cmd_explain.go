@@ -82,28 +82,28 @@ func runExplain(ctx context.Context, env Env, args []string) int {
 		return ExitOK
 	}
 
-	fmt.Fprintf(env.Stdout, "%s  (%s)\n", entityID, mapping.EntityType)
+	fmt.Fprintf(env.Stdout, "%s  (%s)\n", SanitizeLine(entityID), mapping.EntityType)
 	if title != "" {
 		fmt.Fprintf(env.Stdout, "  title:        %s\n", SanitizeLine(title))
 	}
 	fmt.Fprintf(env.Stdout, "  target:       %s\n", plan.Target)
-	fmt.Fprintf(env.Stdout, "  activation:   %s\n", adapters.ScopeLabel(mapping.Activation))
+	fmt.Fprintf(env.Stdout, "  activation:   %s\n", SanitizeLine(adapters.ScopeLabel(mapping.Activation)))
 	if mapping.Source.SourcePath != "" {
 		fmt.Fprintf(env.Stdout, "  imported from:%s (%s, %s)\n",
-			" "+mapping.Source.SourcePath, mapping.Source.SourceFormat, mapping.Source.Disposition)
+			" "+SanitizeLine(mapping.Source.SourcePath), SanitizeLine(mapping.Source.SourceFormat), SanitizeLine(string(mapping.Source.Disposition)))
 		if mapping.Source.Span.LineStart > 0 {
 			fmt.Fprintf(env.Stdout, "                lines %d-%d\n",
 				mapping.Source.Span.LineStart, mapping.Source.Span.LineEnd)
 		}
 	}
 	if mapping.Override != nil {
-		fmt.Fprintf(env.Stdout, "  profile:      override applied%s\n", describeOverride(*mapping.Override))
+		fmt.Fprintf(env.Stdout, "  profile:      override applied%s\n", SanitizeLine(describeOverride(*mapping.Override)))
 	} else {
 		fmt.Fprintf(env.Stdout, "  profile:      no override\n")
 	}
 	fmt.Fprintf(env.Stdout, "  outcome:      %s\n", mapping.Outcome)
 	if len(mapping.Files) > 0 {
-		fmt.Fprintf(env.Stdout, "  destination:  %s\n", strings.Join(mapping.Files, ", "))
+		fmt.Fprintf(env.Stdout, "  destination:  %s\n", SanitizeLine(strings.Join(mapping.Files, ", ")))
 	} else {
 		fmt.Fprintf(env.Stdout, "  destination:  (none)\n")
 	}

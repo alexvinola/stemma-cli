@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/alexvinola/stemma-cli/internal/canonical"
 	"github.com/alexvinola/stemma-cli/internal/diagnostics"
@@ -39,9 +38,6 @@ type Result struct {
 type Options struct {
 	// DeduplicateExact removes byte-identical entities.
 	DeduplicateExact bool
-	// DeduplicateNormalized also removes entities that are identical after
-	// conservative whitespace normalization.
-	DeduplicateNormalized bool
 	// PreserveEntityIDs excludes projection-sensitive entities from
 	// deduplication. The compiler populates this for profile overrides, whose
 	// target-specific effects are resolved by adapters after optimization.
@@ -50,7 +46,7 @@ type Options struct {
 
 // DefaultOptions enables the passes that are always safe.
 func DefaultOptions() Options {
-	return Options{DeduplicateExact: true, DeduplicateNormalized: true}
+	return Options{DeduplicateExact: true}
 }
 
 // Run applies the enabled passes and returns a new project.
@@ -59,7 +55,7 @@ func Run(p canonical.Project, opts Options) Result {
 	out := p
 	var dropped []Dropped
 
-	if opts.DeduplicateExact || opts.DeduplicateNormalized {
+	if opts.DeduplicateExact {
 		out, dropped = deduplicate(out, opts, &bag)
 	}
 	sort.Slice(dropped, func(i, j int) bool { return dropped[i].ID < dropped[j].ID })
@@ -83,13 +79,13 @@ func deduplicate(p canonical.Project, opts Options, bag *diagnostics.Bag) (canon
 			keptDocs = append(keptDocs, d)
 			continue
 		}
-		key := documentDedupeKey(d, opts.DeduplicateNormalized)
+		key := documentDedupeKey(d)
 		if prev, ok := seen[key]; ok {
 			dropped = append(dropped, Dropped{
 				ID: d.ID, Type: canonical.EntityContext, KeptID: prev,
 				Reason: fmt.Sprintf("identical content and activation to %s", prev),
 			})
-			bag.Add(duplicateDiag(d.ID, prev, d.Provenance.SourcePath, opts.DeduplicateNormalized))
+			bag.Add(duplicateDiag(d.ID, prev, d.Provenance.SourcePath))
 			continue
 		}
 		seen[key] = d.ID
@@ -106,13 +102,13 @@ func deduplicate(p canonical.Project, opts Options, bag *diagnostics.Bag) (canon
 			keptRules = append(keptRules, r)
 			continue
 		}
-		key := ruleDedupeKey(r, opts.DeduplicateNormalized)
+		key := ruleDedupeKey(r)
 		if prev, ok := seenRules[key]; ok {
 			dropped = append(dropped, Dropped{
 				ID: r.ID, Type: canonical.EntityRule, KeptID: prev,
 				Reason: fmt.Sprintf("identical instruction, priority and activation to %s", prev),
 			})
-			bag.Add(duplicateDiag(r.ID, prev, r.Provenance.SourcePath, opts.DeduplicateNormalized))
+			bag.Add(duplicateDiag(r.ID, prev, r.Provenance.SourcePath))
 			continue
 		}
 		seenRules[key] = r.ID
@@ -140,31 +136,24 @@ func ruleCandidate(r canonical.Rule, preserve map[string]struct{}) bool {
 		r.Activation.Type != canonical.ActivationOnDemand && len(r.Extensions) == 0
 }
 
-func duplicateDiag(id, kept, path string, normalized bool) diagnostics.Diagnostic {
-	how := "byte-identical"
-	if normalized {
-		how = "identical after whitespace normalization"
-	}
+func duplicateDiag(id, kept, path string) diagnostics.Diagnostic {
 	return diagnostics.New(diagnostics.DuplicateEntityID, diagnostics.SeverityInfo,
 		fmt.Sprintf("%s duplicates %s and is not projected", id, kept)).
 		WithEntity(id).WithPath(path).
-		WithDetail("The two entities are %s and have the same activation.", how).
+		WithDetail("The two entities are byte-identical and have the same activation.").
 		WithSuggestion("Remove one of them from .stemma/project.json to silence this notice.").
 		WithBlocking(false)
 }
 
-func documentDedupeKey(d canonical.ContextDocument, normalize bool) string {
-	return dedupeKey(d.Content, d.Activation, normalize, string(d.Kind), string(d.Audience))
+func documentDedupeKey(d canonical.ContextDocument) string {
+	return dedupeKey(d.Content, d.Activation, string(d.Kind), string(d.Audience))
 }
 
-func ruleDedupeKey(r canonical.Rule, normalize bool) string {
-	return dedupeKey(r.Instruction, r.Activation, normalize, string(r.Priority))
+func ruleDedupeKey(r canonical.Rule) string {
+	return dedupeKey(r.Instruction, r.Activation, string(r.Priority))
 }
 
-func dedupeKey(content string, a canonical.Activation, normalize bool, metadata ...string) string {
-	if normalize {
-		content = NormalizeWhitespace(content)
-	}
+func dedupeKey(content string, a canonical.Activation, metadata ...string) string {
 	var key []byte
 	appendPart := func(value string) {
 		key = strconv.AppendInt(key, int64(len(value)), 10)
@@ -191,26 +180,6 @@ func sortedCopy(in []string) []string {
 	out := append([]string{}, in...)
 	sort.Strings(out)
 	return out
-}
-
-// NormalizeWhitespace collapses runs of spaces and trims each line. It is the
-// only text transformation the optimizer is allowed to apply, and it is used
-// solely for comparison, never for rewriting stored content.
-func NormalizeWhitespace(s string) string {
-	lines := strings.Split(s, "\n")
-	out := make([]string, 0, len(lines))
-	for _, l := range lines {
-		l = strings.TrimSpace(l)
-		l = strings.Join(strings.Fields(l), " ")
-		if l == "" && len(out) > 0 && out[len(out)-1] == "" {
-			continue
-		}
-		out = append(out, l)
-	}
-	for len(out) > 0 && out[len(out)-1] == "" {
-		out = out[:len(out)-1]
-	}
-	return strings.Join(out, "\n")
 }
 
 // BudgetDiagnostics reports token budget problems for a compiled target.
