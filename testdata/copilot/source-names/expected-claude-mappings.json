@@ -56,7 +56,7 @@
     "files": [
       ".claude/skills/procedure-review/SKILL.md"
     ],
-    "activation": "on demand (review)",
+    "activation": "on demand (procedure-review)",
     "explanation": "Claude Code has no dedicated procedure format; the procedure is delivered as a skill. The github-copilot source name \"review\" was not reused because it collides with skill.review at .claude/skills/review/SKILL.md, so the destination uses the complete canonical ID. The skill invocation name is \"procedure-review\" to match its destination directory."
   },
   {
@@ -76,7 +76,7 @@
     "files": [
       ".claude/skills/skill-release-notes/SKILL.md"
     ],
-    "activation": "on demand (Release_Notes)",
+    "activation": "on demand (skill-release-notes)",
     "explanation": "Claude Code supports skills natively. The github-copilot source name \"Release_Notes\" was not reused because it does not satisfy this target's agent-skill-name rule (at most 64 bytes), so the destination uses the complete canonical ID. The skill invocation name is \"skill-release-notes\" to match its destination directory."
   },
   {
@@ -86,7 +86,7 @@
     "files": [
       ".claude/skills/skill-review/SKILL.md"
     ],
-    "activation": "on demand (review)",
+    "activation": "on demand (skill-review)",
     "explanation": "Claude Code supports skills natively. The github-copilot source name \"review\" was not reused because it collides with procedure.review at .claude/skills/review/SKILL.md, so the destination uses the complete canonical ID. The skill invocation name is \"skill-review\" to match its destination directory."
   }
 ]

@@ -51,19 +51,32 @@ func TestDeduplicateRespectsActivation(t *testing.T) {
 	}
 }
 
-func TestNormalizedDeduplication(t *testing.T) {
-	p := canonical.NewProject("prj", "x")
-	a := canonical.Rule{ID: "rule.a", Title: "A", Instruction: "do   x\n\n\n", Priority: canonical.PriorityMust,
-		Enabled: true, Activation: canonical.Always()}
-	b := canonical.Rule{ID: "rule.b", Title: "B", Instruction: "do x", Priority: canonical.PriorityMust,
-		Enabled: true, Activation: canonical.Always()}
-	p.Rules = []canonical.Rule{a, b}
-
-	if got := Run(p, Options{DeduplicateExact: true}); len(got.Project.Rules) != 2 {
-		t.Error("whitespace-only differences must survive exact deduplication")
-	}
-	if got := Run(p, DefaultOptions()); len(got.Project.Rules) != 1 {
-		t.Error("normalized deduplication should collapse whitespace-only differences")
+func TestDeduplicationPreservesWhitespaceDifferences(t *testing.T) {
+	for _, tc := range []struct{ name, first, second string }{
+		{"fenced literal", "```text\na  b\n```", "```text\na b\n```"},
+		{"indented code", "    a  b", "    a b"},
+		{"inline literal", "Use `a  b`.", "Use `a b`."},
+		{"quoted prose", "Preserve \"a  b\".", "Preserve \"a b\"."},
+		{"markdown hard break", "First  \nSecond", "First\nSecond"},
+		{"blank lines", "do x\n\n\n", "do x\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := canonical.NewProject("prj", "x")
+			for i, content := range []string{tc.first, tc.second} {
+				id := []string{"a", "b"}[i]
+				p.Rules = append(p.Rules, canonical.Rule{ID: "rule." + id,
+					Instruction: content, Priority: canonical.PriorityMust, Enabled: true,
+					Activation: canonical.Always()})
+				p.ContextDocuments = append(p.ContextDocuments, canonical.ContextDocument{
+					ID: "context." + id, Content: content, Kind: canonical.KindOther,
+					Audience: canonical.AudienceAgent, Activation: canonical.Always()})
+			}
+			got := Run(p, DefaultOptions())
+			if len(got.Project.Rules) != 2 || len(got.Project.ContextDocuments) != 2 ||
+				len(got.Dropped) != 0 || len(got.Diagnostics) != 0 {
+				t.Fatalf("distinct text was deduplicated: %+v", got)
+			}
+		})
 	}
 }
 
@@ -170,7 +183,7 @@ func TestDeduplicateRequiresProjectionEquivalence(t *testing.T) {
 				return p
 			},
 			options: Options{
-				DeduplicateExact: true, DeduplicateNormalized: true,
+				DeduplicateExact:  true,
 				PreserveEntityIDs: map[string]struct{}{"rule.a": {}},
 			},
 			wantRule: 2,
@@ -283,13 +296,6 @@ func TestOptimizerIsOrderIndependent(t *testing.T) {
 			t.Fatalf("optimization depends on input order: %s vs %s",
 				first.Project.Rules[i].ID, second.Project.Rules[i].ID)
 		}
-	}
-}
-
-func TestNormalizeWhitespace(t *testing.T) {
-	got := NormalizeWhitespace("  a   b  \n\n\n  c  \n\n")
-	if got != "a b\n\nc" {
-		t.Errorf("NormalizeWhitespace = %q", got)
 	}
 }
 

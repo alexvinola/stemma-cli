@@ -76,6 +76,9 @@ values inside a valid provider extension mapping remain preserved.
 
 ## Generated names and destination collisions
 
+For a complete Copilot-to-Claude example with reviewed profile overrides, see
+the [v0.5.0 migration guide](migration-guide.md).
+
 Internal identity and destination names are separate. Canonical IDs never
 change for naming; one shared policy (`Builder.Destination` in
 `internal/adapters`) names every file or skill directory that an entity owns,

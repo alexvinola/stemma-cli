@@ -337,14 +337,19 @@ func TestDeduplicationCombinesCallerAndProfilePreservation(t *testing.T) {
 	}
 }
 
-func TestSafeDuplicatesStillDeduplicateAcrossTargets(t *testing.T) {
+func TestDeduplicationUsesExactTextAcrossTargets(t *testing.T) {
 	tests := []struct {
 		name        string
 		instruction string
 		other       string
+		wantDropped int
+		wantText    []string
 	}{
-		{name: "exact", instruction: "Check the result.", other: "Check the result."},
-		{name: "normalized", instruction: "Check   the result.\n\n", other: "Check the result."},
+		{name: "exact", instruction: "Check the result.", other: "Check the result.", wantDropped: 1},
+		{name: "spaces", instruction: "Check   the result.\n\n", other: "Check the result.",
+			wantText: []string{"Check   the result.", "Check the result."}},
+		{name: "literal", instruction: "```text\na  b\n```", other: "```text\na b\n```",
+			wantText: []string{"a  b", "a b"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -369,8 +374,19 @@ func TestSafeDuplicatesStillDeduplicateAcrossTargets(t *testing.T) {
 							projected++
 						}
 					}
-					if deduplicated != 1 || projected != 1 {
+					if deduplicated != tt.wantDropped || projected != 2-tt.wantDropped {
 						t.Errorf("deduplicated=%d projected=%d mappings=%+v", deduplicated, projected, out.Mappings)
+					}
+					if tt.wantDropped == 0 {
+						var content strings.Builder
+						for _, f := range out.Files {
+							content.WriteString(f.Text)
+						}
+						for _, text := range tt.wantText {
+							if !strings.Contains(content.String(), text) {
+								t.Errorf("projected files lost %q", text)
+							}
+						}
 					}
 				})
 			}

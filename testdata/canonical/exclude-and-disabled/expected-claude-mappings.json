@@ -24,7 +24,7 @@
     "files": [
       ".claude/skills/context-runbook/SKILL.md"
     ],
-    "activation": "on demand (incident-runbook)",
+    "activation": "on demand (context-runbook)",
     "explanation": "Claude Code has no on-demand context format other than skills, so the document is delivered as a skill that loads when invoked. The skill invocation name is \"context-runbook\" to match its destination directory."
   },
   {

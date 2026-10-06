@@ -248,12 +248,11 @@ func (b *Builder) SkillName(id, name, dest string) string {
 		return name
 	}
 	if _, ok := ReuseOriginal(b.in, dest, []string{id}); ok {
+		b.skillNames[id] = name
 		return name
 	}
 	projected := path.Base(path.Dir(dest))
-	if projected != name {
-		b.skillNames[id] = projected
-	}
+	b.skillNames[id] = projected
 	return projected
 }
 
@@ -274,7 +273,8 @@ func (b *Builder) RecordWithDiagnostics(
 		explanation += note
 		diagIDs = append(append([]string{}, diagIDs...), notes...)
 	}
-	if name, changed := b.skillNames[id]; changed {
+	if name, projected := b.skillNames[id]; projected && name != res.Activation.InvocationName {
+		res.Activation.InvocationName = name
 		explanation += fmt.Sprintf(" The skill invocation name is %q to match its destination directory.", name)
 		if outcome == OutcomeExact {
 			outcome = OutcomeAdapted

@@ -132,8 +132,8 @@ project: canonical truth wins over delivery.
 model:
 
 - remove byte-identical duplicates,
-- remove duplicates that are identical after conservative whitespace
-  normalization (used for comparison only — stored content is never rewritten),
+- retain text with any byte difference: whitespace can be meaningful in
+  literals, code, quoted prose and Markdown hard breaks,
 - keep the lexicographically smallest id so the result never depends on input
   order,
 - report a removed duplicate as `skipped-explicitly` with an informational

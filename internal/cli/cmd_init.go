@@ -68,9 +68,9 @@ func runInit(ctx context.Context, env Env, args []string) int {
 		}
 		return ExitOK
 	}
-	fmt.Fprintf(env.Stdout, "Created canonical project %q (%s)\n", SanitizeLine(project.Name), project.ID)
+	fmt.Fprintf(env.Stdout, "Created canonical project %q (%s)\n", SanitizeLine(project.Name), SanitizeLine(project.ID))
 	for _, c := range created {
-		fmt.Fprintf(env.Stdout, "  %s\n", c)
+		fmt.Fprintf(env.Stdout, "  %s\n", SanitizeLine(c))
 	}
 	fmt.Fprintf(env.Stdout, "\nNext: run `stemma scan` to see what agent configuration this repository has,\n")
 	fmt.Fprintf(env.Stdout, "then `stemma import --from <format>` to populate the canonical project.\n")

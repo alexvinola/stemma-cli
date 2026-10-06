@@ -83,7 +83,7 @@ func runValidate(ctx context.Context, env Env, args []string) int {
 		}
 		return code
 	}
-	fmt.Fprintf(env.Stdout, "Canonical project %s (%s)\n", SanitizeLine(project.Name), project.ID)
+	fmt.Fprintf(env.Stdout, "Canonical project %s (%s)\n", SanitizeLine(project.Name), SanitizeLine(project.ID))
 	fmt.Fprintf(env.Stdout, "  entities:        %d\n", data.Entities)
 	fmt.Fprintf(env.Stdout, "  opaque blocks:   %d\n", len(project.OpaqueBlocks))
 	fmt.Fprintf(env.Stdout, "  targets:         %v\n", project.Targets)

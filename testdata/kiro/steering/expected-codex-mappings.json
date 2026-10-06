@@ -26,7 +26,7 @@
     "files": [
       ".agents/skills/incident/SKILL.md"
     ],
-    "activation": "on demand (incident-response)",
+    "activation": "on demand (incident)",
     "explanation": "This ecosystem has no on-demand instructions format other than skills, so the document is delivered as a skill. The destination keeps the name \"incident\" of its kiro source. The skill invocation name is \"incident\" to match its destination directory. Provider-specific fields not written for codex: kiro.inclusion (behaviour)."
   },
   {
